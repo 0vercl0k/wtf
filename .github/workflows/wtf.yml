@@ -9,8 +9,13 @@ permissions:
 
 jobs:
   Windows:
-    name: Windows latest
     runs-on: windows-latest 
+    strategy:
+      fail-fast: false
+      matrix:
+        generator: ['ninja', 'msvc']
+
+    name: Windows latest / ${{ matrix.generator }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -26,10 +31,17 @@ jobs:
       with:
         languages: cpp
 
-    - name: Build
+    - name: Build with Ninja/cl
+      if: matrix.generator == 'ninja'
       run: |
         cd src\build
         .\build-release.bat
+
+    - name: Build with msvc
+      if: matrix.generator == 'msvc'
+      run: |
+        cd src\build
+        .\build-release-msvc.bat
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
