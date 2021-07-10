@@ -1,0 +1,1018 @@
+// Axel '0vercl0k' Souchet - February 28 2020
+#include "bochscpu_backend.h"
+#include "blake3.h"
+#include "globals.h"
+#include "platform.h"
+#include <cstdarg>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+
+//#define BOCHS_LOGGING_ON
+//#define BOCHSHOOKS_LOGGING_ON
+
+#ifdef BOCHS_LOGGING_ON
+#define BochsDebugPrint(Format, ...) fmt::print("bochs: " Format, ##__VA_ARGS__)
+#else
+#define BochsDebugPrint(Format, ...) /* nuthin' */
+#endif
+
+#ifdef BOCHSHOOKS_LOGGING_ON
+#define BochsHooksDebugPrint(Format, ...)                                      \
+  fmt::print("bochshooks: " Format, ##__VA_ARGS__)
+#else
+#define BochsHooksDebugPrint(fmt, ...) /* nuthin' */
+#endif
+
+//
+// This is a function that gets called when there is missing physical memory.
+// It is very useful because it allows us to adopt a lazy paging mechanism.
+// Everything will get loaded lazily in memory even the page tables hierarchy.
+//
+
+void StaticGpaMissingHandler(const uint64_t Gpa) {
+
+  //
+  // Align the GPA.
+  //
+
+  const Gpa_t AlignedGpa = Gpa_t(Gpa).Align();
+  BochsHooksDebugPrint("GpaMissingHandler: Mapping GPA {:#x} ({:#x}) ..\n",
+                       AlignedGpa, Gpa);
+
+  //
+  // Retrieve the page from the dump file.
+  //
+
+  const void *DmpPage =
+      reinterpret_cast<BochscpuBackend_t *>(g_Backend)->GetPhysicalPage(
+          AlignedGpa);
+  if (DmpPage == nullptr) {
+    BochsHooksDebugPrint(
+        "GpaMissingHandler: GPA {:#x} is not mapped in the dump.\n",
+        AlignedGpa);
+    //__debugbreak();
+  }
+
+  //
+  // Allocate a new page of memory. We allocate a new page because the dump
+  // memory is not writeable. Also, because we will be using the original page
+  // content to be able to restore the context.
+  //
+  // Something *really* important is that the allocation *needs* to be page
+  // aligned as bochs assume they are. Bochs does computation like `base |
+  // offset` (which is equivalent to base + offset assuming base is aligned) but
+  // it doesn't hold if base is not aligned: (0000022ed2ae7010 | 00000738) !=
+  // (0000022ed2ae7010 + 00000738) but (0000022ed2ae7000 | 00000738) ==
+  // (0000022ed2ae7000 + 00000738).
+  //
+
+  uint8_t *Page = (uint8_t *)aligned_alloc(Page::Size, Page::Size);
+  if (Page == nullptr) {
+    fmt::print("Failed to allocate memory in GpaMissingHandler.\n");
+    __debugbreak();
+  }
+
+  if (DmpPage) {
+
+    //
+    // Copy the dump page into the new page.
+    //
+
+    memcpy(Page, DmpPage, Page::Size);
+
+  } else {
+
+    //
+    // Fake it 'till you make it.
+    //
+
+    memset(Page, 0, Page::Size);
+  }
+
+  //
+  // Tell bochscpu that we inserted a page backing the requested GPA.
+  //
+
+  bochscpu_mem_page_insert(AlignedGpa.U64(), Page);
+}
+
+void StaticPhyAccessHook(void *Context, uint32_t Id, uint64_t PhysicalAddress,
+                         uintptr_t Len, uint32_t MemType, uint32_t MemAccess) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->PhyAccessHook(
+      Id, PhysicalAddress, Len, MemType, MemAccess);
+}
+
+void StaticAfterExecutionHook(void *Context, uint32_t Id, void *Ins) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  return reinterpret_cast<BochscpuBackend_t *>(Context)->AfterExecutionHook(
+      Id, Ins);
+}
+
+void StaticBeforeExecutionHook(void *Context, uint32_t Id, void *Ins) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  return reinterpret_cast<BochscpuBackend_t *>(Context)->BeforeExecutionHook(
+      Id, Ins);
+}
+
+void StaticLinAccessHook(void *Context, uint32_t Id, uint64_t VirtualAddress,
+                         uint64_t PhysicalAddress, uintptr_t Len,
+                         uint32_t MemType, uint32_t MemAccess) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->LinAccessHook(
+      Id, VirtualAddress, PhysicalAddress, Len, MemType, MemAccess);
+}
+
+void StaticInterruptHook(void *Context, uint32_t Id, uint32_t Vector) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->InterruptHook(Id, Vector);
+}
+
+void StaticExceptionHook(void *Context, uint32_t Id, uint32_t Vector,
+                         uint32_t ErrorCode) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->ExceptionHook(Id, Vector,
+                                                                ErrorCode);
+}
+
+void StaticTlbControlHook(void *Context, uint32_t Id, uint32_t What,
+                          uint64_t NewCrValue) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->TlbControlHook(Id, What,
+                                                                 NewCrValue);
+}
+
+void StaticOpcodeHook(void *Context, uint32_t Id, const void *i,
+                      const uint8_t *opcode, uintptr_t len, bool is32,
+                      bool is64) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->OpcodeHook(Id, i, opcode, len,
+                                                             is32, is64);
+}
+
+BochscpuBackend_t::BochscpuBackend_t() {
+
+  //
+  // Zero init a bunch of variables.
+  //
+
+  memset(&Hooks_, 0, sizeof(Hooks_));
+  memset(&HookChain_, 0, sizeof(HookChain_));
+}
+
+bool BochscpuBackend_t::Initialize(const Options_t &Opts,
+                                   const CpuState_t &CpuState) {
+
+  //
+  // Open the dump file.
+  //
+
+  const std::string DumpPathA(Opts.DumpPath.string());
+  if (!DmpParser_.Parse(DumpPathA.c_str())) {
+    fmt::print("Parsing '{}' failed, bailing.\n", DumpPathA.c_str());
+    return false;
+  }
+
+  //
+  // Create a cpu.
+  //
+
+  Cpu_ = bochscpu_cpu_new(0);
+
+  //
+  // Prepare the hooks.
+  //
+
+  Hooks_.ctx = this;
+  Hooks_.after_execution = StaticAfterExecutionHook;
+  Hooks_.before_execution = StaticBeforeExecutionHook;
+  Hooks_.lin_access = StaticLinAccessHook;
+  Hooks_.interrupt = StaticInterruptHook;
+  Hooks_.exception = StaticExceptionHook;
+  Hooks_.phy_access = StaticPhyAccessHook;
+  Hooks_.tlb_cntrl = StaticTlbControlHook;
+  // Hooks_.opcode = StaticOpcodeHook;
+
+  //
+  // Initialize the hook chain with only one set of hooks.
+  //
+
+  HookChain_[0] = &Hooks_;
+  HookChain_[1] = nullptr;
+
+  //
+  // Install handler that gets called when physical memory
+  // is missing.
+  //
+
+  bochscpu_mem_missing_page(StaticGpaMissingHandler);
+
+  //
+  // Load the state into the CPU.
+  //
+
+  LoadState(CpuState);
+  Seed_ = CpuState.Seed;
+
+  //
+  // XXX: disable kd: nt!KdpOweBreakpoint / nt!KdDebuggerEnabled
+  //
+
+  return true;
+}
+
+bool BochscpuBackend_t::SetBreakpoint(const Gva_t Gva,
+                                      const BreakpointHandler_t Handler) {
+  Breakpoints_.emplace_back(Gva, Handler);
+  return true;
+}
+
+void BochscpuBackend_t::SetLimit(const uint64_t InstructionLimit) {
+  InstructionLimit_ = InstructionLimit;
+}
+
+std::optional<TestcaseResult_t>
+BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
+
+  //
+  // Initialize a few things.
+  //
+
+  TestcaseBuffer_ = Buffer;
+  TestcaseBufferSize_ = BufferSize;
+  LastNewCoverage_.clear();
+
+  //
+  // Reset some of the stats.
+  //
+
+  RunStats_.Reset();
+
+  //
+  // Lift off.
+  //
+
+  bochscpu_cpu_run(Cpu_, HookChain_);
+
+  //
+  // Fill in the stats.
+  //
+
+  RunStats_.AggregatedCodeCoverage = AggregatedCodeCoverage_.size();
+  RunStats_.DirtyGpas = DirtyGpas_.size();
+
+  //
+  // Return to the user how the testcase exited.
+  //
+
+  return TestcaseResult_;
+}
+
+void BochscpuBackend_t::PhyAccessHook(/*void *Context, */ uint32_t,
+                                      uint64_t PhysicalAddress, uintptr_t Len,
+                                      uint32_t, uint32_t MemAccess) {
+
+  //
+  // Physical memory is getting accessed! Exciting.
+  //
+
+  BochsHooksDebugPrint("PhyAccessHook: Access {} bytes to GPA {:#x}.\n", Len,
+                       PhysicalAddress);
+
+  //
+  // Keep track of stats.
+  //
+
+  RunStats_.NumberMemoryAccesses += Len;
+
+  //
+  // If this is not a write access, we don't care.
+  //
+
+  if (MemAccess != BOCHSCPU_HOOK_MEM_WRITE &&
+      MemAccess != BOCHSCPU_HOOK_MEM_RW) {
+    return;
+  }
+
+  //
+  // Adding the physical memory range to the set of dirty GPAs.
+  //
+
+  DirtyPhysicalMemoryRange(Gpa_t(PhysicalAddress), Len);
+}
+
+void BochscpuBackend_t::AfterExecutionHook(/*void *Context, */ uint32_t,
+                                           void *) {
+
+  //
+  // Keep track of the instructions executed.
+  //
+
+  RunStats_.NumberInstructionsExecuted++;
+
+  //
+  // Check the instruction limit.
+  //
+
+  if (InstructionLimit_ > 0 &&
+      RunStats_.NumberInstructionsExecuted > InstructionLimit_) {
+
+    //
+    // If we're over the limit, we stop the cpu.
+    //
+
+    BochsHooksDebugPrint("Over the instruction limit ({}), stopping cpu.\n",
+                         InstructionLimit_);
+    TestcaseResult_ = Timedout_t();
+    bochscpu_cpu_stop(Cpu_);
+  }
+}
+
+//
+// This is THE HOT PATH in wtf.
+//
+
+#ifdef WINDOWS
+__declspec(safebuffers)
+#endif
+    void BochscpuBackend_t::BeforeExecutionHook(
+        /*void *Context, */ uint32_t, void *) {
+
+  //
+  // Grab the rip register off the cpu.
+  //
+
+  const Gva_t Rip = Gva_t(bochscpu_cpu_rip(Cpu_));
+
+  //
+  // Keep track of new code coverage or log into the trace file.
+  //
+
+  const auto &Res = AggregatedCodeCoverage_.emplace(Rip);
+  if (Res.second) {
+    LastNewCoverage_.emplace(Rip);
+  }
+
+  if (TraceFile_) {
+    const bool RipTrace = TraceType_ == TraceType_t::Rip;
+    const bool UniqueRipTrace = TraceType_ == TraceType_t::UniqueRip;
+    const bool NewRip = Res.second;
+
+    //
+    // On Linux we don't have access to dbgeng so just write the plain address
+    // for both Windows & Linux.
+    //
+
+    if (RipTrace || (UniqueRipTrace && NewRip)) {
+      fmt::print(TraceFile_, "{:#x}\n", Rip);
+    }
+  }
+
+  //
+  // Handle the breakpoints.
+  //
+
+  for (const auto &Breakpoint : Breakpoints_) {
+
+    //
+    // If we have a breakpoint registered for this rip, invoke the handler.
+    //
+
+    if (Breakpoint.Gva_ == Rip) {
+      Breakpoint.Handler_(this);
+    }
+  }
+}
+
+void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
+                                      uint64_t VirtualAddress,
+                                      uint64_t PhysicalAddress, uintptr_t Len,
+                                      uint32_t, uint32_t MemAccess) {
+
+  //
+  // Virtual memory is getting accessed! Exciting.
+  //
+
+  BochsHooksDebugPrint(
+      "LinAccessHook: Access {} bytes to GVA {:#x} (GPA {:#x}).\n", Len,
+      VirtualAddress, PhysicalAddress);
+
+  //
+  // Keep track of stats.
+  //
+
+  RunStats_.NumberMemoryAccesses += Len;
+
+  //
+  // If this is not a write access, we don't care to go further.
+  //
+
+  if (MemAccess != BOCHSCPU_HOOK_MEM_WRITE &&
+      MemAccess != BOCHSCPU_HOOK_MEM_RW) {
+    return;
+  }
+
+  //
+  // Adding the physical address the set of dirty GPAs.
+  // We don't use DirtyVirtualMemoryRange here as we need to
+  // do a GVA->GPA translation which is a bit costly.
+  //
+
+  DirtyGpa(Gpa_t(PhysicalAddress));
+}
+
+void BochscpuBackend_t::InterruptHook(/*void *Context, */ uint32_t,
+                                      uint32_t Vector) {
+
+  //
+  // Hit an exception, dump it on stdout.
+  //
+
+  BochsHooksDebugPrint("InterruptHook: Vector({:#x})\n", Vector);
+
+  //
+  // If we trigger a breakpoint it's probably time to stop the cpu.
+  //
+
+  if (Vector != 3) {
+    return;
+  }
+
+  //
+  // This is an int3 so let's stop the cpu.
+  //
+
+  BochsDebugPrint("Stopping cpu.\n");
+  TestcaseResult_ = Crash_t();
+  bochscpu_cpu_stop(Cpu_);
+}
+
+void BochscpuBackend_t::ExceptionHook(/*void *Context, */ uint32_t,
+                                      uint32_t Vector, uint32_t ErrorCode) {
+  // https://wiki.osdev.org/Exceptions
+  BochsHooksDebugPrint("ExceptionHook: Vector({:#x}), ErrorCode({:#x})\n",
+                       Vector, ErrorCode);
+}
+
+void BochscpuBackend_t::TlbControlHook(/*void *Context, */ uint32_t,
+                                       uint32_t What, uint64_t NewCrValue) {
+
+  //
+  // We only care about CR3 changes.
+  //
+
+  if (What != BOCHSCPU_HOOK_TLB_CR3) {
+    return;
+  }
+
+  //
+  // And we only care about it when the CR3 value is actually different from
+  // when we started the testcase.
+  //
+
+  if (NewCrValue == InitialCr3_) {
+    return;
+  }
+
+  //
+  // Stop the cpu as we don't want to be context-switching.
+  //
+
+  BochsHooksDebugPrint("The cr3 register is getting changed ({:#x})\n",
+                       NewCrValue);
+  BochsHooksDebugPrint("Stopping cpu.\n");
+  TestcaseResult_ = Cr3Change_t();
+  bochscpu_cpu_stop(Cpu_);
+}
+
+void BochscpuBackend_t::OpcodeHook(/*void *Context, */ uint32_t,
+                                   const void *Ins, const uint8_t *, uintptr_t,
+                                   bool, bool) {
+  const uint32_t Op = bochscpu_instr_bx_opcode(Ins);
+  // if (Op >= 0x83e && Op <= 0x840) {
+  //  fmt::print("rdrand @ {:#x}\n", bochscpu_cpu_rip(Cpu_));
+  //  __debugbreak();
+  //}
+  // return;
+#define BX_IA_CMP_RAXId 0x491
+#define BX_IA_CMP_EqsIb 0x4a3
+#define BX_IA_CMP_EqId 0x49a
+  if (Op == BX_IA_CMP_RAXId || Op == BX_IA_CMP_EqId || Op == BX_IA_CMP_EqsIb) {
+    fmt::print("cmp with imm64 {:#x}\n", bochscpu_instr_imm64(Ins));
+  }
+#undef BX_IA_CMP_RAXId
+#undef BX_IA_CMP_EqsIb
+#undef BX_IA_CMP_EqId
+
+#define BX_IA_CMP_EAXId 0x38
+#define BX_IA_CMP_EdId 0x61
+#define BX_IA_CMP_EdsIb 0x6a
+  if (Op == BX_IA_CMP_EAXId || Op == BX_IA_CMP_EdId || Op == BX_IA_CMP_EdsIb) {
+    fmt::print("cmp with imm32 {:#x}\n", bochscpu_instr_imm32(Ins));
+  }
+
+#undef BX_IA_CMP_EAXId
+#undef BX_IA_CMP_EdId
+#undef BX_IA_CMP_EdsIb
+
+#define BX_IA_CMP_AXIw 0x2f
+#define BX_IA_CMP_EwIw 0x4f
+#define BX_IA_CMP_EwsIb 0x58
+  if (Op == BX_IA_CMP_AXIw || Op == BX_IA_CMP_EwIw || Op == BX_IA_CMP_EwsIb) {
+    fmt::print("cmp with imm16 {:#x}\n", bochscpu_instr_imm16(Ins));
+  }
+#undef BX_IA_CMP_AXIw
+#undef BX_IA_CMP_EwIw
+#undef BX_IA_CMP_EwsIb
+}
+
+bool BochscpuBackend_t::Restore(const CpuState_t &CpuState) {
+
+  //
+  // We keep the cr3 at the beginning to be able to know when it is getting
+  // swapped.
+  //
+
+  InitialCr3_ = CpuState.Cr3;
+
+  //
+  // Load the state into the CPU.
+  //
+
+  LoadState(CpuState);
+
+  //
+  // Restore physical memory.
+  //
+
+  uint8_t ZeroPage[Page::Size];
+  memset(ZeroPage, 0, sizeof(ZeroPage));
+  for (const auto DirtyGpa : DirtyGpas_) {
+    const uint8_t *Hva = DmpParser_.GetPhysicalPage(DirtyGpa.U64());
+
+    //
+    // As we allocate physical memory pages full of zeros when
+    // the guest tries to access a GPA that isn't present in the dump,
+    // we need to be able to restore those. It's easy, if the Hva is nullptr,
+    // we point it to a zero page.
+    //
+
+    if (Hva == nullptr) {
+      Hva = ZeroPage;
+    }
+
+    bochscpu_mem_phy_write(DirtyGpa.U64(), Hva, Page::Size);
+  }
+
+  //
+  // Empty the set.
+  //
+
+  DirtyGpas_.clear();
+
+  //
+  // Close the trace file if we had one.
+  //
+
+  if (TraceFile_) {
+    fclose(TraceFile_);
+    TraceFile_ = nullptr;
+    TraceType_ = TraceType_t::NoTrace;
+
+    //
+    // Empty the aggregated coverage set. When tracing we use it as a per-run
+    // unique rips.
+    //
+
+    AggregatedCodeCoverage_.clear();
+  }
+
+  //
+  // Reset the testcase result as well.
+  //
+
+  TestcaseResult_ = Ok_t();
+  return true;
+}
+
+bool BochscpuBackend_t::SetTraceFile(const std::filesystem::path &TraceFile,
+                                     const TraceType_t TraceType) {
+  //
+  // Open the trace file.
+  //
+
+  TraceFile_ = fopen(TraceFile.string().c_str(), "w");
+  if (TraceFile_ == nullptr) {
+    return false;
+  }
+
+  //
+  // Keep track of the type of trace.
+  //
+
+  TraceType_ = TraceType;
+  return true;
+}
+
+void BochscpuBackend_t::DirtyVirtualMemoryRange(const Gva_t Gva,
+                                                const uint64_t Len) {
+
+  //
+  // Tracking the dirty GPAs. Note that bochscpu guarantees us
+  // to get called twice if there's an access that straddles several
+  // pages but external code doesn't guarantee that. So, to be safe
+  // we iterate through the entire memory range and tag dirty pages.
+  //
+
+  const Gva_t EndGva = Gva + Gva_t(Len);
+  const uint64_t Cr3 = bochscpu_cpu_cr3(Cpu_);
+  for (Gva_t AlignedGva = Gva.Align(); AlignedGva < EndGva;
+       AlignedGva += Gva_t(Page::Size)) {
+    const Gpa_t AlignedGpa =
+        Gpa_t(bochscpu_mem_virt_translate(Cr3, AlignedGva.U64()));
+    BochsHooksDebugPrint(
+        "DirtyVirtualMemoryRange: Adding GPA {:#x} to the dirty set..\n",
+        AlignedGpa);
+
+    if (AlignedGpa == Gpa_t(0xffffffffffffffff)) {
+      fmt::print("Could not translate {:#x}\n", AlignedGva);
+      __debugbreak();
+    }
+
+    DirtyGpa(AlignedGpa);
+  }
+}
+
+void BochscpuBackend_t::DirtyPhysicalMemoryRange(const Gpa_t Gpa,
+                                                 const uint64_t Len) {
+
+  //
+  // Tracking the dirty GPAs. Same comment as above applies here.
+  //
+
+  const Gpa_t EndGpa = Gpa + Gpa_t(Len);
+  for (Gpa_t AlignedGpa = Gpa.Align(); AlignedGpa < EndGpa;
+       AlignedGpa += Gpa_t(Page::Size)) {
+    BochsHooksDebugPrint(
+        "DirtyPhysicalMemoryRange: Adding GPA {:#x} to the dirty set..\n",
+        AlignedGpa);
+    DirtyGpa(AlignedGpa);
+  }
+}
+
+const uint8_t *
+BochscpuBackend_t::GetPhysicalPage(const Gpa_t PhysicalAddress) const {
+  return DmpParser_.GetPhysicalPage(PhysicalAddress.U64());
+}
+
+void BochscpuBackend_t::Stop(const TestcaseResult_t &Res) {
+  TestcaseResult_ = Res;
+  bochscpu_cpu_stop(Cpu_);
+}
+
+uint64_t BochscpuBackend_t::Rdrand() {
+  const uint64_t HashSize = sizeof(uint64_t) * 2;
+  uint8_t Hash[HashSize];
+  blake3_hasher Hasher;
+  blake3_hasher_init(&Hasher);
+  blake3_hasher_update(&Hasher, &Seed_, sizeof(Seed_));
+  blake3_hasher_finalize(&Hasher, Hash, HashSize);
+
+  const uint64_t *P = (uint64_t *)Hash;
+  Seed_ = P[0];
+  return P[1];
+}
+
+bool BochscpuBackend_t::DirtyGpa(const Gpa_t Gpa) {
+  return DirtyGpas_.emplace(Gpa.Align()).second;
+}
+
+bool BochscpuBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
+                                      const MemoryValidate_t) const {
+  const uint64_t Cr3 = bochscpu_cpu_cr3(Cpu_);
+  Gpa = Gpa_t(bochscpu_mem_virt_translate(Cr3, Gva.U64()));
+  return Gpa != Gpa_t(0xffffffffffffffff);
+}
+
+uint8_t *BochscpuBackend_t::PhysTranslate(const Gpa_t Gpa) const {
+  return bochscpu_mem_phy_translate(Gpa.U64());
+}
+
+Gva_t BochscpuBackend_t::GetFirstVirtualPageToFault(const Gva_t Gva,
+                                                    const size_t Size) {
+  const uint64_t Cr3 = bochscpu_cpu_cr3(Cpu_);
+  const Gva_t EndGva = Gva + Gva_t(Size);
+  for (Gva_t AlignedGva = Gva.Align(); AlignedGva < EndGva;
+       AlignedGva += Gva_t(Page::Size)) {
+    const Gpa_t AlignedGpa =
+        Gpa_t(bochscpu_mem_virt_translate(Cr3, AlignedGva.U64()));
+    if (AlignedGpa == Gpa_t(0xffffffffffffffff))
+      return AlignedGva;
+  }
+
+  return Gva_t(0xffffffffffffffff);
+}
+
+bool BochscpuBackend_t::PageFaultsMemoryIfNeeded(const Gva_t Gva,
+                                                 const uint64_t Size) {
+
+  //
+  // The problem this function is solving is the following. Imagine that the
+  // guest allocates memory, at which points the kernel sets-up the appropriate
+  // page tables hierarchy but sets the leaf PTEs as non-present. As usual, the
+  // memory management is lazy and you have to access the actual pages for the
+  // page to be valid. This is actually documented in 'VirtualAlloc'
+  // documentation for example:
+  // "Actual physical pages are not allocated unless/until the virtual addresses
+  // are actually accessed."
+  //
+  // So ok. Now, the other piece of the puzzle is that we emulate / instrument
+  // the guest systems in various ways. One of the thing we do a lot in
+  // basically writing to the guest memory ourselves; it means it parses the
+  // page tables and finds the backing page which we write to. This is a great
+  // tool but if you consider the above case, then the leaf PTE structure might
+  // not be present in which case you can't service the write.
+  // The idea to solve this is to perform a memory translation of a virtual
+  // memory range and check which pages are not translatable. When we encounter
+  // one of those, we insert a #PF fault to have the kernel fix the PTE.
+  // That's the idea.
+  //
+  // Cool - let's put things in perspective now. When one of our breakpoint
+  // trigger, in bochs land we are in the `before_exec` hook. It means bochs is
+  // in the process of executing an instruction. It is safe to inject any number
+  // of page faults here because this could happen without us doing it; imagine
+  // a `mov rax, [rcx]` instruction and the memory pointed by @rcx hasn't been
+  // paged in yet. Well, it'll trigger a page fault, the kernel fixes the PTE
+  // and bochs retries to re-executes the instruction. In the above example,
+  // there's probably not going to be another #PF possible, but you could
+  // imagine instructions where several ones could happen like a 'movsb' for
+  // example where both the source and the destination are not paged in. So
+  // anyways, this is good for us.
+  //
+  // Now the way the API works is that `bochscpu_cpu_set_exception` sets an
+  // internal flag that gets read once we return from the hooks; then the guest
+  // services the page fault and will try to re-execute the instruction from the
+  // beginning. This means, our breakpoint triggers again but this time
+  // hopefully the memory is paged in and we don't need to do anything.
+  //
+  // The way we achieve that is by trying to translate every GVA into a GPA, if
+  // we can translate every pages in a range, then we bail because we have no
+  // job to do. If the translation fails, `bochscpu_mem_virt_translate` returns
+  // `0xffffffffffffffff` which is the signal we need to do some work. When we
+  // see that, we know that we have a physical page of memory to page in. So we
+  // set-up cr3 with the GVA that needs paging in, and dispatches the exception.
+  //
+  // If you are wondering what happens if we have an entire range of memory to
+  // page in, well after bochs does its work, the breakpoint triggers again at
+  // which point we are going to be invoked to inspect the memory range and will
+  // notice that the first page is now paged in, so we'll translate the second
+  // one and notices now this one needs paging in. So we'll re-do the same
+  // dance until the whole range is paged in at which point.
+  //
+
+  const Gva_t PageToFault = GetFirstVirtualPageToFault(Gva, Size);
+
+  //
+  // If we haven't found any GVA to fault-in then we have no job to do so we
+  // return.
+  //
+
+  if (PageToFault == Gva_t(0xffffffffffffffff)) {
+    return false;
+  }
+
+  //
+  // At this point, we know we need to fault a page in.
+  // Put the base GVA in cr2.
+  //
+
+  bochscpu_cpu_set_cr2(Cpu_, PageToFault.U64());
+
+  //
+  // Have bochs services the page fault.
+  //
+
+  const uint64_t PfVector = 14;
+  bochscpu_cpu_set_exception(Cpu_, PfVector, ErrorWrite | ErrorUser);
+  return true;
+}
+
+const tsl::robin_set<Gva_t> &BochscpuBackend_t::LastNewCoverage() const {
+  return LastNewCoverage_;
+}
+
+bool BochscpuBackend_t::RevokeLastNewCoverage() {
+  //
+  // Revoking code coverage means removing it from the aggregated set.
+  //
+
+  for (const auto &Gva : LastNewCoverage_) {
+    AggregatedCodeCoverage_.erase(Gva);
+  }
+
+  LastNewCoverage_.clear();
+  return true;
+}
+
+void BochscpuBackend_t::PrintRunStats() { RunStats_.Print(); }
+
+const uint8_t *BochscpuBackend_t::GetTestcaseBuffer() {
+  return TestcaseBuffer_;
+}
+
+uint64_t BochscpuBackend_t::GetTestcaseSize() { return TestcaseBufferSize_; }
+
+void BochscpuBackend_t::LoadState(const CpuState_t &State) {
+  bochscpu_cpu_state_t Bochs;
+  memset(&Bochs, 0, sizeof(Bochs));
+
+  Seed_ = State.Seed;
+  Bochs.bochscpu_seed = State.Seed;
+  Bochs.rax = State.Rax;
+  Bochs.rbx = State.Rbx;
+  Bochs.rcx = State.Rcx;
+  Bochs.rdx = State.Rdx;
+  Bochs.rsi = State.Rsi;
+  Bochs.rdi = State.Rdi;
+  Bochs.rip = State.Rip;
+  Bochs.rsp = State.Rsp;
+  Bochs.rbp = State.Rbp;
+  Bochs.r8 = State.R8;
+  Bochs.r9 = State.R9;
+  Bochs.r10 = State.R10;
+  Bochs.r11 = State.R11;
+  Bochs.r12 = State.R12;
+  Bochs.r13 = State.R13;
+  Bochs.r14 = State.R14;
+  Bochs.r15 = State.R15;
+  Bochs.rflags = State.Rflags;
+  Bochs.tsc = State.Tsc;
+  Bochs.apic_base = State.ApicBase;
+  Bochs.sysenter_cs = State.SysenterCs;
+  Bochs.sysenter_esp = State.SysenterEsp;
+  Bochs.sysenter_eip = State.SysenterEip;
+  Bochs.pat = State.Pat;
+  Bochs.efer = uint32_t(State.Efer.Flags);
+  Bochs.star = State.Star;
+  Bochs.lstar = State.Lstar;
+  Bochs.cstar = State.Cstar;
+  Bochs.sfmask = State.Sfmask;
+  Bochs.kernel_gs_base = State.KernelGsBase;
+  Bochs.tsc_aux = State.TscAux;
+  Bochs.fpcw = State.Fpcw;
+  Bochs.fpsw = State.Fpsw;
+  Bochs.fptw = State.Fptw;
+  Bochs.cr0 = uint32_t(State.Cr0.Flags);
+  Bochs.cr2 = State.Cr2;
+  Bochs.cr3 = State.Cr3;
+  Bochs.cr4 = uint32_t(State.Cr4.Flags);
+  Bochs.cr8 = State.Cr8;
+  Bochs.xcr0 = State.Xcr0;
+  Bochs.dr0 = State.Dr0;
+  Bochs.dr1 = State.Dr1;
+  Bochs.dr2 = State.Dr2;
+  Bochs.dr3 = State.Dr3;
+  Bochs.dr6 = State.Dr6;
+  Bochs.dr7 = State.Dr7;
+  Bochs.mxcsr = State.Mxcsr;
+  Bochs.mxcsr_mask = State.MxcsrMask;
+  Bochs.fpop = State.Fpop;
+
+#define SEG(_Bochs_, _Whv_)                                                    \
+  {                                                                            \
+    Bochs._Bochs_.attr = State._Whv_.Attr;                                     \
+    Bochs._Bochs_.base = State._Whv_.Base;                                     \
+    Bochs._Bochs_.limit = State._Whv_.Limit;                                   \
+    Bochs._Bochs_.present = State._Whv_.Present;                               \
+    Bochs._Bochs_.selector = State._Whv_.Selector;                             \
+  }
+
+  SEG(es, Es);
+  SEG(cs, Cs);
+  SEG(ss, Ss);
+  SEG(ds, Ds);
+  SEG(fs, Fs);
+  SEG(gs, Gs);
+  SEG(tr, Tr);
+  SEG(ldtr, Ldtr);
+
+#undef SEG
+
+#define GLOBALSEG(_Bochs_, _Whv_)                                              \
+  {                                                                            \
+    Bochs._Bochs_.base = State._Whv_.Base;                                     \
+    Bochs._Bochs_.limit = State._Whv_.Limit;                                   \
+  }
+
+  GLOBALSEG(gdtr, Gdtr);
+  GLOBALSEG(idtr, Idtr);
+
+#undef GLOBALSEG
+
+  for (uint64_t Idx = 0; Idx < 8; Idx++) {
+    Bochs.fpst[Idx] = State.Fpst[Idx];
+  }
+
+  for (uint64_t Idx = 0; Idx < 10; Idx++) {
+    memcpy(Bochs.zmm[Idx].q, State.Zmm[Idx].Q, sizeof(Zmm_t::Q));
+  }
+
+  bochscpu_cpu_set_state(Cpu_, &Bochs);
+}
+
+uint64_t BochscpuBackend_t::GetReg(const Registers_t Reg) {
+  using BochscpuGetReg_t = uint64_t (*)(bochscpu_cpu_t);
+  static const std::unordered_map<Registers_t, BochscpuGetReg_t>
+      RegisterMappingGetters = {{Registers_t::Rax, bochscpu_cpu_rax},
+                                {Registers_t::Rbx, bochscpu_cpu_rbx},
+                                {Registers_t::Rcx, bochscpu_cpu_rcx},
+                                {Registers_t::Rdx, bochscpu_cpu_rdx},
+                                {Registers_t::Rsi, bochscpu_cpu_rsi},
+                                {Registers_t::Rdi, bochscpu_cpu_rdi},
+                                {Registers_t::Rip, bochscpu_cpu_rip},
+                                {Registers_t::Rsp, bochscpu_cpu_rsp},
+                                {Registers_t::Rbp, bochscpu_cpu_rbp},
+                                {Registers_t::R8, bochscpu_cpu_r8},
+                                {Registers_t::R9, bochscpu_cpu_r9},
+                                {Registers_t::R10, bochscpu_cpu_r10},
+                                {Registers_t::R11, bochscpu_cpu_r11},
+                                {Registers_t::R12, bochscpu_cpu_r12},
+                                {Registers_t::R13, bochscpu_cpu_r13},
+                                {Registers_t::R14, bochscpu_cpu_r14},
+                                {Registers_t::R15, bochscpu_cpu_r15},
+                                {Registers_t::Rflags, bochscpu_cpu_rflags}};
+
+  if (!RegisterMappingGetters.contains(Reg)) {
+    fmt::print("There is no mapping for register {:x}.\n", Reg);
+    __debugbreak();
+  }
+
+  const BochscpuGetReg_t &Getter = RegisterMappingGetters.at(Reg);
+  return Getter(Cpu_);
+}
+
+uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
+                                   const uint64_t Value) {
+  using BochscpuSetReg_t = void (*)(bochscpu_cpu_t, uint64_t);
+  static const std::unordered_map<Registers_t, BochscpuSetReg_t>
+      RegisterMappingSetters = {{Registers_t::Rax, bochscpu_cpu_set_rax},
+                                {Registers_t::Rbx, bochscpu_cpu_set_rbx},
+                                {Registers_t::Rcx, bochscpu_cpu_set_rcx},
+                                {Registers_t::Rdx, bochscpu_cpu_set_rdx},
+                                {Registers_t::Rsi, bochscpu_cpu_set_rsi},
+                                {Registers_t::Rdi, bochscpu_cpu_set_rdi},
+                                {Registers_t::Rip, bochscpu_cpu_set_rip},
+                                {Registers_t::Rsp, bochscpu_cpu_set_rsp},
+                                {Registers_t::Rbp, bochscpu_cpu_set_rbp},
+                                {Registers_t::R8, bochscpu_cpu_set_r8},
+                                {Registers_t::R9, bochscpu_cpu_set_r9},
+                                {Registers_t::R10, bochscpu_cpu_set_r10},
+                                {Registers_t::R11, bochscpu_cpu_set_r11},
+                                {Registers_t::R12, bochscpu_cpu_set_r12},
+                                {Registers_t::R13, bochscpu_cpu_set_r13},
+                                {Registers_t::R14, bochscpu_cpu_set_r14},
+                                {Registers_t::R15, bochscpu_cpu_set_r15},
+                                {Registers_t::Rflags, bochscpu_cpu_set_rflags}};
+
+  if (!RegisterMappingSetters.contains(Reg)) {
+    fmt::print("There is no mapping for register {:x}.\n", Reg);
+    __debugbreak();
+  }
+
+  const BochscpuSetReg_t &Setter = RegisterMappingSetters.at(Reg);
+  Setter(Cpu_, Value);
+  return Value;
+}
