@@ -10,16 +10,16 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
-      with:
-        languages: cpp
-
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
 
     - name: Setup vs prompt
       uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: cpp
 
     - name: Build
       run: |
@@ -31,8 +31,8 @@ jobs:
 
     - name: Copy dbghelp/symsrv
       run: |
-        copy "c:\program Files (x86)\windows kits\10\debuggers\${{ matrix.platform }}\dbghelp.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\${{ matrix.platform }}\symsrv.dll" src/build
+        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
+        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
