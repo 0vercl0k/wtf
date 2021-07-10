@@ -27,6 +27,7 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Initialize CodeQL
+      if: matrix.generator == 'msvc'
       uses: github/codeql-action/init@v1
       with:
         languages: cpp
@@ -44,14 +45,17 @@ jobs:
         .\build-release-msvc.bat
 
     - name: Perform CodeQL Analysis
+      if: matrix.generator == 'msvc'
       uses: github/codeql-action/analyze@v1
 
     - name: Copy dbghelp/symsrv
+      if: matrix.generator == 'ninja'
       run: |
         copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
         copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
 
     - name: Upload artifacts
+      if: matrix.generator == 'ninja'
       uses: actions/upload-artifact@v2
       with:
         name: bin-win64.RelWithDebInfo
