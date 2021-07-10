@@ -10,6 +10,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: cpp
+
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
 
@@ -20,6 +25,24 @@ jobs:
       run: |
         cd src\build
         .\build-release.bat
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
+
+    - name: Copy dbghelp/symsrv
+      run: |
+        copy "c:\program Files (x86)\windows kits\10\debuggers\${{ matrix.platform }}\dbghelp.dll" src/build
+        copy "c:\program Files (x86)\windows kits\10\debuggers\${{ matrix.platform }}\symsrv.dll" src/build
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: bin-win64.RelWithDebInfo
+        path: |
+          src/build/wtf.exe
+          src/build/wtf.pdb
+          src/build/dbghelp.dll
+          src/build/symsrv.dll
 
   Linux:
     runs-on: ubuntu-20.04
@@ -32,6 +55,11 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: cpp
 
     - name: Installing dependencies
       run: |
@@ -58,3 +86,13 @@ jobs:
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: bin-lin64-${{ matrix.compiler }}.Release
+        path: |
+          src/build/wtf
