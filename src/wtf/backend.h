@@ -24,7 +24,7 @@ struct Cr3Change_t {
 struct Crash_t {
   std::string CrashName;
   Crash_t() = default;
-  explicit Crash_t(std::string CrashName_) : CrashName(CrashName_) {}
+  explicit Crash_t(const std::string &CrashName_) : CrashName(CrashName_) {}
   std::string_view Name() const { return "crash"; }
 };
 

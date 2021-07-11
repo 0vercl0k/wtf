@@ -1,0 +1,1 @@
+..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu --input %* --limit 10000000

@@ -60,6 +60,10 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 }
 
 bool Init(const Options_t &Opts, const CpuState_t &) {
+  //
+  // Stop the test-case once we return back from the call [DeviceIoControl]
+  //
+
   const Gva_t Rip = Gva_t(g_Backend->Rip());
   const Gva_t AfterCall = Rip + Gva_t(6);
   if (!g_Backend->SetBreakpoint(AfterCall, [](Backend_t *Backend) {
@@ -70,8 +74,12 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
     return false;
   }
 
+  //
+  // NOP the calls to DbgPrintEx.
+  //
+
   if (!g_Backend->SetBreakpoint("nt!DbgPrintEx", [](Backend_t *Backend) {
-        const Gva_t FormatPtr = Gva_t(Backend->R8());
+        const Gva_t FormatPtr = Backend->GetArgGva(2);
         const std::string &Format = Backend->VirtReadString(FormatPtr);
         DebugPrint("DbgPrintEx: {}", Format);
         Backend->SimulateReturnFromFunction(0);
@@ -80,6 +88,9 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
     return false;
   }
 
+  //
+  // Make ExGenRandom deterministic.
+  //
   // kd> ub fffff805`3b8287c4 l1
   // nt!ExGenRandom+0xe0:
   // fffff805`3b8287c0 480fc7f2        rdrand  rdx
@@ -92,12 +103,26 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   }
 
   //
-  // Avoid the fuzzer to spin out of control if we mess-up real bad.
+  // Catch bugchecks.
   //
 
-  if (!g_Backend->SetCrashBreakpoint("nt!KeBugCheck2")) {
+  if (!g_Backend->SetBreakpoint("nt!KeBugCheck2", [](Backend_t *Backend) {
+        const uint64_t B0 = g_Backend->GetArg(1);
+        const uint64_t B1 = g_Backend->GetArg(2);
+        const uint64_t B2 = g_Backend->GetArg(3);
+        const uint64_t B3 = g_Backend->GetArg(4);
+        const uint64_t B4 = g_Backend->GetArg(5);
+        const std::string Filename = fmt::format(
+            "crash-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}", B0, B1, B2, B3, B4);
+        DebugPrint("KeBugCheck2: {}\n", Filename);
+        Backend->Stop(Crash_t(Filename));
+      })) {
     return false;
   }
+
+  //
+  // Catch context-switches.
+  //
 
   if (!g_Backend->SetBreakpoint("nt!SwapContext", [](Backend_t *Backend) {
         DebugPrint("nt!SwapContext\n");

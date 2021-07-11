@@ -1,0 +1,1 @@
+..\..\src\build\wtf.exe fuzz --backend=bochscpu --name hevd --max_len 1028 --limit 10000000
