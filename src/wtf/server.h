@@ -293,7 +293,7 @@ class Server_t {
   // Mutator.
   //
 
-  std::unique_ptr<HonggfuzzMutator_t> Mutator_;
+  std::unique_ptr<LibfuzzerMutator_t> Mutator_;
 
   //
   // Master options.
@@ -391,7 +391,7 @@ public:
     // Instantiate the mutator.
     //
 
-    Mutator_ = std::make_unique<HonggfuzzMutator_t>(Rng_);
+    Mutator_ = std::make_unique<LibfuzzerMutator_t>(Rng_);
 
     //
     // Prepare initial seeds.

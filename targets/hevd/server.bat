@@ -1,1 +1,1 @@
-..\..\src\build\wtf.exe master --max_len=1028 --runs=10000000 --target .
+..\..\src\build\wtf.exe master --max_len=1028 --runs=10000000 --target . %*
