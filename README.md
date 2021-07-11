@@ -16,6 +16,52 @@ Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable in
 
 XXX: TODO.
 
+Taking a crash-dump using [bdump.js](https://github.com/yrp604/bdump):
+
+```
+kd> .scriptload c:\\work\\codes\\bdump\\bdump.js
+[bdump] Usage: !bdump "C:\\path\\to\\dump"
+[bdump] Usage: !bdump_full "C:\\path\\to\\dump"
+[bdump] Usage: !bdump_active_kernel "C:\\path\\to\\dump"
+[bdump] This will create a dump directory and fill it with a memory and register files
+[bdump] NOTE: you must include the quotes and escape the backslashes!
+JavaScript script successfully loaded from 'c:\work\codes\bdump\bdump.js'
+
+kd> !bdump_active_kernel "c:\\work\\codes\\wtf\\targets\\hevd\\state"
+[bdump] creating dir...
+[bdump] saving regs...
+[bdump] register fixups...
+[bdump] don't know how to get mxcsr_mask or fpop, setting to zero...
+[bdump]
+[bdump] don't know how to get avx registers, skipping...
+[bdump]
+[bdump] tr.base is not cannonical...
+[bdump] old tr.base: 0x7375c000
+[bdump] new tr.base: 0xfffff8047375c000
+[bdump]
+[bdump] setting flag 0x2000 on cs.attr...
+[bdump] old cs.attr: 0x2fb
+[bdump] new cs.attr: 0x22fb
+[bdump]
+[bdump] rip and gs don't match kernel/user, swapping...
+[bdump] rip: 0x7ff6f5bb111e
+[bdump] new gs.base: 0xdfd9621000
+[bdump] new kernel_gs_base: 0xfffff8046b6f3000
+[bdump]
+[bdump] non-zero IRQL in usermode, resetting to zero...
+[bdump] saving mem, get a coffee or have a smoke, this will probably take around 10-15 minutes...
+[bdump] Creating c:\work\codes\wtf\targets\hevd\state\mem.dmp - Active kernel and user memory bitmap dump
+[bdump] Collecting pages to write to the dump. This may take a while.
+[bdump] 0% written.
+[...]
+[bdump] 95% written. 1 sec remaining.
+[bdump] Wrote 1.5 GB in 23 sec.
+[bdump] The average transfer rate was 64.7 MB/s.
+[bdump] Dump successfully written
+[bdump] done!
+@$bdump_active_kernel("c:\\work\\codes\\wtf\\targets\\hevd\\state")
+```
+
 ## Usage
 
 XXX: TODO.
@@ -132,4 +178,4 @@ To build it yourself you need to start a *Visual Studio Developper Command Promp
 
 ## Authors
 
-Axel '[0vercl0k](https://twitter.com/0vercl0k)' Souchet
+* Axel '[0vercl0k](https://twitter.com/0vercl0k)' Souchet
