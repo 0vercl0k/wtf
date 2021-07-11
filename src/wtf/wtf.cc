@@ -18,7 +18,9 @@ int main(int argc, const char *argv[]) {
 
   Options_t Opts;
 
-  CLI::App Wtf("what the fuzz");
+  CLI::App Wtf("what the fuzz: a distributed, code-coverage guided, "
+               "customizable,\ncross-platform snapshot-based fuzzer by Axel "
+               "'0vercl0k' Souchet.\n");
 
   Wtf.require_subcommand(1);
   Wtf.allow_windows_style_options();
@@ -76,7 +78,7 @@ int main(int argc, const char *argv[]) {
       ->required();
 
   MasterCmd->add_option("--target", Opts.Master.TargetPath, "Target path")
-      ->description("State directory")
+      ->description("Target directory")
       ->required();
 
   MasterCmd->add_option("--inputs", Opts.Master.InputsPath, "Inputs")
