@@ -545,6 +545,17 @@ public:
       }
 
       //
+      // Let's check if we have no more paths to handle and that we aren't going
+      // above the number of mutations we are supposed to do.
+      //
+
+      if (Mutations_ >= Opts_.Runs && Paths_.size() == 0) {
+        fmt::print("Completed {} mutations, time to stop the server..\n",
+                   Mutations_);
+        break;
+      }
+
+      //
       // Scan the write set.
       //
 
@@ -575,17 +586,6 @@ public:
           Ret = EXIT_FAILURE;
           break;
         }
-      }
-
-      //
-      // Let's check if we have no more paths to handle and that we aren't going
-      // above the number of mutations we are supposed to do.
-      //
-
-      if (Mutations_ >= Opts_.Runs && Paths_.size() == 0) {
-        fmt::print("Completed {} mutations, time to stop the server..\n",
-                   Mutations_);
-        break;
       }
     }
 
