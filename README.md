@@ -22,8 +22,8 @@ wtf runs user & kernel mode through an *execution backend* and relies on the use
 
 The usual workflow to harness a target is as follows:
 
-1. Get your target running into an Hyper-V VM running Windows with one virtual CPU and 4GB of RAM,
-1. Put your target into the desired state using [KD](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/). For example, to target [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver)'s IOCTL handler, I chose to stop the target in user-mode right before the client invokes [DeviceIoControl](https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol). This will vary depending on your targets but you probably want it to be close from the code you want to fuzz.,
+1. Get your target running into a Hyper-V VM running Windows with one virtual CPU and 4GB of RAM,
+1. Put your target into the desired state using [KD](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/). For example, to target [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver)'s IOCTL handler, I chose to stop the target in user-mode right before the client invokes [DeviceIoControl](https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol). This will vary depending on your targets but you probably want it to be close to the code you want to fuzz.
 
     ```
     kd> r
@@ -89,7 +89,7 @@ The usual workflow to harness a target is as follows:
 
 At this point you should start to iterate and verify that the fuzzer module works as expected. The execution backends are a blackbox so you should generate execution traces to make sure it goes through the right paths, does the right things. During this phase I mainly use the [bochscpu](https://github.com/yrp604/bochscpu) backend as it is fully deterministic, starts fast, generating execution traces is possible, code-coverage comes for free, etc. Overall, it's a nicer environment to develop and prototype in.
 
-Once you are satisfied with the module, you can start to look at making it work with the [winhv](https://github.com/0vercl0k/wtf/blob/main/src/wtf/whv_backend.h) / [kvm](https://github.com/0vercl0k/wtf/blob/main/src/wtf/kvm_backend.h) backends if you need it to run under those. One major different between the *bochscpu* backend & the others, is that the others use software breakpoints to provide code-coverage information. As a result, you'll need to load the modules you want coverage for under [IDA](https://hex-rays.com/IDA-pro/) and use the [gen_coveragefile_ida.py](https://github.com/0vercl0k/wtf/blob/main/script/gen_coveragefile_ida.py) script to generate a simple JSON file that gets loaded by wtf. You are free to generate this JSON file yourself using whatever tool you would like: it basically is a list of basic-blocks virtual addresses. 
+Once you are satisfied with the module, you can start to look at making it work with the [winhv](https://github.com/0vercl0k/wtf/blob/main/src/wtf/whv_backend.h) / [kvm](https://github.com/0vercl0k/wtf/blob/main/src/wtf/kvm_backend.h) backends if you need it to run under those. One major difference between the *bochscpu* backend & the others, is that the others use software breakpoints to provide code-coverage information. As a result, you'll need to load the modules you want coverage for under [IDA](https://hex-rays.com/IDA-pro/) and use the [gen_coveragefile_ida.py](https://github.com/0vercl0k/wtf/blob/main/script/gen_coveragefile_ida.py) script to generate a simple JSON file that gets loaded by wtf. You are free to generate this JSON file yourself using whatever tool you would like: it basically is a list of basic-blocks virtual addresses. 
 
 ## Usage
 
@@ -147,6 +147,20 @@ This is how you would would run the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10
 <img src='pics/run.gif'>
 </p>
 
+### Minseting a corpus
+
+To minset a corpus, you need to use a server node and as many client nodes as you need like you would for a fuzzing job. You can simply set the `runs` optins to 0.
+
+This is how you would minset the corpus in `outputs` into the `minset` directory (also highlights how you can override the `inputs` and `outputs` directories):
+
+```
+..\..\src\build\wtf.exe master --max_len=1028 --runs=0 --target . --inputs=outputs --outputs=minset
+```
+
+<p align='center'>
+<img src='pics/minset.gif'>
+</p>
+
 ### Generating execution traces
 
 The main mechanism available to instrospect in an execution backend is to generate an execution trace. *bochscpu* is the only backend that has the ability to generate a complete execution traces so it is best to use for debugging purposes. The other backends only generate execution traces used to measure code-coverage (address of the first instruction in a basic block).
@@ -173,19 +187,66 @@ symbolizer.exe --input crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.t
 <img src='pics/symbolizer.gif'>
 </p>
 
-### Minseting a corpus
+### Generating code-coverage traces
 
-To minset a corpus, you need to use a server node and as many client nodes as you need like you would for a fuzzing job. You can simply set the `runs` optins to 0.
+To generate code-coverage traces you can simply use the `run` subcommand with the `--trace-type=cov` option.
 
-This is how you would minset the corpus in `outputs` into the `minset` directory (also highlights how you can override the `inputs` and `outputs` directories):
+This is how you would generate code-coverage traces for all the files inside the `minset` folder and store them in the `coverage-traces` folder:
 
 ```
-..\..\src\build\wtf.exe master --max_len=1028 --runs=0 --target . --inputs=outputs --outputs=minset
+..\..\src\build\wtf.exe run --name hevd --state state --backend=whv --input minset --trace-path=coverage-traces --trace-type=cov
 ```
 
 <p align='center'>
-<img src='pics/minset.gif'>
+<img src='pics/ccov.gif'>
 </p>
+
+Those traces aren't directly loadable into [lighthouse](https://github.com/gaasedelen/lighthouse) because they aren't symbolized.
+
+This is how you would symbolize all the files inside the `coverage-traces` folder and write the results into `coverage-traces-symbolized`:
+
+```
+symbolizer.exe --input coverage-traces --crash-dump state\mem.dmp -o coverage-traces-symbolized --style modoff
+```
+
+<p align='center'>
+<img src='pics/symbolizer-ccov.gif'>
+</p>
+
+And finally, you can load those up in [lighthouse](https://github.com/gaasedelen/lighthouse):
+
+<p align='center'>
+<img src='pics/lighthouse.gif'>
+</p>
+
+## Execution backends
+
+In this section I briefly mention various differences between the execution backends.
+
+### bochscpu
+
+- ✅ Code-coverage
+- ✅ Demand-paging,
+- ✅ Timeout is the number of instructions which is very precise,
+- ✅ Full execution traces are supported,
+- ✅ Fully deterministic,
+- ❌Speed seems to be good for short executions but not for long executions (~100x slower than KVM when I was fuzzing IDA).
+
+### whv
+- ✔ Code-coverage via software breakpoints,
+- ❌ Demand-paging so start-up is slow (as it needs to load the full crash-dump in memory),
+- ✔ Timeout is implemented with a timer,
+- ✔ Only code-coverage traces are supported,
+- ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
+- ☑ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
+
+### KVM
+- ✔ Code-coverage via software breakpoints,
+- ✅ Demand-paging is supported via UFDD,
+- ✔ Timeout is implemented with a timer. ✅ If the hardware supports PMU virtualization, it is used to generate an interrupt after X retired instructions (`MSR_IA32_FIXED_CTR0`);
+- ✔ Only code-coverage traces are supported,
+- ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
+- ✅ Fastest for long executions (~500m - 1.5 billion instructions) to be ok but there seems to be a lot of bottleneck in whv (~100x faster than *bochscpu*, ~10x faster than *whv* when I was fuzzing IDA) than WHV when I was fuzzing IDA).
 
 ## Build
 
