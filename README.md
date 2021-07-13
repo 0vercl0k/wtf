@@ -18,7 +18,7 @@ Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable in
 
 ## How it works
 
-wtf runs user & kernel mode through an *execution backend* and relies on the user to insert test-cases in the target. Unlike other classical fuzzer tools, wtf doesn't do much of the heavy lifting; the user does. The user needs to know the harnessed target very well and onboarding a target is an iterative process that will take time. It has a lot of flexibility to offer if you are ready to get hacking though :)
+*wtf* runs user & kernel mode through an *execution backend* and relies on the user to insert test-cases in the target. Unlike other classical fuzzer tools, *wtf* doesn't do much of the heavy lifting; the user does. The user needs to know the harnessed target very well and onboarding a target is an iterative process that will take time. It has a lot of flexibility to offer if you are ready to get hacking though :)
 
 The usual workflow to harness a target is as follows:
 
@@ -93,13 +93,13 @@ Once you are satisfied with the module, you can start to look at making it work 
 
 ## Usage
 
-The best way to try the features out is to work the the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) example module. You can grab the [target-hevd.7z]() archive and extract it into the `targets/` directory. The archive contains the directory tree that is expected for every targets:
+The best way to try the features out is to work the the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) example module. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) archive and extract it into the `targets/` directory. The archive contains the directory tree that is expected for every targets:
 
 - `inputs` is the folder where your input test-cases go into,
 - `outputs` is the folder where the current minset files are saved into,
 - `coverage` is the folder where the `.cov` files are expected to be in,
 - `crashes` is where the crashes gets saved in,
-- `state` is where the memory dump (`mem.dmp`) as well as the CPU state (`regs.json`) and the symbol store are stored in (`symbol-store.json`). The symbol store is a simple JSON file that is used on Linux systems to know where to put breakpoints as there is no support for symbols / dbgeng on those platforms. wtf generates this file at runtime everytime you run your target on Windows.
+- `state` is where the memory dump (`mem.dmp`) as well as the CPU state (`regs.json`) and the symbol store are stored in (`symbol-store.json`). The symbol store is a simple JSON file that is used on Linux systems to know where to put breakpoints as there is no support for symbols / dbgeng on those platforms. *wtf* generates this file at runtime everytime you run your target on Windows.
 
 ### Starting a server node
 
@@ -111,7 +111,7 @@ This is how you might choose to launch a server node:
 (base) c:\work\codes\wtf\targets\hevd>..\..\src\build\wtf.exe master --max_len=1028 --runs=10000000 --target . --address tcp://192.168.2.41/
 ```
 
-The `max_len` option is used to limit the size of the generated test-case, `runs` is the number of test-cases it will generate, `address` specify where wtf needs to be listening on and `target` is a directory with the directory tree we described above (the user can also choose to override those directories with `--input` / `--output` / `--crashes`).
+The `max_len` option is used to limit the size of the generated test-case, `runs` is the number of test-cases it will generate, `address` specify where *wtf* needs to be listening on and `target` is a directory with the directory tree we described above (the user can also choose to override those directories with `--input` / `--output` / `--crashes`).
 
 <p align='center'>
 <img src='pics/server.gif'>
@@ -250,7 +250,7 @@ In this section I briefly mention various differences between the execution back
 
 ## Build
 
-The [CI](https://github.com/0vercl0k/wtf/blob/main/.github/workflows/wtf.yml) builds wtf on Ubuntu 20.04 using [clang++-11](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
+The [CI](https://github.com/0vercl0k/wtf/blob/main/.github/workflows/wtf.yml) builds *wtf* on Ubuntu 20.04 using [clang++-11](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
 
 To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](https://github.com/0vercl0k/wtf/blob/main/src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](https://github.com/0vercl0k/wtf/blob/main/src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
 
