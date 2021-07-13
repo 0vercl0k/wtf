@@ -1,0 +1,119 @@
+name: Builds
+
+on: [push, pull_request]
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  Windows:
+    runs-on: windows-latest 
+    strategy:
+      fail-fast: false
+      matrix:
+        generator: ['ninja', 'msvc']
+
+    name: Windows latest / ${{ matrix.generator }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Setup vs prompt
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Initialize CodeQL
+      if: matrix.generator == 'msvc'
+      uses: github/codeql-action/init@v1
+      with:
+        languages: cpp
+
+    - name: Build with Ninja/cl
+      if: matrix.generator == 'ninja'
+      run: |
+        cd src\build
+        .\build-release.bat
+
+    - name: Build with msvc
+      if: matrix.generator == 'msvc'
+      run: |
+        cd src\build
+        .\build-release-msvc.bat
+
+    - name: Perform CodeQL Analysis
+      if: matrix.generator == 'msvc'
+      uses: github/codeql-action/analyze@v1
+
+    - name: Copy dbghelp/symsrv
+      if: matrix.generator == 'ninja'
+      run: |
+        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
+        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
+
+    - name: Upload artifacts
+      if: matrix.generator == 'ninja'
+      uses: actions/upload-artifact@v2
+      with:
+        name: bin-win64.RelWithDebInfo
+        path: |
+          src/build/wtf.exe
+          src/build/wtf.pdb
+          src/build/dbghelp.dll
+          src/build/symsrv.dll
+
+  Linux:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: ['clang', 'gcc']
+
+    name: Ubuntu 20.04 / ${{ matrix.compiler }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: cpp
+
+    - name: Installing dependencies
+      run: |
+        sudo apt-get -y update
+        sudo apt install -y g++-10 ninja-build
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+
+    - name: Build with gcc
+      if: matrix.compiler == 'gcc'
+      env:
+        CC: gcc-10
+        CXX: g++-10
+      run: |
+        cd src/build
+        chmod u+x ./build-release.sh
+        ./build-release.sh
+
+    - name: Build with clang
+      if: matrix.compiler == 'clang'
+      env:
+        CC: clang-11
+        CXX: clang++-11
+      run: |
+        cd src/build
+        chmod u+x ./build-release.sh
+        ./build-release.sh
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: bin-lin64-${{ matrix.compiler }}.Release
+        path: |
+          src/build/wtf

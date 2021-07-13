@@ -1,0 +1,94 @@
+# Axel '0vercl0k' Souchet - July 26 2020
+name: Builds
+
+on: [push, pull_request]
+
+jobs:
+  Ubuntu2004:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Available versions: https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+        # We don't test below 3.6 because f'strings were implemented in 3.6 and we use them in build scripts, etc.
+        pyver: ['3.6', '3.7', '3.8', '3.9', '3.x']
+        compiler: ['clang', 'gcc']
+
+    name: Ubuntu 20.04 - Py${{ matrix.pyver }} / ${{ matrix.compiler }}
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup Python3
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.pyver }}
+        architecture: 'x64'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get -y update
+        sudo apt install -y g++-10-multilib g++-10 ninja-build
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+
+    - name: Build with gcc
+      if: matrix.compiler == 'gcc'
+      run: python3 builder.py --run-tests
+      env:
+        CC: gcc-10
+        CXX: g++-10
+
+    - name: Build with clang
+      if: matrix.compiler == 'clang'
+      run: python3 builder.py --run-tests
+      env:
+        CC: clang-11
+        CXX: clang++-11
+
+    - name: Upload artifacts for rel/x64
+      uses: actions/upload-artifact@v2
+      with:
+        name: linx64-RelWithDebInfo-py${{ matrix.pyver }}
+        path: bin/linx64-RelWithDebInfo
+
+    - name: Upload artifacts for dbg/x64
+      uses: actions/upload-artifact@v2
+      with:
+        name: linx64-Debug-py${{ matrix.pyver }}
+        path: bin/linx64-Debug
+
+  Windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        pyver: ['3.6', '3.7', '3.8', '3.9', '3.x']
+
+    name: Windows latest - Py${{ matrix.pyver }}
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup Python3
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.pyver }}
+        architecture: 'x64'
+
+    - name: Setup vs prompt
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build
+      run: python builder.py --run-tests
+
+    - name: Upload artifacts for rel/x64
+      uses: actions/upload-artifact@v2
+      with:
+        name: winx64-RelWithDebInfo-py${{ matrix.pyver }}
+        path: bin/winx64-RelWithDebInfo
+
+    - name: Upload artifacts for dbg/x64
+      uses: actions/upload-artifact@v2
+      with:
+        name: winx64-Debug
+        path: bin/winx64-Debug
