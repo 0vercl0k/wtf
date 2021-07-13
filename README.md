@@ -246,7 +246,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Timeout is implemented with a timer. ✅ If the hardware supports PMU virtualization, it is used to generate an interrupt after X retired instructions (`MSR_IA32_FIXED_CTR0`);
 - ✔ Only code-coverage traces are supported,
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
-- ✅ Fastest for long executions (~500m - 1.5 billion instructions) to be ok but there seems to be a lot of bottleneck in whv (~100x faster than *bochscpu*, ~10x faster than *whv* when I was fuzzing IDA) than WHV when I was fuzzing IDA).
+- ✅ Fastest for long executions (~500m - 1.5 billion instructions; ~100x faster than *bochscpu*, ~10x faster than *whv* when I was fuzzing IDA).
 
 ## Build
 
