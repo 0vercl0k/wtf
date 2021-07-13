@@ -144,7 +144,7 @@ And finally, you can load those up in [lighthouse](https://github.com/gaasedelen
 <img src='pics/lighthouse.gif'>
 </p>
 
-## How it works
+## How does it work?
 
 *wtf* runs user & kernel mode through an *execution backend* and relies on the user to insert test-cases in the target. Unlike other classical fuzzer tools, *wtf* doesn't do much of the heavy lifting; the user does. The user needs to know the harnessed target very well and onboarding a target is an iterative process that will take time. It has a lot of flexibility to offer if you are ready to get hacking though :)
 
