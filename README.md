@@ -225,7 +225,7 @@ In this section I briefly mention various differences between the execution back
 
 ### bochscpu
 
-- ✅ Code-coverage
+- ✅ Full system code-coverage,
 - ✅ Demand-paging,
 - ✅ Timeout is the number of instructions which is very precise,
 - ✅ Full execution traces are supported,
@@ -243,7 +243,7 @@ In this section I briefly mention various differences between the execution back
 ### KVM
 - ✔ Code-coverage via software breakpoints,
 - ✅ Demand-paging is supported via UFDD,
-- ✔ Timeout is implemented with a timer. ✅ If the hardware supports PMU virtualization, it is used to generate an interrupt after X retired instructions (`MSR_IA32_FIXED_CTR0`);
+- ✔ Timeout is implemented with a timer. ✅ If the hardware supports PMU virtualization, it is used to generate a [PMI](https://forum.osdev.org/viewtopic.php?f=1&t=27040) after X retired instructions (`MSR_IA32_FIXED_CTR0`),
 - ✔ Only code-coverage traces are supported,
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
 - ✅ Fastest for long executions (~500m - 1.5 billion instructions; ~100x faster than *bochscpu*, ~10x faster than *whv* when I was fuzzing IDA).
