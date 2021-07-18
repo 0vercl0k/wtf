@@ -15,6 +15,7 @@
 #endif
 
 bool SetupUsermodeCrashDetectionHooks() {
+
   //
   // This is to catch the PMI interrupt if performance counters are used to
   // bound execution.
