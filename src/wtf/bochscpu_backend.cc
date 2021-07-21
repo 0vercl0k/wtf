@@ -274,6 +274,7 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   TestcaseBuffer_ = Buffer;
   TestcaseBufferSize_ = BufferSize;
   LastNewCoverage_.clear();
+  bochscpu_cpu_state(Cpu_, &CpuStatePrev_);
 
   //
   // Reset some of the stats.
@@ -344,6 +345,14 @@ void BochscpuBackend_t::AfterExecutionHook(/*void *Context, */ uint32_t,
   RunStats_.NumberInstructionsExecuted++;
 
   //
+  // Dump register + mem changes if generating Tenet traces.
+  //
+
+  if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
+    DumpDelta();
+  }
+
+  //
   // Check the instruction limit.
   //
 
@@ -389,15 +398,27 @@ __declspec(safebuffers)
   if (TraceFile_) {
     const bool RipTrace = TraceType_ == TraceType_t::Rip;
     const bool UniqueRipTrace = TraceType_ == TraceType_t::UniqueRip;
+    const bool TenetTrace = TraceType_ == TraceType_t::Tenet;
     const bool NewRip = Res.second;
 
-    //
-    // On Linux we don't have access to dbgeng so just write the plain address
-    // for both Windows & Linux.
-    //
-
     if (RipTrace || (UniqueRipTrace && NewRip)) {
+
+      //
+      // On Linux we don't have access to dbgeng so just write the plain
+      // address for both Windows & Linux.
+      //
+
       fmt::print(TraceFile_, "{:#x}\n", Rip);
+
+    } else if (TenetTrace) {
+
+      //
+      // Save a complete copy of the Cpu registers so that we can diff
+      // them against the next step when taking Tenet traces
+      //
+
+      bochscpu_cpu_state(Cpu_, &CpuStatePrev_);
+
     }
   }
 
@@ -435,6 +456,14 @@ void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
   //
 
   RunStats_.NumberMemoryAccesses += Len;
+
+  //
+  // Log explicit details about the memory access if taking a full-trace
+  //
+
+  if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
+    MemAccesses_.push_back(BochscpuMemAccess_t(VirtualAddress, Len, MemAccess));
+  }
 
   //
   // If this is not a write access, we don't care to go further.
@@ -1015,4 +1044,94 @@ uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
   const BochscpuSetReg_t &Setter = RegisterMappingSetters.at(Reg);
   Setter(Cpu_, Value);
   return Value;
+}
+
+void BochscpuBackend_t::DumpDelta() {
+
+  uint8_t buffer_raw[1024] = {};
+  char buffer_printed[2048 + 1] = {}; // +1 for null term
+
+  //
+  // dump register delta
+  //
+
+  if (bochscpu_cpu_rax(Cpu_) != CpuStatePrev_.rax)
+    fmt::print(TraceFile_, "rax={:#x},", bochscpu_cpu_rax(Cpu_));
+  if (bochscpu_cpu_rbx(Cpu_) != CpuStatePrev_.rbx)
+    fmt::print(TraceFile_, "rbx={:#x},", bochscpu_cpu_rbx(Cpu_));
+  if (bochscpu_cpu_rcx(Cpu_) != CpuStatePrev_.rcx)
+    fmt::print(TraceFile_, "rcx={:#x},", bochscpu_cpu_rcx(Cpu_));
+  if (bochscpu_cpu_rdx(Cpu_) != CpuStatePrev_.rdx)
+    fmt::print(TraceFile_, "rdx={:#x},", bochscpu_cpu_rdx(Cpu_));
+  if (bochscpu_cpu_rbp(Cpu_) != CpuStatePrev_.rbp)
+    fmt::print(TraceFile_, "rbp={:#x},", bochscpu_cpu_rbp(Cpu_));
+  if (bochscpu_cpu_rsp(Cpu_) != CpuStatePrev_.rsp)
+    fmt::print(TraceFile_, "rsp={:#x},", bochscpu_cpu_rsp(Cpu_));
+  if (bochscpu_cpu_rsi(Cpu_) != CpuStatePrev_.rsi)
+    fmt::print(TraceFile_, "rsi={:#x},", bochscpu_cpu_rsi(Cpu_));
+  if (bochscpu_cpu_rdi(Cpu_) != CpuStatePrev_.rdi)
+    fmt::print(TraceFile_, "rdi={:#x},", bochscpu_cpu_rdi(Cpu_));
+  if (bochscpu_cpu_r8(Cpu_) != CpuStatePrev_.r8)
+    fmt::print(TraceFile_, "r8={:#x},", bochscpu_cpu_r8(Cpu_));
+  if (bochscpu_cpu_r9(Cpu_) != CpuStatePrev_.r9)
+    fmt::print(TraceFile_, "r9={:#x},", bochscpu_cpu_r9(Cpu_));
+  if (bochscpu_cpu_r10(Cpu_) != CpuStatePrev_.r10)
+    fmt::print(TraceFile_, "r10={:#x},", bochscpu_cpu_r10(Cpu_));
+  if (bochscpu_cpu_r11(Cpu_) != CpuStatePrev_.r11)
+    fmt::print(TraceFile_, "r11={:#x},", bochscpu_cpu_r11(Cpu_));
+  if (bochscpu_cpu_r12(Cpu_) != CpuStatePrev_.r12)
+    fmt::print(TraceFile_, "r12={:#x},", bochscpu_cpu_r12(Cpu_));
+  if (bochscpu_cpu_r13(Cpu_) != CpuStatePrev_.r13)
+    fmt::print(TraceFile_, "r13={:#x},", bochscpu_cpu_r13(Cpu_));
+  if (bochscpu_cpu_r14(Cpu_) != CpuStatePrev_.r14)
+    fmt::print(TraceFile_, "r14={:#x},", bochscpu_cpu_r14(Cpu_));
+  if (bochscpu_cpu_r15(Cpu_) != CpuStatePrev_.r15)
+    fmt::print(TraceFile_, "r15={:#x},", bochscpu_cpu_r15(Cpu_));
+
+  fmt::print(TraceFile_, "rip={:#x}", bochscpu_cpu_rip(Cpu_));
+
+  //
+  // dump memory delta
+  //
+
+  for (const auto AccessInfo : MemAccesses_) {
+      const char *type = NULL;
+
+      // determine the label to use for this memory access
+      switch (AccessInfo.MemAccess) {
+        case BOCHSCPU_HOOK_MEM_READ:
+        type = "mr";
+        break;
+        case BOCHSCPU_HOOK_MEM_RW:
+        type = "mrw";
+        break;
+        case BOCHSCPU_HOOK_MEM_WRITE:
+        type = "mw";
+        break;
+      }
+
+      // Ignore unknown memory-accesses types for now...
+      if (type == NULL)
+        continue;
+
+      // I think this is true for bochs, but just to be sure...
+      assert(Len < sizeof(buffer_raw));
+
+      // Fetch the memory that was read or written by the last executed instruction
+      VirtRead(Gva_t(AccessInfo.VirtualAddress), buffer_raw, AccessInfo.Len);
+
+      // Convert the raw memory bytes to a human-readable hex string
+      for (int i = 0; i < AccessInfo.Len; i++) {
+        sprintf_s(&buffer_printed[i * 2], 3, "%02X", buffer_raw[i]);
+      }
+
+      // Write the formatted memory access to file, eg 'mr=0x140148040:0000000400080040'
+      fmt::print(TraceFile_, ",{}={:#x}:{}", type, AccessInfo.VirtualAddress, buffer_printed);
+  }
+
+  // Clear out the saved memory accesses as they are no longer needed
+  MemAccesses_.clear();
+
+  // End of delta
+  fmt::print(TraceFile_, "\n");
 }

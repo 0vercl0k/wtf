@@ -1200,7 +1200,14 @@ enum class TraceType_t {
   // This is a trace of only unique rip locations.
   //
 
-  UniqueRip
+  UniqueRip,
+
+  //
+  // This is a Tenet trace of register & mem changes.
+  //
+
+  Tenet
+
 };
 
 //

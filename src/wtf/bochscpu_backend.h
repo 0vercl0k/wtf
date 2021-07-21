@@ -51,6 +51,20 @@ struct BochscpuBreakpoint_t {
       : Gva_(Gva), Handler_(Handler) {}
 };
 
+//
+// A structure to capture information about a single memory access (tracing).
+//
+
+struct BochscpuMemAccess_t {
+  const uint64_t VirtualAddress;
+  const uintptr_t Len;
+  const uint32_t MemAccess;
+  explicit BochscpuMemAccess_t(const uint64_t VirtualAddress,
+                                   const uintptr_t Len,
+                                   const uint32_t MemAccess)
+      : VirtualAddress(VirtualAddress), Len(Len), MemAccess(MemAccess) {}
+};
+
 class BochscpuBackend_t : public Backend_t {
 
   //
@@ -97,10 +111,22 @@ class BochscpuBackend_t : public Backend_t {
   std::vector<BochscpuBreakpoint_t> Breakpoints_;
 
   //
+  // List of memory accesses.
+  //
+
+  std::vector<BochscpuMemAccess_t> MemAccesses_;
+
+  //
   // Cpu.
   //
 
   bochscpu_cpu_t Cpu_ = nullptr;
+
+  //
+  // A copy of Cpu registers at t-1 (the previous instruction).
+  //
+
+  bochscpu_cpu_state_t CpuStatePrev_;
 
   //
   // The hooks we define onto the Cpu.
@@ -285,4 +311,7 @@ private:
 
   const uint8_t *GetTestcaseBuffer();
   uint64_t GetTestcaseSize();
+
+  void DumpDelta();
+
 };
