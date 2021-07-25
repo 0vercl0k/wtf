@@ -256,7 +256,12 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
 
 bool BochscpuBackend_t::SetBreakpoint(const Gva_t Gva,
                                       const BreakpointHandler_t Handler) {
-  Breakpoints_.emplace_back(Gva, Handler);
+  if (Breakpoints_.contains(Gva)) {
+    fmt::print("/!\\ There is already a breakpoint set on {:#x}\n", Gva);
+    return false;
+  }
+
+  Breakpoints_.emplace(Gva, Handler);
   return true;
 }
 
@@ -402,18 +407,11 @@ __declspec(safebuffers)
   }
 
   //
-  // Handle the breakpoints.
+  // Handle breakpoints.
   //
 
-  for (const auto &Breakpoint : Breakpoints_) {
-
-    //
-    // If we have a breakpoint registered for this rip, invoke the handler.
-    //
-
-    if (Breakpoint.Gva_ == Rip) {
-      Breakpoint.Handler_(this);
-    }
+  if (Breakpoints_.contains(Rip)) {
+    Breakpoints_.at(Rip)(this);
   }
 }
 

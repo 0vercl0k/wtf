@@ -6,6 +6,7 @@
 #include "globals.h"
 #include "kdmp-parser.h"
 #include "platform.h"
+#include "tsl/robin_map.h"
 #include "tsl/robin_set.h"
 #include "utils.h"
 #include <cstdlib>
@@ -36,19 +37,6 @@ struct BochscpuRunStats_t {
     NumberInstructionsExecuted = 0;
     NumberMemoryAccesses = 0;
   }
-};
-
-//
-// A breakpoint is basically a gva and a handler.
-//
-
-struct BochscpuBreakpoint_t {
-  const Gva_t Gva_;
-  const BreakpointHandler_t Handler_;
-
-  explicit BochscpuBreakpoint_t(const Gva_t Gva,
-                                const BreakpointHandler_t Handler)
-      : Gva_(Gva), Handler_(Handler) {}
 };
 
 class BochscpuBackend_t : public Backend_t {
@@ -91,10 +79,10 @@ class BochscpuBackend_t : public Backend_t {
   tsl::robin_pg_set<Gpa_t, IdentityGpaHash> DirtyGpas_;
 
   //
-  // List of breakpoints.
+  // Breakpoints. This maps a GVA to a breakpoint.
   //
 
-  std::vector<BochscpuBreakpoint_t> Breakpoints_;
+  tsl::robin_map<Gva_t, BreakpointHandler_t> Breakpoints_;
 
   //
   // Cpu.

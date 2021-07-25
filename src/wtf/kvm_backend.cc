@@ -1891,6 +1891,11 @@ bool KvmBackend_t::SetBreakpoint(const Gva_t Gva,
   // the dmp cache knows about the breakpoint as well.
   //
 
+  if (Breakpoints_.contains(Gva)) {
+    fmt::print("/!\\ There already is a breakpoint at {:#x}\n", Gva);
+    return false;
+  }
+
   KvmBreakpoint_t Breakpoint(Gpa, Handler);
   Breakpoints_.emplace(Gva, Breakpoint);
   const uint8_t *Hva = Ram_.AddBreakpoint(Gpa);
