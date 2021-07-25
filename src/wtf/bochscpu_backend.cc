@@ -257,7 +257,7 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
 bool BochscpuBackend_t::SetBreakpoint(const Gva_t Gva,
                                       const BreakpointHandler_t Handler) {
   if (Breakpoints_.contains(Gva)) {
-    fmt::print("/!\\ There is already a breakpoint set on {:#x}\n", Gva);
+    fmt::print("/!\\ There is already a breakpoint at {:#x}\n", Gva);
     return false;
   }
 
