@@ -1744,7 +1744,7 @@ uint64_t KvmBackend_t::GetReg(const Registers_t Reg) {
   }
 
   case Registers_t::Cr3: {
-    return Run_->s.regs.sregs.cr2;
+    return Run_->s.regs.sregs.cr3;
   }
   }
 
@@ -1850,12 +1850,12 @@ uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
   }
 
   case Registers_t::Cr2: {
-    Run_->s.regs.regs.cr2 = Value;
+    Run_->s.regs.sregs.cr2 = Value;
     break;
   }
 
   case Registers_t::Cr3: {
-    Run_->s.regs.regs.cr3 = Value;
+    Run_->s.regs.sregs.cr3 = Value;
     break;
   }
   }
