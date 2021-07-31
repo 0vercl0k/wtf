@@ -1738,10 +1738,16 @@ uint64_t KvmBackend_t::GetReg(const Registers_t Reg) {
   case Registers_t::Rflags: {
     return Run_->s.regs.regs.rflags;
   }
+
+  case Registers_t::Cr2: {
+    return Run_->s.regs.sregs.cr2;
   }
 
-  __debugbreak();
-  return 0;
+  default: {
+    __debugbreak();
+    return 0;
+  }
+  }
 }
 
 uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {

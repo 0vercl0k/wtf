@@ -48,7 +48,8 @@ const std::unordered_map<Registers_t, WHV_REGISTER_NAME> RegisterMapping = {
     {Registers_t::R13, WHvX64RegisterR13},
     {Registers_t::R14, WHvX64RegisterR14},
     {Registers_t::R15, WHvX64RegisterR15},
-    {Registers_t::Rflags, WHvX64RegisterRflags}};
+    {Registers_t::Rflags, WHvX64RegisterRflags},
+    {Registers_t::Cr2, WHvX64RegisterCr2}};
 
 //
 // WHVExitReason to string conversion.

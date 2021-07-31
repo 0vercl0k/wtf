@@ -971,7 +971,8 @@ uint64_t BochscpuBackend_t::GetReg(const Registers_t Reg) {
                                 {Registers_t::R13, bochscpu_cpu_r13},
                                 {Registers_t::R14, bochscpu_cpu_r14},
                                 {Registers_t::R15, bochscpu_cpu_r15},
-                                {Registers_t::Rflags, bochscpu_cpu_rflags}};
+                                {Registers_t::Rflags, bochscpu_cpu_rflags},
+                                {Registers_t::Cr2, bochscpu_cpu_cr2}};
 
   if (!RegisterMappingGetters.contains(Reg)) {
     fmt::print("There is no mapping for register {:x}.\n", Reg);
