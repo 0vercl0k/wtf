@@ -1743,11 +1743,18 @@ uint64_t KvmBackend_t::GetReg(const Registers_t Reg) {
     return Run_->s.regs.sregs.cr2;
   }
 
-  default: {
-    __debugbreak();
-    return 0;
+  case Registers_t::Cr3: {
+    return Run_->s.regs.sregs.cr2;
   }
   }
+
+  //
+  // We don't use a default case above to have the compiler warn us
+  // when we're missing a case.
+  //
+
+  __debugbreak();
+  return 0;
 }
 
 uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
@@ -1839,6 +1846,16 @@ uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
 
   case Registers_t::Rflags: {
     Run_->s.regs.regs.rflags = Value;
+    break;
+  }
+
+  case Registers_t::Cr2: {
+    Run_->s.regs.regs.cr2 = Value;
+    break;
+  }
+
+  case Registers_t::Cr3: {
+    Run_->s.regs.regs.cr3 = Value;
     break;
   }
   }

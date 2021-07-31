@@ -149,7 +149,8 @@ enum class Registers_t : uint32_t {
   R14,
   R15,
   Rflags,
-  Cr2
+  Cr2,
+  Cr3
 };
 
 //
