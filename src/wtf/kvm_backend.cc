@@ -1738,7 +1738,20 @@ uint64_t KvmBackend_t::GetReg(const Registers_t Reg) {
   case Registers_t::Rflags: {
     return Run_->s.regs.regs.rflags;
   }
+
+  case Registers_t::Cr2: {
+    return Run_->s.regs.sregs.cr2;
   }
+
+  case Registers_t::Cr3: {
+    return Run_->s.regs.sregs.cr3;
+  }
+  }
+
+  //
+  // We don't use a default case above to have the compiler warn us
+  // when we're missing a case.
+  //
 
   __debugbreak();
   return 0;
@@ -1835,6 +1848,16 @@ uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
     Run_->s.regs.regs.rflags = Value;
     break;
   }
+
+  case Registers_t::Cr2: {
+    Run_->s.regs.sregs.cr2 = Value;
+    break;
+  }
+
+  case Registers_t::Cr3: {
+    Run_->s.regs.sregs.cr3 = Value;
+    break;
+  }
   }
 
   //
@@ -1890,6 +1913,11 @@ bool KvmBackend_t::SetBreakpoint(const Gva_t Gva,
   // Once we have it, we push the breakpoint/handler in our structures, and let
   // the dmp cache knows about the breakpoint as well.
   //
+
+  if (Breakpoints_.contains(Gva)) {
+    fmt::print("/!\\ There already is a breakpoint at {:#x}\n", Gva);
+    return false;
+  }
 
   KvmBreakpoint_t Breakpoint(Gpa, Handler);
   Breakpoints_.emplace(Gva, Breakpoint);

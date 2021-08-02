@@ -256,7 +256,12 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
 
 bool BochscpuBackend_t::SetBreakpoint(const Gva_t Gva,
                                       const BreakpointHandler_t Handler) {
-  Breakpoints_.emplace_back(Gva, Handler);
+  if (Breakpoints_.contains(Gva)) {
+    fmt::print("/!\\ There is already a breakpoint at {:#x}\n", Gva);
+    return false;
+  }
+
+  Breakpoints_.emplace(Gva, Handler);
   return true;
 }
 
@@ -402,18 +407,11 @@ __declspec(safebuffers)
   }
 
   //
-  // Handle the breakpoints.
+  // Handle breakpoints.
   //
 
-  for (const auto &Breakpoint : Breakpoints_) {
-
-    //
-    // If we have a breakpoint registered for this rip, invoke the handler.
-    //
-
-    if (Breakpoint.Gva_ == Rip) {
-      Breakpoint.Handler_(this);
-    }
+  if (Breakpoints_.contains(Rip)) {
+    Breakpoints_.at(Rip)(this);
   }
 }
 
@@ -973,7 +971,9 @@ uint64_t BochscpuBackend_t::GetReg(const Registers_t Reg) {
                                 {Registers_t::R13, bochscpu_cpu_r13},
                                 {Registers_t::R14, bochscpu_cpu_r14},
                                 {Registers_t::R15, bochscpu_cpu_r15},
-                                {Registers_t::Rflags, bochscpu_cpu_rflags}};
+                                {Registers_t::Rflags, bochscpu_cpu_rflags},
+                                {Registers_t::Cr2, bochscpu_cpu_cr2},
+                                {Registers_t::Cr3, bochscpu_cpu_cr3}};
 
   if (!RegisterMappingGetters.contains(Reg)) {
     fmt::print("There is no mapping for register {:x}.\n", Reg);
@@ -1005,7 +1005,9 @@ uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
                                 {Registers_t::R13, bochscpu_cpu_set_r13},
                                 {Registers_t::R14, bochscpu_cpu_set_r14},
                                 {Registers_t::R15, bochscpu_cpu_set_r15},
-                                {Registers_t::Rflags, bochscpu_cpu_set_rflags}};
+                                {Registers_t::Rflags, bochscpu_cpu_set_rflags},
+                                {Registers_t::Cr2, bochscpu_cpu_set_cr2},
+                                {Registers_t::Cr3, bochscpu_cpu_set_cr3}};
 
   if (!RegisterMappingSetters.contains(Reg)) {
     fmt::print("There is no mapping for register {:x}.\n", Reg);
