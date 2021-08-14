@@ -15,6 +15,12 @@
 #endif
 
 bool SetupUsermodeCrashDetectionHooks() {
+
+  //
+  // This is to catch the PMI interrupt if performance counters are used to
+  // bound execution.
+  //
+
   if (!g_Backend->SetBreakpoint("hal!HalpPerfInterrupt",
                                 [](Backend_t *Backend) {
                                   CrashDetectionPrint("Perf interrupt\n");
@@ -23,8 +29,6 @@ bool SetupUsermodeCrashDetectionHooks() {
     fmt::print("Could not set a breakpoint on hal!HalpPerfInterrupt, but "
                "carrying on..\n");
   }
-
-#pragma region(crash / end detection)
 
   //
   // Avoid the fuzzer to spin out of control if we mess-up real bad.
@@ -114,41 +118,6 @@ bool SetupUsermodeCrashDetectionHooks() {
   }
 
   //
-  // XXX: what about kernelbase!BasepCurrentTopLevelFilter?
-  //
-
-  const Gva_t RtlpUnhandledExceptionFilterPtr =
-      Gva_t(g_Dbg.GetSymbol("ntdll!RtlpUnhandledExceptionFilter"));
-  const uint64_t EncodedExceptionFilter =
-      g_Backend->VirtRead8(RtlpUnhandledExceptionFilterPtr);
-  const Gva_t CookiePtr =
-      Gva_t(g_Dbg.GetSymbol("ntdll!`RtlpGetCookieValue'::`2'::CookieValue"));
-  const uint64_t Cookie = g_Backend->VirtRead8(CookiePtr);
-  const Gva_t UnhandledExceptionFilter =
-      DecodePointer(Cookie, EncodedExceptionFilter);
-
-  if (!g_Backend->SetBreakpoint(
-          UnhandledExceptionFilter, [](Backend_t *Backend) {
-            // LONG UnhandledExceptionFilter(
-            //  _EXCEPTION_POINTERS *ExceptionInfo
-            //);
-            const Gva_t ExceptionInfo = Backend->GetArgGva(0);
-            const Gva_t ExceptionRecordPtr =
-                Backend->VirtReadGva(ExceptionInfo);
-            wtf::EXCEPTION_RECORD ExceptionRecord;
-            Backend->VirtReadStruct(ExceptionRecordPtr, &ExceptionRecord);
-            const Gva_t ExceptionAddress =
-                Gva_t(ExceptionRecord.ExceptionAddress);
-            const uint32_t ExceptionCode = ExceptionRecord.ExceptionCode;
-            CrashDetectionPrint(
-                "UnhandledExceptionFilter triggered {} @ {:#x}\n",
-                ExceptionCodeToStr(ExceptionCode), ExceptionAddress);
-            g_Backend->SaveCrash(ExceptionAddress, ExceptionCode);
-          })) {
-    return false;
-  }
-
-  //
   // As we can't set-up the exception bitmap so that we receive a vmexit on
   // failfast exceptions, we instead set a breakpoint to the function handling
   // the interruption.
@@ -170,6 +139,5 @@ bool SetupUsermodeCrashDetectionHooks() {
     return false;
   }
 
-#pragma endregion
   return true;
 }
