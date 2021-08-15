@@ -44,12 +44,11 @@ struct BochscpuRunStats_t {
 //
 
 struct BochscpuMemAccess_t {
-  const uint64_t VirtualAddress;
+  const Gva_t VirtualAddress;
   const uintptr_t Len;
   const uint32_t MemAccess;
   explicit BochscpuMemAccess_t(const uint64_t VirtualAddress,
-                                   const uintptr_t Len,
-                                   const uint32_t MemAccess)
+                               const uintptr_t Len, const uint32_t MemAccess)
       : VirtualAddress(VirtualAddress), Len(Len), MemAccess(MemAccess) {}
 };
 
@@ -301,5 +300,4 @@ private:
   uint64_t GetTestcaseSize();
 
   void DumpDelta();
-
 };

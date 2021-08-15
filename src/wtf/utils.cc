@@ -244,12 +244,8 @@ std::string Blake3HexDigest(const uint8_t *Data, const size_t DataSize) {
   return Hexdigest;
 }
 
-inline uint64_t rotr64(uint64_t w, uint64_t c) {
-  return (w >> c) | (w << (64 - c));
-}
-
 const Gva_t DecodePointer(const uint64_t Cookie, const uint64_t Value) {
-  return Gva_t(rotr64(Value, 0x40 - (Cookie & 0x3F)) ^ Cookie);
+  return Gva_t(std::rotr(Value, 0x40 - (Cookie & 0x3F)) ^ Cookie);
 }
 
 std::string u16stringToString(const std::u16string &S) {

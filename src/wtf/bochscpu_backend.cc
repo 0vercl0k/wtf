@@ -418,12 +418,11 @@ __declspec(safebuffers)
     } else if (TenetTrace) {
 
       //
-      // Save a complete copy of the Cpu registers so that we can diff
-      // them against the next step when taking Tenet traces
+      // Save a complete copy of the registers so that we can diff
+      // them against the next step when taking Tenet traces.
       //
 
       bochscpu_cpu_state(Cpu_, &CpuStatePrev_);
-
     }
   }
 
@@ -456,11 +455,11 @@ void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
   RunStats_.NumberMemoryAccesses += Len;
 
   //
-  // Log explicit details about the memory access if taking a full-trace
+  // Log explicit details about the memory access if taking a full-trace.
   //
 
   if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
-    MemAccesses_.push_back(BochscpuMemAccess_t(VirtualAddress, Len, MemAccess));
+    MemAccesses_.emplace_back(VirtualAddress, Len, MemAccess);
   }
 
   //
@@ -1050,90 +1049,117 @@ uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
 
 void BochscpuBackend_t::DumpDelta() {
 
-  uint8_t buffer_raw[1024] = {};
-  char buffer_printed[2048 + 1] = {}; // +1 for null term
-
   //
-  // dump register delta
+  // Dump register deltas.
   //
 
-  if (bochscpu_cpu_rax(Cpu_) != CpuStatePrev_.rax)
-    fmt::print(TraceFile_, "rax={:#x},", bochscpu_cpu_rax(Cpu_));
-  if (bochscpu_cpu_rbx(Cpu_) != CpuStatePrev_.rbx)
-    fmt::print(TraceFile_, "rbx={:#x},", bochscpu_cpu_rbx(Cpu_));
-  if (bochscpu_cpu_rcx(Cpu_) != CpuStatePrev_.rcx)
-    fmt::print(TraceFile_, "rcx={:#x},", bochscpu_cpu_rcx(Cpu_));
-  if (bochscpu_cpu_rdx(Cpu_) != CpuStatePrev_.rdx)
-    fmt::print(TraceFile_, "rdx={:#x},", bochscpu_cpu_rdx(Cpu_));
-  if (bochscpu_cpu_rbp(Cpu_) != CpuStatePrev_.rbp)
-    fmt::print(TraceFile_, "rbp={:#x},", bochscpu_cpu_rbp(Cpu_));
-  if (bochscpu_cpu_rsp(Cpu_) != CpuStatePrev_.rsp)
-    fmt::print(TraceFile_, "rsp={:#x},", bochscpu_cpu_rsp(Cpu_));
-  if (bochscpu_cpu_rsi(Cpu_) != CpuStatePrev_.rsi)
-    fmt::print(TraceFile_, "rsi={:#x},", bochscpu_cpu_rsi(Cpu_));
-  if (bochscpu_cpu_rdi(Cpu_) != CpuStatePrev_.rdi)
-    fmt::print(TraceFile_, "rdi={:#x},", bochscpu_cpu_rdi(Cpu_));
-  if (bochscpu_cpu_r8(Cpu_) != CpuStatePrev_.r8)
-    fmt::print(TraceFile_, "r8={:#x},", bochscpu_cpu_r8(Cpu_));
-  if (bochscpu_cpu_r9(Cpu_) != CpuStatePrev_.r9)
-    fmt::print(TraceFile_, "r9={:#x},", bochscpu_cpu_r9(Cpu_));
-  if (bochscpu_cpu_r10(Cpu_) != CpuStatePrev_.r10)
-    fmt::print(TraceFile_, "r10={:#x},", bochscpu_cpu_r10(Cpu_));
-  if (bochscpu_cpu_r11(Cpu_) != CpuStatePrev_.r11)
-    fmt::print(TraceFile_, "r11={:#x},", bochscpu_cpu_r11(Cpu_));
-  if (bochscpu_cpu_r12(Cpu_) != CpuStatePrev_.r12)
-    fmt::print(TraceFile_, "r12={:#x},", bochscpu_cpu_r12(Cpu_));
-  if (bochscpu_cpu_r13(Cpu_) != CpuStatePrev_.r13)
-    fmt::print(TraceFile_, "r13={:#x},", bochscpu_cpu_r13(Cpu_));
-  if (bochscpu_cpu_r14(Cpu_) != CpuStatePrev_.r14)
-    fmt::print(TraceFile_, "r14={:#x},", bochscpu_cpu_r14(Cpu_));
-  if (bochscpu_cpu_r15(Cpu_) != CpuStatePrev_.r15)
-    fmt::print(TraceFile_, "r15={:#x},", bochscpu_cpu_r15(Cpu_));
-
-  fmt::print(TraceFile_, "rip={:#x}", bochscpu_cpu_rip(Cpu_));
-
-  //
-  // dump memory delta
-  //
-
-  for (const auto AccessInfo : MemAccesses_) {
-      const char *type = NULL;
-
-      // determine the label to use for this memory access
-      switch (AccessInfo.MemAccess) {
-        case BOCHSCPU_HOOK_MEM_READ:
-        type = "mr";
-        break;
-        case BOCHSCPU_HOOK_MEM_RW:
-        type = "mrw";
-        break;
-        case BOCHSCPU_HOOK_MEM_WRITE:
-        type = "mw";
-        break;
-      }
-
-      // Ignore unknown memory-accesses types for now...
-      if (type == NULL)
-        continue;
-
-      // I think this is true for bochs, but just to be sure...
-      assert(Len < sizeof(buffer_raw));
-
-      // Fetch the memory that was read or written by the last executed instruction
-      VirtRead(Gva_t(AccessInfo.VirtualAddress), buffer_raw, AccessInfo.Len);
-
-      // Convert the raw memory bytes to a human-readable hex string
-      for (int i = 0; i < AccessInfo.Len; i++) {
-        sprintf_s(&buffer_printed[i * 2], 3, "%02X", buffer_raw[i]);
-      }
-
-      // Write the formatted memory access to file, eg 'mr=0x140148040:0000000400080040'
-      fmt::print(TraceFile_, ",{}={:#x}:{}", type, AccessInfo.VirtualAddress, buffer_printed);
+#define DeltaRegister(Reg)                                                     \
+  {                                                                            \
+    if (&CpuStatePrev_.##Reg == &CpuStatePrev_.rip) {                          \
+      fmt::print(TraceFile_, "rip={:#x}", bochscpu_cpu_rip(Cpu_));             \
+    } else if (bochscpu_cpu_##Reg(Cpu_) != CpuStatePrev_.##Reg) {              \
+      fmt::print(TraceFile_, #Reg "={:#x},", bochscpu_cpu_##Reg(Cpu_));        \
+    }                                                                          \
   }
 
-  // Clear out the saved memory accesses as they are no longer needed
+  DeltaRegister(rax);
+  DeltaRegister(rbx);
+  DeltaRegister(rcx);
+  DeltaRegister(rdx);
+  DeltaRegister(rbp);
+  DeltaRegister(rsp);
+  DeltaRegister(rsi);
+  DeltaRegister(rdi);
+  DeltaRegister(r8);
+  DeltaRegister(r9);
+  DeltaRegister(r10);
+  DeltaRegister(r11);
+  DeltaRegister(r12);
+  DeltaRegister(r13);
+  DeltaRegister(r14);
+  DeltaRegister(r15);
+  DeltaRegister(rip);
+#undef DeltaRegister
+
+  //
+  // Dump memory deltas.
+  //
+
+  for (const auto &AccessInfo : MemAccesses_) {
+    const char *MemoryType = nullptr;
+
+    //
+    // Determine the label to use for this memory access.
+    //
+
+    switch (AccessInfo.MemAccess) {
+    case BOCHSCPU_HOOK_MEM_READ: {
+      MemoryType = "mr";
+      break;
+    }
+
+    case BOCHSCPU_HOOK_MEM_RW: {
+      MemoryType = "mrw";
+      break;
+    }
+
+    case BOCHSCPU_HOOK_MEM_WRITE: {
+      MemoryType = "mw";
+      break;
+    }
+
+    default: {
+      fmt::print("Unexpected MemAccess type, aborting\n");
+      std::abort();
+    }
+    }
+
+    //
+    // Fetch the memory that was read or written by the last executed
+    // instruction. The largest load that can happen today is an AVX512
+    // load which is 64 bytes long.
+    //
+
+    std::array<uint8_t, 64> Buffer;
+    if (AccessInfo.Len > Buffer.size()) {
+      fmt::print("A memory access was bigger than {} bytes, aborting\n",
+                 AccessInfo.Len);
+      std::abort();
+    }
+
+    if (!VirtRead(AccessInfo.VirtualAddress, Buffer.data(), AccessInfo.Len)) {
+      fmt::print("VirtRead at {#x} failed, aborting\n",
+                 AccessInfo.VirtualAddress);
+      std::abort();
+    }
+
+    //
+    // Convert the raw memory bytes to a human-readable hex string.
+    //
+
+    std::string HexString;
+    for (size_t Idx = 0; Idx < AccessInfo.Len; Idx++) {
+      HexString = fmt::format("{}{:02X}", HexString, Buffer[Idx]);
+    }
+
+    //
+    // Write the formatted memory access to file, eg
+    // 'mr=0x140148040:0000000400080040'.
+    //
+
+    fmt::print(TraceFile_, ",{}={:#x}:{}", MemoryType,
+               AccessInfo.VirtualAddress, HexString);
+  }
+
+  //
+  // Clear out the saved memory accesses as they are no longer needed.
+  //
+
   MemAccesses_.clear();
 
-  // End of delta
+  //
+  // End of deltas.
+  //
+
   fmt::print(TraceFile_, "\n");
 }
