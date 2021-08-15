@@ -1055,9 +1055,9 @@ void BochscpuBackend_t::DumpDelta() {
 
 #define DeltaRegister(Reg)                                                     \
   {                                                                            \
-    if (&CpuStatePrev_.##Reg == &CpuStatePrev_.rip) {                          \
+    if (&CpuStatePrev_.Reg == &CpuStatePrev_.rip) {                            \
       fmt::print(TraceFile_, "rip={:#x}", bochscpu_cpu_rip(Cpu_));             \
-    } else if (bochscpu_cpu_##Reg(Cpu_) != CpuStatePrev_.##Reg) {              \
+    } else if (bochscpu_cpu_##Reg(Cpu_) != CpuStatePrev_.Reg) {                \
       fmt::print(TraceFile_, #Reg "={:#x},", bochscpu_cpu_##Reg(Cpu_));        \
     }                                                                          \
   }
