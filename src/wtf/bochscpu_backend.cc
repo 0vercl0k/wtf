@@ -400,10 +400,10 @@ __declspec(safebuffers)
     LastNewCoverage_.emplace(Rip);
   }
 
+  const bool TenetTrace = TraceType_ == TraceType_t::Tenet;
   if (TraceFile_) {
     const bool RipTrace = TraceType_ == TraceType_t::Rip;
     const bool UniqueRipTrace = TraceType_ == TraceType_t::UniqueRip;
-    const bool TenetTrace = TraceType_ == TraceType_t::Tenet;
     const bool NewRip = Res.second;
 
     if (RipTrace || (UniqueRipTrace && NewRip)) {
@@ -414,7 +414,6 @@ __declspec(safebuffers)
       //
 
       fmt::print(TraceFile_, "{:#x}\n", Rip);
-
     } else if (TenetTrace) {
 
       //
@@ -432,6 +431,20 @@ __declspec(safebuffers)
 
   if (Breakpoints_.contains(Rip)) {
     Breakpoints_.at(Rip)(this);
+    const Gva_t RipAfter = Gva_t(bochscpu_cpu_rip(Cpu_));
+    if (TenetTrace && Rip != RipAfter) {
+
+      //
+      // If we executed a breakpoint, we need to serialize the changes it did if
+      // it has changed rip. Why? If it has changed @rip, bochs returns from
+      // this callback noticing that @rip has changed and will not invoke the
+      // AfterExecution callback which is where the deltas are serialized. This
+      // means we miss every instruction / state changes happening right after a
+      // breakpoint that changes @rip.
+      //
+
+      TenetDumpDelta();
+    }
   }
 }
 
