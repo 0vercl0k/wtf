@@ -287,10 +287,26 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   RunStats_.Reset();
 
   //
+  // Force dumping all the registers if this is a Tenet trace.
+  //
+
+  if (TraceType_ == TraceType_t::Tenet) {
+    DumpTenetDelta(true);
+  }
+
+  //
   // Lift off.
   //
 
   bochscpu_cpu_run(Cpu_, HookChain_);
+
+  //
+  // Dump the last delta for Tenet traces.
+  //
+
+  if (TraceType_ == TraceType_t::Tenet) {
+    DumpTenetDelta();
+  }
 
   //
   // Fill in the stats.
@@ -391,18 +407,38 @@ __declspec(safebuffers)
     LastNewCoverage_.emplace(Rip);
   }
 
+  const bool TenetTrace = TraceType_ == TraceType_t::Tenet;
   if (TraceFile_) {
     const bool RipTrace = TraceType_ == TraceType_t::Rip;
     const bool UniqueRipTrace = TraceType_ == TraceType_t::UniqueRip;
     const bool NewRip = Res.second;
 
-    //
-    // On Linux we don't have access to dbgeng so just write the plain address
-    // for both Windows & Linux.
-    //
-
     if (RipTrace || (UniqueRipTrace && NewRip)) {
+
+      //
+      // On Linux we don't have access to dbgeng so just write the plain
+      // address for both Windows & Linux.
+      //
+
       fmt::print(TraceFile_, "{:#x}\n", Rip);
+    } else if (TenetTrace) {
+      if (Tenet_.PastFirstInstruction_) {
+
+        //
+        // If we already executed an instruction, dump register + mem changes if
+        // generating Tenet traces.
+        //
+
+        DumpTenetDelta();
+      }
+
+      //
+      // Save a complete copy of the registers so that we can diff them against
+      // the next step when taking Tenet traces.
+      //
+
+      bochscpu_cpu_state(Cpu_, &Tenet_.CpuStatePrev_);
+      Tenet_.PastFirstInstruction_ = true;
     }
   }
 
@@ -433,6 +469,14 @@ void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
   //
 
   RunStats_.NumberMemoryAccesses += Len;
+
+  //
+  // Log explicit details about the memory access if taking a full-trace.
+  //
+
+  if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
+    Tenet_.MemAccesses_.emplace_back(VirtualAddress, Len, MemAccess);
+  }
 
   //
   // If this is not a write access, we don't care to go further.
@@ -1017,4 +1061,130 @@ uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
   const BochscpuSetReg_t &Setter = RegisterMappingSetters.at(Reg);
   Setter(Cpu_, Value);
   return Value;
+}
+
+[[nodiscard]] constexpr const char *
+MemAccessToTenetLabel(const uint32_t MemAccess) {
+  switch (MemAccess) {
+  case BOCHSCPU_HOOK_MEM_READ: {
+    return "mr";
+  }
+
+  case BOCHSCPU_HOOK_MEM_RW: {
+    return "mrw";
+  }
+
+  case BOCHSCPU_HOOK_MEM_WRITE: {
+    return "mw";
+    break;
+  }
+
+  default: {
+    fmt::print("Unexpected MemAccess type, aborting\n");
+    std::abort();
+  }
+  }
+}
+
+void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
+
+  //
+  // Dump register deltas.
+  //
+
+#define __DeltaRegister(Reg, Comma)                                            \
+  {                                                                            \
+    if (bochscpu_cpu_##Reg(Cpu_) != Tenet_.CpuStatePrev_.Reg || Force) {       \
+      fmt::print(TraceFile_, #Reg "={:#x}", bochscpu_cpu_##Reg(Cpu_));         \
+      if (Comma) {                                                             \
+        fmt::print(TraceFile_, ",");                                           \
+      }                                                                        \
+    }                                                                          \
+  }
+
+#define DeltaRegister(Reg) __DeltaRegister(Reg, true)
+#define DeltaRegisterEnd(Reg) __DeltaRegister(Reg, false)
+
+  DeltaRegister(rax);
+  DeltaRegister(rbx);
+  DeltaRegister(rcx);
+  DeltaRegister(rdx);
+  DeltaRegister(rbp);
+  DeltaRegister(rsp);
+  DeltaRegister(rsi);
+  DeltaRegister(rdi);
+  DeltaRegister(r8);
+  DeltaRegister(r9);
+  DeltaRegister(r10);
+  DeltaRegister(r11);
+  DeltaRegister(r12);
+  DeltaRegister(r13);
+  DeltaRegister(r14);
+  DeltaRegister(r15);
+  DeltaRegisterEnd(rip);
+
+#undef DeltaRegisterEnd
+#undef DeltaRegister
+#undef __DeltaRegister
+
+  //
+  // Dump memory deltas.
+  //
+
+  for (const auto &AccessInfo : Tenet_.MemAccesses_) {
+
+    //
+    // Determine the label to use for this memory access.
+    //
+
+    const char *MemoryType = MemAccessToTenetLabel(AccessInfo.MemAccess);
+
+    //
+    // Fetch the memory that was read or written by the last executed
+    // instruction. The largest load that can happen today is an AVX512
+    // load which is 64 bytes long.
+    //
+
+    std::array<uint8_t, 64> Buffer;
+    if (AccessInfo.Len > Buffer.size()) {
+      fmt::print("A memory access was bigger than {} bytes, aborting\n",
+                 AccessInfo.Len);
+      std::abort();
+    }
+
+    if (!VirtRead(AccessInfo.VirtualAddress, Buffer.data(), AccessInfo.Len)) {
+      fmt::print("VirtRead at {:#x} failed, aborting\n",
+                 AccessInfo.VirtualAddress);
+      std::abort();
+    }
+
+    //
+    // Convert the raw memory bytes to a human-readable hex string.
+    //
+
+    std::string HexString;
+    for (size_t Idx = 0; Idx < AccessInfo.Len; Idx++) {
+      HexString = fmt::format("{}{:02X}", HexString, Buffer[Idx]);
+    }
+
+    //
+    // Write the formatted memory access to file, eg
+    // 'mr=0x140148040:0000000400080040'.
+    //
+
+    fmt::print(TraceFile_, ",{}={:#x}:{}", MemoryType,
+               AccessInfo.VirtualAddress, HexString);
+  }
+
+  //
+  // Clear out the saved memory accesses as they are no longer needed.
+  //
+
+  Tenet_.MemAccesses_.clear();
+
+  //
+  // End of deltas.
+  //
+
+  fmt::print(TraceFile_, "\n");
 }

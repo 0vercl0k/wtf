@@ -152,7 +152,10 @@ int main(int argc, const char *argv[]) {
       ->check(CLI::ExistingDirectory);
 
   const std::unordered_map<std::string, TraceType_t> TraceTypeMap = {
-      {"rip", TraceType_t::Rip}, {"cov", TraceType_t::UniqueRip}};
+      {"rip", TraceType_t::Rip},
+      {"cov", TraceType_t::UniqueRip},
+      {"tenet", TraceType_t::Tenet}
+  };
 
   TraceOpt->add_option("--trace-type", Opts.Run.TraceType, "Trace type")
       ->transform(CLI::CheckedTransformer(TraceTypeMap, CLI::ignore_case))
