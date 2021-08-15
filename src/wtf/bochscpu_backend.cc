@@ -1128,7 +1128,7 @@ void BochscpuBackend_t::DumpDelta() {
     }
 
     if (!VirtRead(AccessInfo.VirtualAddress, Buffer.data(), AccessInfo.Len)) {
-      fmt::print("VirtRead at {#x} failed, aborting\n",
+      fmt::print("VirtRead at {:#x} failed, aborting\n",
                  AccessInfo.VirtualAddress);
       std::abort();
     }
