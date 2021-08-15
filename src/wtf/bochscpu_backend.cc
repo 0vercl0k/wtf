@@ -354,7 +354,7 @@ void BochscpuBackend_t::AfterExecutionHook(/*void *Context, */ uint32_t,
   //
 
   if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
-    DumpDelta();
+    TenetDumpDelta();
   }
 
   //
@@ -1047,7 +1047,30 @@ uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
   return Value;
 }
 
-void BochscpuBackend_t::DumpDelta() {
+[[nodiscard]] constexpr const char *
+MemAccessToTenetLabel(const uint32_t MemAccess) {
+  switch (MemAccess) {
+  case BOCHSCPU_HOOK_MEM_READ: {
+    return "mr";
+  }
+
+  case BOCHSCPU_HOOK_MEM_RW: {
+    return "mrw";
+  }
+
+  case BOCHSCPU_HOOK_MEM_WRITE: {
+    return "mw";
+    break;
+  }
+
+  default: {
+    fmt::print("Unexpected MemAccess type, aborting\n");
+    std::abort();
+  }
+  }
+}
+
+void BochscpuBackend_t::TenetDumpDelta() {
 
   //
   // Dump register deltas.
@@ -1086,33 +1109,12 @@ void BochscpuBackend_t::DumpDelta() {
   //
 
   for (const auto &AccessInfo : MemAccesses_) {
-    const char *MemoryType = nullptr;
 
     //
     // Determine the label to use for this memory access.
     //
 
-    switch (AccessInfo.MemAccess) {
-    case BOCHSCPU_HOOK_MEM_READ: {
-      MemoryType = "mr";
-      break;
-    }
-
-    case BOCHSCPU_HOOK_MEM_RW: {
-      MemoryType = "mrw";
-      break;
-    }
-
-    case BOCHSCPU_HOOK_MEM_WRITE: {
-      MemoryType = "mw";
-      break;
-    }
-
-    default: {
-      fmt::print("Unexpected MemAccess type, aborting\n");
-      std::abort();
-    }
-    }
+    const char *MemoryType = MemAccessToTenetLabel(AccessInfo.MemAccess);
 
     //
     // Fetch the memory that was read or written by the last executed

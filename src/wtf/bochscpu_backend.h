@@ -40,7 +40,8 @@ struct BochscpuRunStats_t {
 };
 
 //
-// A structure to capture information about a single memory access (tracing).
+// A structure to capture information about a single memory access; used for
+// Tenet traces.
 //
 
 struct BochscpuMemAccess_t {
@@ -98,7 +99,7 @@ class BochscpuBackend_t : public Backend_t {
   tsl::robin_map<Gva_t, BreakpointHandler_t> Breakpoints_;
 
   //
-  // List of memory accesses.
+  // List of memory accesses; used for Tenet traces.
   //
 
   std::vector<BochscpuMemAccess_t> MemAccesses_;
@@ -110,23 +111,24 @@ class BochscpuBackend_t : public Backend_t {
   bochscpu_cpu_t Cpu_ = nullptr;
 
   //
-  // A copy of Cpu registers at t-1 (the previous instruction).
+  // A copy of Cpu registers at t-1 (the previous instruction); used for Tenet
+  // traces.
   //
 
-  bochscpu_cpu_state_t CpuStatePrev_;
+  bochscpu_cpu_state_t CpuStatePrev_ = {};
 
   //
   // The hooks we define onto the Cpu.
   //
 
-  bochscpu_hooks_t Hooks_;
+  bochscpu_hooks_t Hooks_ = {};
 
   //
   // The chain of hooks. We only use a set of hooks, so we need
   // only two entries (it has to end with a nullptr entry).
   //
 
-  bochscpu_hooks_t *HookChain_[2];
+  bochscpu_hooks_t *HookChain_[2] = {};
 
   //
   // Instruction limit.
@@ -164,7 +166,7 @@ class BochscpuBackend_t : public Backend_t {
   // Stats of the run.
   //
 
-  BochscpuRunStats_t RunStats_;
+  BochscpuRunStats_t RunStats_ = {};
 
   uint64_t Seed_ = 0;
 
@@ -299,5 +301,9 @@ private:
   const uint8_t *GetTestcaseBuffer();
   uint64_t GetTestcaseSize();
 
-  void DumpDelta();
+  //
+  // Dump the register & memory deltas for Tenet traces.
+  //
+
+  void TenetDumpDelta();
 };
