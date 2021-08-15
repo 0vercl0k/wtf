@@ -99,23 +99,33 @@ class BochscpuBackend_t : public Backend_t {
   tsl::robin_map<Gva_t, BreakpointHandler_t> Breakpoints_;
 
   //
-  // List of memory accesses; used for Tenet traces.
-  //
-
-  std::vector<BochscpuMemAccess_t> MemAccesses_;
-
-  //
   // Cpu.
   //
 
   bochscpu_cpu_t Cpu_ = nullptr;
 
-  //
-  // A copy of Cpu registers at t-1 (the previous instruction); used for Tenet
-  // traces.
-  //
+  struct Tenet_t {
 
-  bochscpu_cpu_state_t CpuStatePrev_ = {};
+    //
+    // A copy of Cpu registers at t-1 (the previous instruction); used for Tenet
+    // traces.
+    //
+
+    bochscpu_cpu_state_t CpuStatePrev_ = {};
+
+    //
+    // Boolean that tracks if the execution is past the first execution; used
+    // for Tenet traces.
+    //
+
+    bool PastFirstInstruction_ = false;
+
+    //
+    // List of memory accesses; used for Tenet traces.
+    //
+
+    std::vector<BochscpuMemAccess_t> MemAccesses_;
+  } Tenet_;
 
   //
   // The hooks we define onto the Cpu.
@@ -302,8 +312,8 @@ private:
   uint64_t GetTestcaseSize();
 
   //
-  // Dump the register & memory deltas for Tenet traces.
+  // Dump the register & memory deltas for Tenet.
   //
 
-  void TenetDumpDelta();
+  void DumpTenetDelta(const bool Force = false);
 };

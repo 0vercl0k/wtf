@@ -279,7 +279,6 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   TestcaseBuffer_ = Buffer;
   TestcaseBufferSize_ = BufferSize;
   LastNewCoverage_.clear();
-  bochscpu_cpu_state(Cpu_, &CpuStatePrev_);
 
   //
   // Reset some of the stats.
@@ -288,10 +287,26 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   RunStats_.Reset();
 
   //
+  // Force dumping all the registers if this is a Tenet trace.
+  //
+
+  if (TraceType_ == TraceType_t::Tenet) {
+    DumpTenetDelta(true);
+  }
+
+  //
   // Lift off.
   //
 
   bochscpu_cpu_run(Cpu_, HookChain_);
+
+  //
+  // Dump the last delta for Tenet traces.
+  //
+
+  if (TraceType_ == TraceType_t::Tenet) {
+    DumpTenetDelta();
+  }
 
   //
   // Fill in the stats.
@@ -348,14 +363,6 @@ void BochscpuBackend_t::AfterExecutionHook(/*void *Context, */ uint32_t,
   //
 
   RunStats_.NumberInstructionsExecuted++;
-
-  //
-  // Dump register + mem changes if generating Tenet traces.
-  //
-
-  if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
-    TenetDumpDelta();
-  }
 
   //
   // Check the instruction limit.
@@ -415,13 +422,23 @@ __declspec(safebuffers)
 
       fmt::print(TraceFile_, "{:#x}\n", Rip);
     } else if (TenetTrace) {
+      if (Tenet_.PastFirstInstruction_) {
+
+        //
+        // If we already executed an instruction, dump register + mem changes if
+        // generating Tenet traces.
+        //
+
+        DumpTenetDelta();
+      }
 
       //
-      // Save a complete copy of the registers so that we can diff
-      // them against the next step when taking Tenet traces.
+      // Save a complete copy of the registers so that we can diff them against
+      // the next step when taking Tenet traces.
       //
 
-      bochscpu_cpu_state(Cpu_, &CpuStatePrev_);
+      bochscpu_cpu_state(Cpu_, &Tenet_.CpuStatePrev_);
+      Tenet_.PastFirstInstruction_ = true;
     }
   }
 
@@ -431,20 +448,6 @@ __declspec(safebuffers)
 
   if (Breakpoints_.contains(Rip)) {
     Breakpoints_.at(Rip)(this);
-    const Gva_t RipAfter = Gva_t(bochscpu_cpu_rip(Cpu_));
-    if (TenetTrace && Rip != RipAfter) {
-
-      //
-      // If we executed a breakpoint, we need to serialize the changes it did if
-      // it has changed rip. Why? If it has changed @rip, bochs returns from
-      // this callback noticing that @rip has changed and will not invoke the
-      // AfterExecution callback which is where the deltas are serialized. This
-      // means we miss every instruction / state changes happening right after a
-      // breakpoint that changes @rip.
-      //
-
-      TenetDumpDelta();
-    }
   }
 }
 
@@ -472,7 +475,7 @@ void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
   //
 
   if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
-    MemAccesses_.emplace_back(VirtualAddress, Len, MemAccess);
+    Tenet_.MemAccesses_.emplace_back(VirtualAddress, Len, MemAccess);
   }
 
   //
@@ -1083,20 +1086,24 @@ MemAccessToTenetLabel(const uint32_t MemAccess) {
   }
 }
 
-void BochscpuBackend_t::TenetDumpDelta() {
+void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
 
   //
   // Dump register deltas.
   //
 
-#define DeltaRegister(Reg)                                                     \
+#define __DeltaRegister(Reg, Comma)                                            \
   {                                                                            \
-    if (&CpuStatePrev_.Reg == &CpuStatePrev_.rip) {                            \
-      fmt::print(TraceFile_, "rip={:#x}", bochscpu_cpu_rip(Cpu_));             \
-    } else if (bochscpu_cpu_##Reg(Cpu_) != CpuStatePrev_.Reg) {                \
-      fmt::print(TraceFile_, #Reg "={:#x},", bochscpu_cpu_##Reg(Cpu_));        \
+    if (bochscpu_cpu_##Reg(Cpu_) != Tenet_.CpuStatePrev_.Reg || Force) {       \
+      fmt::print(TraceFile_, #Reg "={:#x}", bochscpu_cpu_##Reg(Cpu_));         \
+      if (Comma) {                                                             \
+        fmt::print(TraceFile_, ",");                                           \
+      }                                                                        \
     }                                                                          \
   }
+
+#define DeltaRegister(Reg) __DeltaRegister(Reg, true)
+#define DeltaRegisterEnd(Reg) __DeltaRegister(Reg, false)
 
   DeltaRegister(rax);
   DeltaRegister(rbx);
@@ -1114,14 +1121,17 @@ void BochscpuBackend_t::TenetDumpDelta() {
   DeltaRegister(r13);
   DeltaRegister(r14);
   DeltaRegister(r15);
-  DeltaRegister(rip);
+  DeltaRegisterEnd(rip);
+
+#undef DeltaRegisterEnd
 #undef DeltaRegister
+#undef __DeltaRegister
 
   //
   // Dump memory deltas.
   //
 
-  for (const auto &AccessInfo : MemAccesses_) {
+  for (const auto &AccessInfo : Tenet_.MemAccesses_) {
 
     //
     // Determine the label to use for this memory access.
@@ -1170,7 +1180,7 @@ void BochscpuBackend_t::TenetDumpDelta() {
   // Clear out the saved memory accesses as they are no longer needed.
   //
 
-  MemAccesses_.clear();
+  Tenet_.MemAccesses_.clear();
 
   //
   // End of deltas.
