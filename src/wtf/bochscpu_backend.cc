@@ -183,6 +183,15 @@ void StaticOpcodeHook(void *Context, uint32_t Id, const void *i,
                                                              is32, is64);
 }
 
+void StaticHltHook(void *Context, uint32_t Cpu) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->OpcodeHlt(Cpu);
+}
+
 BochscpuBackend_t::BochscpuBackend_t() {
 
   //
@@ -224,6 +233,7 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
   Hooks_.exception = StaticExceptionHook;
   Hooks_.phy_access = StaticPhyAccessHook;
   Hooks_.tlb_cntrl = StaticTlbControlHook;
+  Hooks_.hlt = StaticHltHook;
   // Hooks_.opcode = StaticOpcodeHook;
 
   //
@@ -599,6 +609,15 @@ void BochscpuBackend_t::OpcodeHook(/*void *Context, */ uint32_t,
 #undef BX_IA_CMP_AXIw
 #undef BX_IA_CMP_EwIw
 #undef BX_IA_CMP_EwsIb
+}
+
+void BochscpuBackend_t::OpcodeHlt(/*void *Context, */ uint32_t) {
+  fmt::print("The emulator ran into a triple-fault exception or hit a HLT "
+             "instruction.\n");
+  fmt::print("If this is not an HLT instruction, please report it as a bug!\n");
+  fmt::print("Stopping the cpu.\n");
+  TestcaseResult_ = Crash_t();
+  bochscpu_cpu_stop(Cpu_);
 }
 
 bool BochscpuBackend_t::Restore(const CpuState_t &CpuState) {

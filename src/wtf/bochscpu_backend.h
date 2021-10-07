@@ -287,9 +287,12 @@ public:
 
   virtual void TlbControlHook(/*void *Context, */ uint32_t Id, uint32_t What,
                               uint64_t NewCrValue);
+
   virtual void OpcodeHook(/*void *Context, */ uint32_t Id, const void *Ins,
                           const uint8_t *Opcode, uintptr_t Len, bool Is32,
                           bool Is64);
+
+  virtual void OpcodeHlt(/*void *Context, */ uint32_t Cpu);
 
 private:
   //
