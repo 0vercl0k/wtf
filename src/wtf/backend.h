@@ -506,6 +506,10 @@ public:
   void Rax(const uint64_t Value);
   void Rax(const Gva_t Value);
 
+  uint64_t Rbx();
+  void Rbx(const uint64_t Value);
+  void Rbx(const Gva_t Value);
+
   uint64_t Rcx();
   void Rcx(const uint64_t Value);
   void Rcx(const Gva_t Value);
