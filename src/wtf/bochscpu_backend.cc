@@ -972,9 +972,13 @@ void BochscpuBackend_t::LoadState(const CpuState_t &State) {
   Bochs.mxcsr_mask = State.MxcsrMask;
   Bochs.fpop = State.Fpop;
 
+// bdump does not include the limit bits in the attributes, bochs does
+// so the attributes need to be shifted for the upper flags (G, D/B, L, AVL) 
+// to be in the correct places
 #define SEG(_Bochs_, _Whv_)                                                    \
   {                                                                            \
-    Bochs._Bochs_.attr = State._Whv_.Attr;                                     \
+    Bochs._Bochs_.attr = (State._Whv_.Attr & 0xFF) |                           \
+      ((State._Whv_.Attr & 0xF00) << 4);                                       \
     Bochs._Bochs_.base = State._Whv_.Base;                                     \
     Bochs._Bochs_.limit = State._Whv_.Limit;                                   \
     Bochs._Bochs_.present = State._Whv_.Present;                               \
