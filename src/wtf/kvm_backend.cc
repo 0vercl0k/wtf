@@ -874,7 +874,7 @@ bool KvmBackend_t::LoadSregs(const CpuState_t &CpuState) {
   Run_->s.regs.sregs.apic_base = CpuState.ApicBase;
 
   SEG(cs, Cs);
-  SEG(ss, SS);
+  SEG(ss, Ss);
   SEG(es, Es);
   SEG(ds, Ds);
   SEG(fs, Fs);
