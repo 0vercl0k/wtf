@@ -199,6 +199,20 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
     }
   }
 
+  //
+  // Validate that the Reserved field of each segment contains bits 16-19 of the Limit
+  //
+
+  Seg_t *Segments[] = {&CpuState.Es, &CpuState.Fs, &CpuState.Cs, 
+                       &CpuState.Gs, &CpuState.Ss, &CpuState.Ds};
+
+  for (Seg_t *Seg : Segments) {
+    if (Seg->Reserved != (Seg->Limit >> 16) & 0xF) {
+      fmt::print("Segment with selector {} has invalid attributes\n", Seg->Selector);
+      return false;
+    }
+  }
+
   return true;
 }
 
