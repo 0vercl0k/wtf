@@ -873,44 +873,12 @@ bool KvmBackend_t::LoadSregs(const CpuState_t &CpuState) {
   Run_->s.regs.sregs.efer = CpuState.Efer.Flags;
   Run_->s.regs.sregs.apic_base = CpuState.ApicBase;
 
-  Run_->s.regs.sregs.cs = {
-      .base = 0,
-      .limit = 0xffffffff,
-      .selector = CpuState.Cs.Selector,
-      .type = uint8_t(CpuState.Cs.SegmentType),
-      .present = uint8_t(CpuState.Cs.Present),
-      .dpl = uint8_t(CpuState.Cs.DescriptorPrivilegeLevel),
-      .db = 0,
-      .s = uint8_t(CpuState.Cs.NonSystemSegment),
-      .l = 1,
-      .g = 1,
-      .avl = 0,
-  };
-
-  struct kvm_segment DataSeg = Run_->s.regs.sregs.cs;
-  DataSeg.type = 3;
-
-  Run_->s.regs.sregs.ss = DataSeg;
-  Run_->s.regs.sregs.ss.type = CpuState.Ss.SegmentType;
-  Run_->s.regs.sregs.ss.selector = CpuState.Ss.Selector;
-
-  Run_->s.regs.sregs.es = DataSeg;
-  Run_->s.regs.sregs.es.type = CpuState.Es.SegmentType;
-  Run_->s.regs.sregs.es.selector = CpuState.Es.Selector;
-
-  Run_->s.regs.sregs.ds = DataSeg;
-  Run_->s.regs.sregs.ds.type = CpuState.Ds.SegmentType;
-  Run_->s.regs.sregs.ds.selector = CpuState.Ds.Selector;
-
-  Run_->s.regs.sregs.fs = DataSeg;
-  Run_->s.regs.sregs.fs.type = CpuState.Fs.SegmentType;
-  Run_->s.regs.sregs.fs.selector = CpuState.Fs.Selector;
-
-  Run_->s.regs.sregs.gs = DataSeg;
-  Run_->s.regs.sregs.gs.base = CpuState.Gs.Base;
-  Run_->s.regs.sregs.gs.type = CpuState.Gs.SegmentType;
-  Run_->s.regs.sregs.gs.selector = CpuState.Gs.Selector;
-
+  SEG(cs, Cs);
+  SEG(ss, Ss);
+  SEG(es, Es);
+  SEG(ds, Ds);
+  SEG(fs, Fs);
+  SEG(gs, Gs);
   SEG(tr, Tr);
   SEG(ldt, Ldtr);
 
