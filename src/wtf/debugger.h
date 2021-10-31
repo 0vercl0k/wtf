@@ -124,52 +124,52 @@ public:
     char ExePathBuffer[MAX_PATH];
     if (!GetModuleFileNameA(nullptr, &ExePathBuffer[0],
                             sizeof(ExePathBuffer))) {
-      printf("GetModuleFileNameA failed.\n");
+      fmt::print("GetModuleFileNameA failed.\n");
       return false;
     }
 
     //
-    // Let's check if the two dlls exist in the same path as the application.
+    // Let's check if the dlls exist in the same path as the application.
     //
 
     const fs::path ExePath(ExePathBuffer);
     const fs::path ParentDir(ExePath.parent_path());
-    if (!fs::exists(ParentDir / "dbghelp.dll") ||
-        !fs::exists(ParentDir / "symsrv.dll")) {
+    const std::vector<std::string_view> Dlls = {"dbghelp.dll", "symsrv.dll",
+                                                "dbgeng.dll", "dbgcore.dll"};
+    const fs::path DefaultDbgDllLocation(
+        R"(c:\program Files (x86)\windows kits\10\debuggers\x64)");
+
+    for (const auto &Dll : Dlls) {
+      if (fs::exists(ParentDir / Dll)) {
+        continue;
+      }
 
       //
-      // Apparently they don't. Be nice and try to find them by ourselves.
+      // Apparently it doesn't. Be nice and try to find them by ourselves.
       //
 
-      const fs::path DefaultDbghelpLocation(
-          R"(c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll)");
-      const fs::path DefaultSymsrvLocation(
-          R"(c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll)");
+      const fs::path DbgDllLocation(DefaultDbgDllLocation / Dll);
+      if (!fs::exists(DbgDllLocation)) {
 
-      const bool Dbghelp = fs::exists(DefaultDbghelpLocation);
-      const bool Symsrv = fs::exists(DefaultSymsrvLocation);
+        //
+        // If it doesn't exist we have to exit.
+        //
 
-      //
-      // If they don't exist and we haven't them ourselves, then we have to
-      // exit.
-      //
-
-      if (!Dbghelp || !Symsrv) {
-        printf("The debugger class expects dbghelp.dll / symsrv.dll in the "
-               "directory "
-               "where the application is running from.\n");
+        fmt::print("The debugger class expects debug dlls in the "
+                   "directory "
+                   "where the application is running from.\n");
         return false;
       }
 
       //
-      // Sounds like we are able to fix the problem ourselves. Copy the files in
-      // the directory where the application is running from and move on!
+      // Sounds like we are able to fix the problem ourselves. Copy the files
+      // in the directory where the application is running from and move on!
       //
 
-      fs::copy(DefaultDbghelpLocation, ParentDir);
-      fs::copy(DefaultSymsrvLocation, ParentDir);
-      printf("Copied dbghelp and symsrv.dll from default location into the "
-             "executable directory..\n");
+      fs::copy(DbgDllLocation, ParentDir);
+      fmt::print("Copied {} into the "
+                 "executable directory..\n",
+                 DbgDllLocation.generic_string());
     }
 
     HRESULT Status = DebugCreate(__uuidof(IDebugClient), (void **)&Client_);
@@ -207,8 +207,8 @@ public:
     //#define SYMOPT_DEBUG 0x80000000
     //    Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
     //    if (FAILED(Status)) {
-    //      fmt::print("IDebugSymbols::SetSymbolOptions failed with hr={:#x}\n",
-    //      Status); return false;
+    //      fmt::print("IDebugSymbols::SetSymbolOptions failed with
+    //      hr={:#x}\n", Status); return false;
     //    }
     // Client_->SetOutputCallbacks(&StdioCallbacks_);
 
@@ -223,8 +223,8 @@ public:
 
     // Note The engine doesn't completely attach to the dump file until the
     // WaitForEvent method has been called. When a dump file is created from a
-    // process or kernel, information about the last event is stored in the dump
-    // file. After the dump file is opened, the next time execution is
+    // process or kernel, information about the last event is stored in the
+    // dump file. After the dump file is opened, the next time execution is
     // attempted, the engine will generate this event for the event callbacks.
     // Only then does the dump file become available in the debugging session.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/dbgeng/nf-dbgeng-idebugclient-opendumpfile
