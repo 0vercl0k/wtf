@@ -52,6 +52,8 @@ jobs:
       if: matrix.generator == 'ninja'
       run: |
         copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
+        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgeng.dll" src/build
+        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgcore.dll" src/build
         copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
 
     - name: Upload artifacts
