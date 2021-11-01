@@ -65,6 +65,8 @@ jobs:
           src/build/wtf.exe
           src/build/wtf.pdb
           src/build/dbghelp.dll
+          src/build/dbgeng.dll
+          src/build/dbgcore.dll
           src/build/symsrv.dll
 
   Linux:
