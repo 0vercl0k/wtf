@@ -221,6 +221,16 @@ At this point you should start to iterate and verify that the fuzzer module work
 
 Once you are satisfied with the module, you can start to look at making it work with the [winhv](https://github.com/0vercl0k/wtf/blob/main/src/wtf/whv_backend.h) / [kvm](https://github.com/0vercl0k/wtf/blob/main/src/wtf/kvm_backend.h) backends if you need it to run under those. One major difference between the *bochscpu* backend & the others, is that the others use software breakpoints to provide code-coverage information. As a result, you'll need to load the modules you want coverage for under [IDA](https://hex-rays.com/IDA-pro/) and use the [gen_coveragefile_ida.py](https://github.com/0vercl0k/wtf/blob/main/script/gen_coveragefile_ida.py) script to generate a simple JSON file that gets loaded by wtf. You are free to generate this JSON file yourself using whatever tool you would like: it basically is a list of basic-blocks virtual addresses.
 
+You can also target [WoW64](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details) applications by using the `!wow64exts.sw` Windbg command to switch to the 64-bit context right before creating the snapshot (thanks [@cube0x8](https://twitter.com/cube0x8) for sharing this trick!):
+
+```
+32.kd:x86> !wow64exts.sw
+The context is partially valid. Only x86 user-mode context is available.
+Switched to Host mode
+
+32.kd> !bdump "c:\\dump"
+```
+
 ## Execution backends
 
 In this section I briefly mention various differences between the execution backends.
