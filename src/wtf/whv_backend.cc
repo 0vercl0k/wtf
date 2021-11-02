@@ -423,9 +423,6 @@ HRESULT WhvBackend_t::LoadState(const CpuState_t &CpuState) {
     Reg->Segment.Limit = CpuState._Whv_.Limit;                                 \
     Reg->Segment.Selector = CpuState._Whv_.Selector;                           \
     Reg->Segment.Attributes = CpuState._Whv_.Attr;                             \
-    if constexpr (WHvX64Register##_Whv_ == WHvX64RegisterTr) {                 \
-      Reg->Segment.Limit = 0xffffffff;                                         \
-    }                                                                          \
     const HRESULT Hr = SetRegister(WHvX64Register##_Whv_, &Reg);               \
     if (FAILED(Hr)) {                                                          \
       fmt::print("Setting " #_Whv_ " failed\n");                               \
