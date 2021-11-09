@@ -215,6 +215,16 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
     }
   }
 
+  //
+  // Check if the CR3 is page aligned.
+  //
+
+  const Gpa_t Cr3(CpuState.Cr3);
+  if (Cr3.Align() != Cr3) {
+    fmt::print("@cr3 ({:x}) is not aligned.. aligning it.\n");
+    CpuState.Cr3 = Cr3.Align().U64();
+  }
+
   return true;
 }
 
