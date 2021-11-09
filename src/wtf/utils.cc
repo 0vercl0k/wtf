@@ -221,7 +221,7 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
 
   const Gpa_t Cr3(CpuState.Cr3);
   if (Cr3.Align() != Cr3) {
-    fmt::print("@cr3 ({:x}) is not aligned.. aligning it.\n");
+    fmt::print("The @cr3 ({:x}) register is not aligned.. aligning it.\n", Cr3);
     CpuState.Cr3 = Cr3.Align().U64();
   }
 
