@@ -115,11 +115,14 @@ TestcaseResult_t RunTestcaseAndRestore(const Target_t &Target,
   }
 
   //
-  // Let know the stats that we finished a testcase.
+  // Let know the stats that we finished a testcase. Make sure to not count
+  // coverage if the testcase timed-out as it'll get revoked.
   //
 
-  const auto &LastNewCoverage = g_Backend->LastNewCoverage();
-  g_Stats.TestcaseEnds(*Res, LastNewCoverage.size());
+  const bool Timedout = std::holds_alternative<Timedout_t>(*Res);
+  const uint64_t NewCoverage =
+      Timedout ? 0 : g_Backend->LastNewCoverage().size();
+  g_Stats.TestcaseEnds(*Res, NewCoverage);
 
   //
   // Let the stats that we are about to start a restore.
