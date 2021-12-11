@@ -8,9 +8,6 @@
 #include <cstring>
 #include <fstream>
 
-//#define BOCHS_LOGGING_ON
-//#define BOCHSHOOKS_LOGGING_ON
-
 constexpr bool BochsLoggingOn = false;
 constexpr bool BochsHooksLoggingOn = false;
 
