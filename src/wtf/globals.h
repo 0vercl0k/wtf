@@ -79,12 +79,12 @@ struct GlobalSeg_t {
 // This is stolen from linux/v5.7.2/source/arch/x86/include/asm/apicdef.h
 //
 
-#define APIC_DEFAULT_PHYS_BASE 0xfee00000
-#define APIC_SPIV 0xF0
-#define APIC_LVTPC 0x340
-#define APIC_MODE_FIXED 0x0
-#define APIC_MODE_NMI 0x4
-#define APIC_MODE_EXTINT 0x7
+constexpr uint32_t APIC_DEFAULT_PHYS_BASE = 0xfee00000;
+constexpr uint32_t APIC_SPIV = 0xF0;
+constexpr uint32_t APIC_LVTPC = 0x340;
+constexpr uint32_t APIC_MODE_FIXED = 0x0;
+constexpr uint32_t APIC_MODE_NMI = 0x4;
+constexpr uint32_t APIC_MODE_EXTINT = 0x7;
 
 //
 // This has been stolen from ia32-docs's ia32.h:
