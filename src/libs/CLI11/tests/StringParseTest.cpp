@@ -1,10 +1,15 @@
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
+// under NSF AWARD 1414736 and by the respective contributors.
+// All rights reserved.
+//
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include "app_helper.hpp"
 
-#include "gmock/gmock.h"
 #include <cstdio>
 #include <sstream>
 
-TEST_F(TApp, ExistingExeCheck) {
+TEST_CASE_METHOD(TApp, "ExistingExeCheck", "[stringparse]") {
 
     TempFile tmpexe{"existingExe.out"};
 
@@ -21,12 +26,12 @@ TEST_F(TApp, ExistingExeCheck) {
     app.parse(std::string("./") + std::string(tmpexe) +
                   " --string=\"this is my quoted string\" -t 'qstring 2' -m=`\"quoted string\"`",
               true);
-    EXPECT_EQ(str, "this is my quoted string");
-    EXPECT_EQ(str2, "qstring 2");
-    EXPECT_EQ(str3, "\"quoted string\"");
+    CHECK("this is my quoted string" == str);
+    CHECK("qstring 2" == str2);
+    CHECK("\"quoted string\"" == str3);
 }
 
-TEST_F(TApp, ExistingExeCheckWithSpace) {
+TEST_CASE_METHOD(TApp, "ExistingExeCheckWithSpace", "[stringparse]") {
 
     TempFile tmpexe{"Space File.out"};
 
@@ -43,14 +48,14 @@ TEST_F(TApp, ExistingExeCheckWithSpace) {
     app.parse(std::string("./") + std::string(tmpexe) +
                   " --string=\"this is my quoted string\" -t 'qstring 2' -m=`\"quoted string\"`",
               true);
-    EXPECT_EQ(str, "this is my quoted string");
-    EXPECT_EQ(str2, "qstring 2");
-    EXPECT_EQ(str3, "\"quoted string\"");
+    CHECK("this is my quoted string" == str);
+    CHECK("qstring 2" == str2);
+    CHECK("\"quoted string\"" == str3);
 
-    EXPECT_EQ(app.get_name(), std::string("./") + std::string(tmpexe));
+    CHECK(std::string("./") + std::string(tmpexe) == app.get_name());
 }
 
-TEST_F(TApp, ExistingExeCheckWithLotsOfSpace) {
+TEST_CASE_METHOD(TApp, "ExistingExeCheckWithLotsOfSpace", "[stringparse]") {
 
     TempFile tmpexe{"this is a weird file.exe"};
 
@@ -67,9 +72,37 @@ TEST_F(TApp, ExistingExeCheckWithLotsOfSpace) {
     app.parse(std::string("./") + std::string(tmpexe) +
                   " --string=\"this is my quoted string\" -t 'qstring 2' -m=`\"quoted string\"`",
               true);
-    EXPECT_EQ(str, "this is my quoted string");
-    EXPECT_EQ(str2, "qstring 2");
-    EXPECT_EQ(str3, "\"quoted string\"");
+    CHECK("this is my quoted string" == str);
+    CHECK("qstring 2" == str2);
+    CHECK("\"quoted string\"" == str3);
 
-    EXPECT_EQ(app.get_name(), std::string("./") + std::string(tmpexe));
+    CHECK(std::string("./") + std::string(tmpexe) == app.get_name());
+}
+
+// From GitHub issue #591 https://github.com/CLIUtils/CLI11/issues/591
+TEST_CASE_METHOD(TApp, "ProgNameWithSpace", "[stringparse]") {
+
+    app.add_flag("--foo");
+    CHECK_NOTHROW(app.parse("\"Foo Bar\" --foo", true));
+
+    CHECK(app["--foo"]->as<bool>());
+    CHECK(app.get_name() == "Foo Bar");
+}
+
+TEST_CASE_METHOD(TApp, "ProgNameWithSpaceEmbeddedQuote", "[stringparse]") {
+
+    app.add_flag("--foo");
+    CHECK_NOTHROW(app.parse("\"Foo\\\" Bar\" --foo", true));
+
+    CHECK(app["--foo"]->as<bool>());
+    CHECK(app.get_name() == "Foo\" Bar");
+}
+
+TEST_CASE_METHOD(TApp, "ProgNameWithSpaceSingleQuote", "[stringparse]") {
+
+    app.add_flag("--foo");
+    CHECK_NOTHROW(app.parse(R"('Foo\' Bar' --foo)", true));
+
+    CHECK(app["--foo"]->as<bool>());
+    CHECK(app.get_name() == "Foo' Bar");
 }

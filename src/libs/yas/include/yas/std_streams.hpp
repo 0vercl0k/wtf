@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -48,7 +48,6 @@ namespace yas {
 
 struct std_ostream_adapter {
     YAS_NONCOPYABLE(std_ostream_adapter)
-    YAS_MOVABLE(std_ostream_adapter)
 
     std_ostream_adapter(std::ostream &os)
         :os(os)
@@ -72,16 +71,22 @@ private:
 
 struct std_istream_adapter {
     YAS_NONCOPYABLE(std_istream_adapter)
-    YAS_MOVABLE(std_istream_adapter)
 
     std_istream_adapter(std::istream &is)
         :is(is)
-    {}
+        ,fsize(0)
+    {
+        std::streampos pos = is.tellg();
+        is.seekg(0, std::ios::end);
+        fsize = is.tellg() - pos;
+        is.seekg(pos, std::ios::beg);
+    }
 
     std::size_t read(void *ptr, const std::size_t size) {
         return __YAS_SCAST(std::size_t, is.read(__YAS_SCAST(char*, ptr), size).gcount());
     }
 
+    std::size_t available() const { return fsize - is.tellg(); }
     bool empty() const { return is.peek() == EOF; }
     char peekch() const { return __YAS_SCAST(char, is.peek()); }
     char getch() { return __YAS_SCAST(char, is.get()); }
@@ -89,6 +94,7 @@ struct std_istream_adapter {
 
 private:
     std::istream &is;
+    std::size_t fsize;
 }; // struct std_istream
 
 /***************************************************************************/

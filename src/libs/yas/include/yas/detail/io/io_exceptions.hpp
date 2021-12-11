@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -36,6 +36,7 @@
 #ifndef __yas__detail__io__io_exceptions_hpp
 #define __yas__detail__io__io_exceptions_hpp
 
+#include <yas/detail/config/config.hpp>
 #include <yas/detail/io/exception_base.hpp>
 
 namespace yas {
@@ -59,20 +60,17 @@ __YAS_DECLARE_EXCEPTION_TYPE(io_exception)
 	__YAS_THROW_EXCEPTION(::yas::io_exception, "you cannot use information functions with \"yas::no_header\" flag");
 
 #define __YAS_THROW_READ_STORAGE_SIZE_ERROR(...) \
-	if ( !(__VA_ARGS__) ) { \
-	} else { \
+	if ( __YAS_UNLIKELY(__VA_ARGS__) ) { \
 		__YAS_THROW_EXCEPTION(::yas::io_exception, "stored value is too big to read"); \
 	}
 
 #define __YAS_THROW_READ_ERROR(...) \
-	if ( !(__VA_ARGS__) ) { \
-	} else { \
+	if ( __YAS_UNLIKELY(__VA_ARGS__) ) { \
 		__YAS_THROW_EXCEPTION(::yas::io_exception, "can't read requested bytes"); \
 	}
 
 #define __YAS_THROW_WRITE_ERROR(...) \
-	if ( !(__VA_ARGS__) ) { \
-	} else { \
+	if ( __YAS_UNLIKELY(__VA_ARGS__) ) { \
 		__YAS_THROW_EXCEPTION(::yas::io_exception, "can't write requested bytes"); \
 	}
 

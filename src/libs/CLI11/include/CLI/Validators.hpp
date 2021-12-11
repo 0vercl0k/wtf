@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020, University of Cincinnati, developed by Henry Schreiner
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
 // under NSF AWARD 1414736 and by the respective contributors.
 // All rights reserved.
 //
@@ -10,6 +10,7 @@
 #include "StringTools.hpp"
 #include "TypeTools.hpp"
 
+// [CLI11:public_includes:set]
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -20,8 +21,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+// [CLI11:public_includes:end]
 
-// [CLI11:verbatim]
+// [CLI11:validators_hpp_filesystem:verbatim]
 
 // C standard library
 // Only needed for existence checking
@@ -55,9 +57,10 @@
 #include <sys/types.h>
 #endif
 
-// [CLI11:verbatim]
+// [CLI11:validators_hpp_filesystem:end]
 
 namespace CLI {
+// [CLI11:validators_hpp:verbatim]
 
 class Option;
 
@@ -419,53 +422,6 @@ class IPV4Validator : public Validator {
     }
 };
 
-/// Validate the argument is a number and greater than 0
-class PositiveNumber : public Validator {
-  public:
-    PositiveNumber() : Validator("POSITIVE") {
-        func_ = [](std::string &number_str) {
-            double number;
-            if(!detail::lexical_cast(number_str, number)) {
-                return std::string("Failed parsing number: (") + number_str + ')';
-            }
-            if(number <= 0) {
-                return std::string("Number less or equal to 0: (") + number_str + ')';
-            }
-            return std::string();
-        };
-    }
-};
-/// Validate the argument is a number and greater than or equal to 0
-class NonNegativeNumber : public Validator {
-  public:
-    NonNegativeNumber() : Validator("NONNEGATIVE") {
-        func_ = [](std::string &number_str) {
-            double number;
-            if(!detail::lexical_cast(number_str, number)) {
-                return std::string("Failed parsing number: (") + number_str + ')';
-            }
-            if(number < 0) {
-                return std::string("Number less than 0: (") + number_str + ')';
-            }
-            return std::string();
-        };
-    }
-};
-
-/// Validate the argument is a number
-class Number : public Validator {
-  public:
-    Number() : Validator("NUMBER") {
-        func_ = [](std::string &number_str) {
-            double number;
-            if(!detail::lexical_cast(number_str, number)) {
-                return std::string("Failed parsing as a number (") + number_str + ')';
-            }
-            return std::string();
-        };
-    }
-};
-
 }  // namespace detail
 
 // Static is not needed here, because global const implies static.
@@ -485,14 +441,23 @@ const detail::NonexistentPathValidator NonexistentPath;
 /// Check for an IP4 address
 const detail::IPV4Validator ValidIPV4;
 
-/// Check for a positive number
-const detail::PositiveNumber PositiveNumber;
-
-/// Check for a non-negative number
-const detail::NonNegativeNumber NonNegativeNumber;
+/// Validate the input as a particular type
+template <typename DesiredType> class TypeValidator : public Validator {
+  public:
+    explicit TypeValidator(const std::string &validator_name) : Validator(validator_name) {
+        func_ = [](std::string &input_string) {
+            auto val = DesiredType();
+            if(!detail::lexical_cast(input_string, val)) {
+                return std::string("Failed parsing ") + input_string + " as a " + detail::type_name<DesiredType>();
+            }
+            return std::string();
+        };
+    }
+    TypeValidator() : TypeValidator(detail::type_name<DesiredType>()) {}
+};
 
 /// Check for a number
-const detail::Number Number;
+const TypeValidator<double> Number("NUMBER");
 
 /// Produce a range (factory). Min and max are inclusive.
 class Range : public Validator {
@@ -501,25 +466,36 @@ class Range : public Validator {
     ///
     /// Note that the constructor is templated, but the struct is not, so C++17 is not
     /// needed to provide nice syntax for Range(a,b).
-    template <typename T> Range(T min, T max) {
-        std::stringstream out;
-        out << detail::type_name<T>() << " in [" << min << " - " << max << "]";
-        description(out.str());
+    template <typename T>
+    Range(T min_val, T max_val, const std::string &validator_name = std::string{}) : Validator(validator_name) {
+        if(validator_name.empty()) {
+            std::stringstream out;
+            out << detail::type_name<T>() << " in [" << min_val << " - " << max_val << "]";
+            description(out.str());
+        }
 
-        func_ = [min, max](std::string &input) {
+        func_ = [min_val, max_val](std::string &input) {
             T val;
             bool converted = detail::lexical_cast(input, val);
-            if((!converted) || (val < min || val > max))
-                return std::string("Value ") + input + " not in range " + std::to_string(min) + " to " +
-                       std::to_string(max);
+            if((!converted) || (val < min_val || val > max_val))
+                return std::string("Value ") + input + " not in range " + std::to_string(min_val) + " to " +
+                       std::to_string(max_val);
 
-            return std::string();
+            return std::string{};
         };
     }
 
     /// Range of one value is 0 to value
-    template <typename T> explicit Range(T max) : Range(static_cast<T>(0), max) {}
+    template <typename T>
+    explicit Range(T max_val, const std::string &validator_name = std::string{})
+        : Range(static_cast<T>(0), max_val, validator_name) {}
 };
+
+/// Check for a non negative number
+const Range NonNegativeNumber((std::numeric_limits<double>::max)(), "NONNEGATIVE");
+
+/// Check for a positive valued number (val>0.0), min() her is the smallest positive number
+const Range PositiveNumber((std::numeric_limits<double>::min)(), (std::numeric_limits<double>::max)(), "POSITIVE");
 
 /// Produce a bounded range (factory). Min and max are inclusive.
 class Bound : public Validator {
@@ -528,28 +504,28 @@ class Bound : public Validator {
     ///
     /// Note that the constructor is templated, but the struct is not, so C++17 is not
     /// needed to provide nice syntax for Range(a,b).
-    template <typename T> Bound(T min, T max) {
+    template <typename T> Bound(T min_val, T max_val) {
         std::stringstream out;
-        out << detail::type_name<T>() << " bounded to [" << min << " - " << max << "]";
+        out << detail::type_name<T>() << " bounded to [" << min_val << " - " << max_val << "]";
         description(out.str());
 
-        func_ = [min, max](std::string &input) {
+        func_ = [min_val, max_val](std::string &input) {
             T val;
             bool converted = detail::lexical_cast(input, val);
             if(!converted) {
                 return std::string("Value ") + input + " could not be converted";
             }
-            if(val < min)
-                input = detail::to_string(min);
-            else if(val > max)
-                input = detail::to_string(max);
+            if(val < min_val)
+                input = detail::to_string(min_val);
+            else if(val > max_val)
+                input = detail::to_string(max_val);
 
             return std::string{};
         };
     }
 
     /// Range of one value is 0 to value
-    template <typename T> explicit Bound(T max) : Bound(static_cast<T>(0), max) {}
+    template <typename T> explicit Bound(T max_val) : Bound(static_cast<T>(0), max_val) {}
 };
 
 namespace detail {
@@ -700,7 +676,7 @@ class IsMember : public Validator {
 
     /// This allows in-place construction using an initializer list
     template <typename T, typename... Args>
-    IsMember(std::initializer_list<T> values, Args &&... args)
+    IsMember(std::initializer_list<T> values, Args &&...args)
         : IsMember(std::vector<T>(values), std::forward<Args>(args)...) {}
 
     /// This checks to see if an item is in a set (empty function)
@@ -746,15 +722,13 @@ class IsMember : public Validator {
             }
 
             // If you reach this point, the result was not found
-            std::string out(" not in ");
-            out += detail::generate_set(detail::smart_deref(set));
-            return out;
+            return input + " not in " + detail::generate_set(detail::smart_deref(set));
         };
     }
 
     /// You can pass in as many filter functions as you like, they nest (string only currently)
     template <typename T, typename... Args>
-    IsMember(T &&set, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args &&... other)
+    IsMember(T &&set, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args &&...other)
         : IsMember(
               std::forward<T>(set),
               [filter_fn_1, filter_fn_2](std::string a) { return filter_fn_2(filter_fn_1(a)); },
@@ -771,7 +745,7 @@ class Transformer : public Validator {
 
     /// This allows in-place construction
     template <typename... Args>
-    Transformer(std::initializer_list<std::pair<std::string, std::string>> values, Args &&... args)
+    Transformer(std::initializer_list<std::pair<std::string, std::string>> values, Args &&...args)
         : Transformer(TransformPairs<std::string>(values), std::forward<Args>(args)...) {}
 
     /// direct map of std::string to std::string
@@ -815,7 +789,7 @@ class Transformer : public Validator {
 
     /// You can pass in as many filter functions as you like, they nest
     template <typename T, typename... Args>
-    Transformer(T &&mapping, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args &&... other)
+    Transformer(T &&mapping, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args &&...other)
         : Transformer(
               std::forward<T>(mapping),
               [filter_fn_1, filter_fn_2](std::string a) { return filter_fn_2(filter_fn_1(a)); },
@@ -829,7 +803,7 @@ class CheckedTransformer : public Validator {
 
     /// This allows in-place construction
     template <typename... Args>
-    CheckedTransformer(std::initializer_list<std::pair<std::string, std::string>> values, Args &&... args)
+    CheckedTransformer(std::initializer_list<std::pair<std::string, std::string>> values, Args &&...args)
         : CheckedTransformer(TransformPairs<std::string>(values), std::forward<Args>(args)...) {}
 
     /// direct map of std::string to std::string
@@ -891,7 +865,7 @@ class CheckedTransformer : public Validator {
 
     /// You can pass in as many filter functions as you like, they nest
     template <typename T, typename... Args>
-    CheckedTransformer(T &&mapping, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args &&... other)
+    CheckedTransformer(T &&mapping, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args &&...other)
         : CheckedTransformer(
               std::forward<T>(mapping),
               [filter_fn_1, filter_fn_2](std::string a) { return filter_fn_2(filter_fn_1(a)); },
@@ -968,14 +942,11 @@ class AsNumberWithUnit : public Validator {
             if(opts & CASE_INSENSITIVE) {
                 unit = detail::to_lower(unit);
             }
-
-            bool converted = detail::lexical_cast(input, num);
-            if(!converted) {
-                throw ValidationError(std::string("Value ") + input + " could not be converted to " +
-                                      detail::type_name<Number>());
-            }
-
             if(unit.empty()) {
+                if(!detail::lexical_cast(input, num)) {
+                    throw ValidationError(std::string("Value ") + input + " could not be converted to " +
+                                          detail::type_name<Number>());
+                }
                 // No need to modify input if no unit passed
                 return {};
             }
@@ -989,12 +960,22 @@ class AsNumberWithUnit : public Validator {
                                       detail::generate_map(mapping, true));
             }
 
-            // perform safe multiplication
-            bool ok = detail::checked_multiply(num, it->second);
-            if(!ok) {
-                throw ValidationError(detail::to_string(num) + " multiplied by " + unit +
-                                      " factor would cause number overflow. Use smaller value.");
+            if(!input.empty()) {
+                bool converted = detail::lexical_cast(input, num);
+                if(!converted) {
+                    throw ValidationError(std::string("Value ") + input + " could not be converted to " +
+                                          detail::type_name<Number>());
+                }
+                // perform safe multiplication
+                bool ok = detail::checked_multiply(num, it->second);
+                if(!ok) {
+                    throw ValidationError(detail::to_string(num) + " multiplied by " + unit +
+                                          " factor would cause number overflow. Use smaller value.");
+                }
+            } else {
+                num = static_cast<Number>(it->second);
             }
+
             input = detail::to_string(num);
 
             return {};
@@ -1119,12 +1100,35 @@ inline std::pair<std::string, std::string> split_program_name(std::string comman
         if(esp == std::string::npos) {
             // if we have reached the end and haven't found a valid file just assume the first argument is the
             // program name
-            esp = commandline.find_first_of(' ', 1);
+            if(commandline[0] == '"' || commandline[0] == '\'' || commandline[0] == '`') {
+                bool embeddedQuote = false;
+                auto keyChar = commandline[0];
+                auto end = commandline.find_first_of(keyChar, 1);
+                while((end != std::string::npos) && (commandline[end - 1] == '\\')) {  // deal with escaped quotes
+                    end = commandline.find_first_of(keyChar, end + 1);
+                    embeddedQuote = true;
+                }
+                if(end != std::string::npos) {
+                    vals.first = commandline.substr(1, end - 1);
+                    esp = end + 1;
+                    if(embeddedQuote) {
+                        vals.first = find_and_replace(vals.first, std::string("\\") + keyChar, std::string(1, keyChar));
+                    }
+                } else {
+                    esp = commandline.find_first_of(' ', 1);
+                }
+            } else {
+                esp = commandline.find_first_of(' ', 1);
+            }
+
             break;
         }
     }
-    vals.first = commandline.substr(0, esp);
-    rtrim(vals.first);
+    if(vals.first.empty()) {
+        vals.first = commandline.substr(0, esp);
+        rtrim(vals.first);
+    }
+
     // strip the program name
     vals.second = (esp != std::string::npos) ? commandline.substr(esp + 1) : std::string{};
     ltrim(vals.second);
@@ -1134,4 +1138,5 @@ inline std::pair<std::string, std::string> split_program_name(std::string comman
 }  // namespace detail
 /// @}
 
+// [CLI11:validators_hpp:end]
 }  // namespace CLI

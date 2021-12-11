@@ -1,7 +1,5 @@
 # Making a git clone
 
-
-
 Let's try our hand at a little `git` clone, called `geet`. It will just print it's intent, rather than running actual code, since it's just a demonstration. Let's start by adding an app and requiring 1 subcommand to run:
 
 [include:"Intro"](../code/geet.cpp)
@@ -18,7 +16,7 @@ All that's need now is the parse call. We'll print a little message after the co
 
 [include:"Parse"](../code/geet.cpp)
 
-[Source code](https://github.com/CLIUtils/CLI11/tree/master/book/code/geet.cpp)
+[Source code](https://github.com/CLIUtils/CLI11/tree/main/book/code/geet.cpp)
 
 If you compile and run:
 

@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -154,6 +154,19 @@ bool fundamental_test(std::ostream &log, const char *archive_type, const char *t
              || l != l2 || i64 != i642 || u64 != u642 || f != f2 || d != d2
              || u64x != u64x2 || i64max != i64max2 || u64max != u64max2 )
         {
+            YAS_TEST_REPORT(log, archive_type, test_name);
+            return false;
+        }
+    }
+
+    if ( archive_traits::oarchive_type::type() == yas::json ) {
+        yas::intrusive_buffer ibuf("1234", 2);
+
+        yas::mem_istream is(ibuf);
+        yas::json_iarchive<yas::mem_istream> ia(is);
+        int v = 0;
+        ia & v;
+        if ( v != 12 ) {
             YAS_TEST_REPORT(log, archive_type, test_name);
             return false;
         }

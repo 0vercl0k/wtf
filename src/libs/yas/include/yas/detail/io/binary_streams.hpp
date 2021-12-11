@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -40,6 +40,7 @@
 #include <yas/detail/io/io_exceptions.hpp>
 #include <yas/detail/io/endian_conv.hpp>
 #include <yas/detail/type_traits/type_traits.hpp>
+#include <yas/tools/wrap_asis.hpp>
 
 namespace yas {
 namespace detail {
@@ -65,6 +66,11 @@ struct binary_ostream {
     }
 
     template<typename T>
+    void write(const asis_wrapper<T> &v) {
+        binary_ostream<OS, (F & ~yas::compacted)>{os}.write(v.val);
+    }
+
+    template<typename T>
     void write(const T &v, __YAS_ENABLE_IF_IS_ANY_OF(T, char, signed char, unsigned char, bool)) {
         __YAS_THROW_WRITE_ERROR(sizeof(v) != os.write(&v, sizeof(v)));
     }
@@ -73,7 +79,7 @@ struct binary_ostream {
     template<typename T>
     void write(const T &v, __YAS_ENABLE_IF_IS_SIGNED_INTEGER(T)) {
         __YAS_CONSTEXPR_IF ( F & yas::compacted ) {
-            if ( v >= 0 ) {
+            if ( __YAS_LIKELY(v >= 0) ) {
                 typename std::make_unsigned<T>::type uv = v;
                 if ( uv >= (1u<<6) ) {
                     const std::uint8_t ns = storage_size(uv);
@@ -198,6 +204,11 @@ struct binary_istream {
         return size;
     }
 
+    template<typename T>
+    void read(asis_wrapper<T> &v) {
+        binary_istream<IS, (F & ~yas::compacted)>{is}.read(v.val);
+    }
+
     // for chars & bools
     template<typename T>
     void read(T &v, __YAS_ENABLE_IF_IS_ANY_OF(T, char, signed char, unsigned char, bool)) {
@@ -212,13 +223,13 @@ struct binary_istream {
             const bool neg = __YAS_SCAST(bool, (ns >> 7) & 1u);
             const bool onebyte = __YAS_SCAST(bool, (ns >> 6) & 1u);
             ns &= ~((1u << 7) | (1u << 6));
-            if ( !onebyte ) {
+            if ( __YAS_LIKELY(!onebyte) ) {
                 typename std::make_unsigned<T>::type av = 0;
                 __YAS_THROW_READ_STORAGE_SIZE_ERROR(sizeof(av) < ns);
                 __YAS_THROW_READ_ERROR(ns != is.read(&av, ns));
-                v = (neg ? -__YAS_SCAST(T, av) : __YAS_SCAST(T, av));
+                v = (__YAS_UNLIKELY(neg) ? -__YAS_SCAST(T, av) : __YAS_SCAST(T, av));
             } else {
-                v = (neg ? -__YAS_SCAST(T, ns) : __YAS_SCAST(T, ns));
+                v = (__YAS_UNLIKELY(neg) ? -__YAS_SCAST(T, ns) : __YAS_SCAST(T, ns));
             }
         } else {
             __YAS_THROW_READ_ERROR(sizeof(v) != is.read(&v, sizeof(v)));
@@ -235,7 +246,7 @@ struct binary_istream {
             std::uint8_t ns = __YAS_SCAST(std::uint8_t, is.getch());
             const bool onebyte = __YAS_SCAST(bool, (ns >> 7) & 1u);
             ns &= ~(1u << 7);
-            if ( !onebyte ) {
+            if ( __YAS_LIKELY(!onebyte) ) {
                 __YAS_THROW_READ_STORAGE_SIZE_ERROR(sizeof(v) < ns);
                 __YAS_THROW_READ_ERROR(ns != is.read(&v, ns));
             } else {

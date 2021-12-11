@@ -1,8 +1,8 @@
 # CLI11: An introduction
 
-This gitbook is designed to provide an introduction to using the CLI11 library to write your own command line programs. The library is designed to be clean, intuitive, but powerful. There are no requirements beyond C++11 support (and even `<regex>` support not required). It works on Mac, Linux, and Windows, and has 100% test coverage on all three systems. You can simply drop in a single header file (`CLI11.hpp` available in [releases]) to use CLI11 in your own application. Other ways to integrate it into a build system are listed in the [README].
+This gitbook is designed to provide an introduction to using the CLI11 library to write your own command line programs. The library is designed to be clean, intuitive, but powerful. There are no requirements beyond C++11 support (and even `<regex>` support not required). It works on Mac, Linux, and Windows, and has 100% test coverage on all three systems. You can simply drop in a single header file (`CLI11.hpp` available in [releases][]) to use CLI11 in your own application. Other ways to integrate it into a build system are listed in the [README][].
 
-The library was inspired the Python libraries [Plumbum] and [Click], and incorporates many of their user friendly features. The library is extensively documented, with a [friendly introduction][README], this tutorial book, and more technical [API docs].
+The library was inspired the Python libraries [Plumbum][] and [Click][], and incorporates many of their user friendly features. The library is extensively documented, with a [friendly introduction][README], this tutorial book, and more technical [API docs][].
 
 > Feel free to contribute to [this documentation here][CLI11Tutorial] if something can be improved!
 
@@ -28,7 +28,7 @@ Like any good command line application, help is provided. This program can be im
 
 [include](code/intro.cpp)
 
-[Source code](https://github.com/CLIUtils/CLI11/blob/master/book/code/intro.cpp)
+[Source code](https://github.com/CLIUtils/CLI11/blob/main/book/code/intro.cpp)
 
 Unlike some other libraries, this is enough to exit correctly and cleanly if help is requested or if incorrect arguments are passed. You can try this example out for yourself. To compile with GCC:
 
@@ -39,7 +39,7 @@ gitbook:examples $ c++ -std=c++11 intro.cpp
 Much more complicated options are handled elegantly:
 
 ```cpp
-std::string req_real_file;
+std::string file;
 app.add_option("-f,--file", file, "Require an existing file")
   ->required()
   ->check(CLI::ExistingFile);
@@ -49,21 +49,17 @@ You can use any valid type; the above example could have used a `boost::file_sys
 
 You can use subcommands, as well. Subcommands support callback lambda functions when parsed, or they can be checked later. You can infinitely nest subcommands, and each is a full `App` instance, supporting everything listed above.
 
-Reading/producing `.ini` files for configuration is also supported, as is using environment variables as input. The base `App` can be subclassed and customized for use in a toolkit (like [GooFit]). All the standard shell idioms, like `--`, work as well.
+Reading/producing `.ini` files for configuration is also supported, as is using environment variables as input. The base `App` can be subclassed and customized for use in a toolkit (like [GooFit][]). All the standard shell idioms, like `--`, work as well.
 
-CLI11 was developed at the [University of Cincinnati] in support of the [GooFit] library under [NSF Award 1414736][NSF 1414736]. It was featured in a [DIANA/HEP] meeting at CERN. Please give it a try! Feedback is always welcome.
+CLI11 was developed at the [University of Cincinnati][] in support of the [GooFit][] library under [NSF Award 1414736][NSF 1414736]. It was featured in a [DIANA/HEP][] meeting at CERN. Please give it a try! Feedback is always welcome.
 
-[GooFit]: https://github.com/GooFit/GooFit
-[DIANA/HEP]: http://diana-hep.org
-[CLI11]: https://github.com/CLIUtils/CLI11
-[CLI11Tutorial]: https://cliutils.github.io/CLI11/book
+[goofit]: https://github.com/GooFit/GooFit
+[diana/hep]: https://diana-hep.org
+[cli11tutorial]: https://cliutils.github.io/CLI11/book
 [releases]: https://github.com/CLIUtils/CLI11/releases
-[API docs]: https://cliutils.github.io/CLI11
-[README]: https://github.com/CLIUtils/CLI11/blob/master/README.md
-[NSF 1414736]: https://nsf.gov/awardsearch/showAward?AWD_ID=1414736
-[University of Cincinnati]: http://www.uc.edu
-[Plumbum]: http://plumbum.readthedocs.io/en/latest/
-[Click]: https://click.palletsprojects.com/
-
-
-
+[api docs]: https://cliutils.github.io/CLI11
+[readme]: https://github.com/CLIUtils/CLI11/blob/main/README.md
+[nsf 1414736]: https://nsf.gov/awardsearch/showAward?AWD_ID=1414736
+[university of cincinnati]: https://www.uc.edu
+[plumbum]: https://plumbum.readthedocs.io/en/latest/
+[click]: https://click.palletsprojects.com

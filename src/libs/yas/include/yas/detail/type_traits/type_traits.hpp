@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -37,6 +37,7 @@
 #define __yas__detail__type_traits__type_traits_hpp
 
 #include <yas/detail/config/endian.hpp>
+#include <yas/detail/type_traits/serializer.hpp>
 #include <yas/detail/type_traits/has_memfn_serialize.hpp>
 #include <yas/detail/type_traits/has_function_serialize.hpp>
 #include <yas/version.hpp>
@@ -213,6 +214,13 @@ enum class ser_case {
     ,use_internal_serializer
 };
 
+template<
+     type_prop
+    ,ser_case
+    ,std::size_t F
+    ,typename T
+> struct serializer;
+
 template<typename T>
 struct type_properties {
     static constexpr type_prop value =
@@ -294,16 +302,38 @@ struct is_writable_archive: std::integral_constant<bool, Ar::is_writable()>
 
 namespace detail {
 
+template<typename...>
+using void_t = void;
+
+} // ns detail
+
+template<typename Ar, typename T, typename = void>
+struct is_serializable : std::false_type {};
+
+template<typename Ar, typename T>
+struct is_serializable<Ar, T, detail::void_t<decltype(
+    detail::serializer<
+         detail::type_properties<T>::value
+        ,detail::serialization_method<T, Ar>::value
+        ,Ar::flags()
+        ,T
+    >::save(std::declval<Ar &>(), std::declval<T>()))>> : std::true_type
+{};
+
+/***************************************************************************/
+
+namespace detail {
+
 template<
      std::size_t F
     ,typename T
-    ,bool Integer = std::is_integral<T>::value || std::is_enum<T>::value
-    ,bool Float = is_any_of<T, float, double>::value
+    ,bool Integral = std::is_integral<T>::value || std::is_enum<T>::value
+    ,bool Float = std::is_floating_point<T>::value
 >
 struct can_be_processed_as_byte_array: std::integral_constant<bool,
     (is_any_of<T, char, signed char, unsigned char>::value) || // text/json
-    ((F & yas::binary) && Integer && sizeof(T) == 1) ||
-    ((F & yas::binary) && Integer && (!(F & yas::compacted) && (!__YAS_BSWAP_NEEDED(F)))) ||
+    ((F & yas::binary) && Integral && sizeof(T) == 1) ||
+    ((F & yas::binary) && Integral && (!(F & yas::compacted) && (!__YAS_BSWAP_NEEDED(F)))) ||
     ((F & yas::binary) && Float && (!(F & yas::compacted) && (!__YAS_BSWAP_NEEDED(F))))
 >
 {};

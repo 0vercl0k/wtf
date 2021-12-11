@@ -70,8 +70,7 @@ BLAKE3 was designed by:
 * [@veorq](https://github.com/veorq) (Jean-Philippe Aumasson)
 * [@zookozcash](https://github.com/zookozcash) (Zooko)
 
-The development of BLAKE3 was sponsored by
-[Teserakt](https://teserakt.io) and [Electric Coin Company](https://electriccoin.co).
+The development of BLAKE3 was sponsored by [Electric Coin Company](https://electriccoin.co).
 
 *NOTE: BLAKE3 is not a password hashing algorithm, because it's
 designed to be fast, whereas password hashing should not be fast. If you
@@ -133,7 +132,7 @@ output_reader.fill(&mut output);
 assert_eq!(&output[..32], hash1.as_bytes());
 
 // Print a hash as hex.
-println!("{}", hash1.to_hex());
+println!("{}", hash1);
 ```
 
 Besides `hash`, BLAKE3 provides two other modes, `keyed_hash` and
@@ -151,9 +150,8 @@ let mac2 = hasher.finalize();
 assert_eq!(mac1, mac2);
 ```
 
-The `derive_key` mode takes a context string of any length and key
-material of any length, and it outputs a derived key of any length. The
-context string should be hardcoded, globally unique, and
+The `derive_key` mode takes a context string and some key material (not a
+password). The context string should be hardcoded, globally unique, and
 application-specific. A good default format for the context string is
 `"[application] [commit timestamp] [purpose]"`:
 
@@ -161,12 +159,10 @@ application-specific. A good default format for the context string is
 // Derive a couple of subkeys for different purposes.
 const EMAIL_CONTEXT: &str = "BLAKE3 example 2020-01-07 17:10:44 email key";
 const API_CONTEXT: &str = "BLAKE3 example 2020-01-07 17:11:21 API key";
-let input_key = b"some very secret key material (>'-')> <('-'<) ^('-')^";
-let mut email_key = [0; 32];
-blake3::derive_key(EMAIL_CONTEXT, input_key, &mut email_key);
-let mut api_key = [0; 32];
-blake3::derive_key(API_CONTEXT, input_key, &mut api_key);
-assert!(email_key != api_key);
+let input_key_material = b"usually at least 32 random bytes, not a password";
+let email_key = blake3::derive_key(EMAIL_CONTEXT, input_key_material);
+let api_key = blake3::derive_key(API_CONTEXT, input_key_material);
+assert_ne!(email_key, api_key);
 ```
 
 ### The C implementation
@@ -179,8 +175,10 @@ We post links to third-party bindings and implementations on the
 [@BLAKE3team Twitter account](https://twitter.com/BLAKE3team) whenever
 we hear about them. Some highlights include [an optimized Go
 implementation](https://github.com/zeebo/blake3), [Wasm bindings for
-Node.js and browsers](https://github.com/connor4312/blake3), and [binary
-wheels for Python](https://github.com/oconnor663/blake3-py).
+Node.js and browsers](https://github.com/connor4312/blake3), [binary
+wheels for Python](https://github.com/oconnor663/blake3-py), [.NET
+bindings](https://github.com/xoofx/Blake3.NET), and [JNI
+bindings](https://github.com/sken77/BLAKE3jni).
 
 ## Contributing
 
@@ -194,3 +192,9 @@ is copyright Samuel Neves, 2019-2020.
 
 This work is released into the public domain with CC0 1.0.
 Alternatively, it is licensed under the Apache License 2.0.
+
+## Miscellany
+
+- [@veorq](https://github.com/veorq) and
+  [@oconnor663](https://github.com/oconnor663) did [a podcast
+  interview](https://www.cryptography.fm/3) about designing BLAKE3.

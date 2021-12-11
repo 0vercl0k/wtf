@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -302,8 +302,6 @@ std::size_t json_read_num(Archive &ar, char *ptr, std::size_t size) {
         ++ptr;
     } while ( --size );
 
-    ar.ungetch(*ptr);
-
     return ptr-p;
 }
 
@@ -334,8 +332,6 @@ std::size_t json_read_double(Archive &ar, char *ptr, std::size_t size) {
         }
         ++ptr;
     } while ( --size );
-
-    ar.ungetch(*ptr);
 
     return ptr-p;
 }

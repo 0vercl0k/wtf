@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020, University of Cincinnati, developed by Henry Schreiner
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
 // under NSF AWARD 1414736 and by the respective contributors.
 // All rights reserved.
 //
@@ -6,15 +6,19 @@
 
 #pragma once
 
+// [CLI11:public_includes:set]
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
+// [CLI11:public_includes:end]
 
 #include "Error.hpp"
 #include "StringTools.hpp"
 
 namespace CLI {
+// [CLI11:split_hpp:verbatim]
+
 namespace detail {
 
 // Returns false if not a short option. Otherwise, sets opt name and rest and returns true
@@ -135,4 +139,5 @@ get_names(const std::vector<std::string> &input) {
 }
 
 }  // namespace detail
+// [CLI11:split_hpp:end]
 }  // namespace CLI

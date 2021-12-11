@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -48,6 +48,17 @@
 #       define __YAS_BIG_ENDIAN (1)
 #   elif (__BYTE_ORDER == __PDP_ENDIAN)
 #       define YAS_PDP_ENDIAN
+#   else
+#       error Unknown machine endianness detected.
+#   endif
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#   include <sys/endian.h>
+#   if (_BYTE_ORDER == _LITTLE_ENDIAN)
+#       define __YAS_LITTLE_ENDIAN (1)
+#       define __YAS_BIG_ENDIAN (0)
+#   elif (_BYTE_ORDER == _BIG_ENDIAN)
+#       define __YAS_LITTLE_ENDIAN (0)
+#       define __YAS_BIG_ENDIAN (1)
 #   else
 #       error Unknown machine endianness detected.
 #   endif

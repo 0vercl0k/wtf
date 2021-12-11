@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -37,6 +37,7 @@
 #define __yas__detail__tools__save_load_string_hpp
 
 #include <string>
+#include <vector>
 #include <cassert>
 
 #if defined(YAS_SERIALIZE_BOOST_TYPES)

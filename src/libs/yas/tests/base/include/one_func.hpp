@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -38,7 +38,7 @@
 
 /***************************************************************************/
 
-namespace onet_func_test {
+namespace one_func_test {
 
 bool _flag = false;
 
@@ -52,41 +52,41 @@ struct type {
 	int y;
 };
 
-} // ns
+} // ns one_func_test
 
 namespace yas {
 
 template<typename Archive>
-void serialize(Archive& ar, onet_func_test::type& t) {
+void serialize(Archive& ar, one_func_test::type& t) {
     auto o0 = YAS_OBJECT_NVP("type", ("x", t.x), ("y", t.y));
 	ar & o0;
 
-    onet_func_test::_flag = true;
+    one_func_test::_flag = true;
 }
 
 } // namespace yas
 
 template<typename archive_traits>
 bool one_function_test(std::ostream &log, const char *archive_type, const char *test_name) {
-    onet_func_test::type type, type2;
+    one_func_test::type type, type2;
 	type.x = 33; type.y = 44;
 
 	typename archive_traits::oarchive oa;
 	archive_traits::ocreate(oa, archive_type);
 	oa & type;
 
-	if ( !onet_func_test::_flag ) {
+	if ( !one_func_test::_flag ) {
 		YAS_TEST_REPORT(log, archive_type, test_name);
 		return false;
 	}
 
-    onet_func_test::_flag = false;
+    one_func_test::_flag = false;
 
 	typename archive_traits::iarchive ia;
 	archive_traits::icreate(ia, oa, archive_type);
     ia & type2;
 
-	if ( !onet_func_test::_flag ) {
+	if ( !one_func_test::_flag ) {
 		YAS_TEST_REPORT(log, archive_type, test_name);
 		return false;
 	}

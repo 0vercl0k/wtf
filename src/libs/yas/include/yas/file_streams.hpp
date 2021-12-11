@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -122,10 +122,15 @@ struct file_istream {
 
     file_istream(const char *fname, std::size_t m = 0)
         :file(std::fopen(fname, "rb"))
+        ,fsize(0)
     {
         if ( !file ) {
             __YAS_THROW_ERROR_OPEN_FILE();
         }
+
+        std::fseek(file, 0, SEEK_END);
+        fsize = std::ftell(file);
+        std::fseek(file, 0, SEEK_SET);
 
         if ( m & file_nobuf ) {
             std::setvbuf(file, nullptr, _IONBF, 0);
@@ -139,6 +144,9 @@ struct file_istream {
         return std::fread(ptr, 1, size, file);
     }
 
+    std::size_t available() const {
+        return fsize - std::ftell(file);
+    }
     bool empty() const { return peekch() == char(EOF); }
     char peekch() const {
         // TODO: optimize
@@ -152,6 +160,7 @@ struct file_istream {
 
 private:
     std::FILE *file;
+    std::size_t fsize;
 }; // struct file_istream
 
 /***************************************************************************/

@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -41,8 +41,8 @@
 // YAS_VERSION % 100 is the bugfix level
 
 #define YAS_VERSION_MAJOR 7
-#define YAS_VERSION_MINOR 0
-#define YAS_VERSION_BUGFIX 5
+#define YAS_VERSION_MINOR 1
+#define YAS_VERSION_BUGFIX 0
 
 #define YAS_VERSION \
      YAS_VERSION_MAJOR*100000 \

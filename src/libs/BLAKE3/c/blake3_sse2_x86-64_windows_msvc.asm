@@ -2054,8 +2054,8 @@ _blake3_compress_in_place_sse2 PROC
         movzx   r8d, r8b
         shl     rax, 32
         add     r8, rax
-        movq    xmm3, r9
-        movq    xmm4, r8
+        movd    xmm3, r9
+        movd    xmm4, r8
         punpcklqdq xmm3, xmm4
         movups  xmm4, xmmword ptr [rdx]
         movups  xmm5, xmmword ptr [rdx+10H]
@@ -2139,10 +2139,10 @@ _blake3_compress_in_place_sse2 PROC
         por     xmm9, xmm8
         movdqa  xmm8, xmm7
         punpcklqdq xmm8, xmm5
-        movdqa  xmm10, xmm6
+        movdqa  xmm14, xmm6
         pand    xmm8, xmmword ptr [PBLENDW_0x3F_MASK]
-        pand    xmm10, xmmword ptr [PBLENDW_0xC0_MASK]
-        por     xmm8, xmm10
+        pand    xmm14, xmmword ptr [PBLENDW_0xC0_MASK]
+        por     xmm8, xmm14
         pshufd  xmm8, xmm8, 78H
         punpckhdq xmm5, xmm7
         punpckldq xmm6, xmm5
@@ -2186,8 +2186,8 @@ _blake3_compress_xof_sse2 PROC
         mov     r10, qword ptr [rsp+0A8H]
         shl     rax, 32
         add     r8, rax
-        movq    xmm3, r9
-        movq    xmm4, r8
+        movd    xmm3, r9
+        movd    xmm4, r8
         punpcklqdq xmm3, xmm4
         movups  xmm4, xmmword ptr [rdx]
         movups  xmm5, xmmword ptr [rdx+10H]
@@ -2271,10 +2271,10 @@ _blake3_compress_xof_sse2 PROC
         por     xmm9, xmm8
         movdqa  xmm8, xmm7
         punpcklqdq xmm8, xmm5
-        movdqa  xmm10, xmm6
+        movdqa  xmm14, xmm6
         pand    xmm8, xmmword ptr [PBLENDW_0x3F_MASK]
-        pand    xmm10, xmmword ptr [PBLENDW_0xC0_MASK]
-        por     xmm8, xmm10
+        pand    xmm14, xmmword ptr [PBLENDW_0xC0_MASK]
+        por     xmm8, xmm14
         pshufd  xmm8, xmm8, 78H
         punpckhdq xmm5, xmm7
         punpckldq xmm6, xmm5

@@ -132,6 +132,10 @@ You can support the YAS project by donating:
  - [yas::shared_buffer](https://github.com/niXman/yas/blob/master/include/yas/buffers.hpp#L67)
 
 ## Projects using YAS
+* [Ufochain](https://github.com/ufo-project/ufochain): a mimblewimble implementation of crypto currency using X17r algorithm
+* [Kvant](https://github.com/KVANTdev/KVANT): Kvant - is an original project using the consensus of MimbleWimble, due to which maximum anonymity and security were achieved
+* [zkPoD-lib](https://github.com/sec-bit/zkPoD-lib): zkPoD-lib is the underlying core library for zkPoD system. It fully implements PoD (proof of delivery) protocol and also provides a CLI interface together with Golang bindings
+* [Litecash](https://github.com/teamlite/litecash): Litecash is the next generation scalable, confidential cryptocurrency based on an elegant and innovative Mimblewimble protocol
 * [K3](https://github.com/DaMSL/K3): K3 is a programming language for building large-scale data systems
 * [vistle](https://github.com/vistle/vistle): Software Environment for High-Performance Simulation and Parallel Visualization
 * [LGraph](https://github.com/masc-ucsc/lgraph): Live Graph infrastructure for Synthesis and Simulation

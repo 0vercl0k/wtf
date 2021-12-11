@@ -1,202 +1,157 @@
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
+// under NSF AWARD 1414736 and by the respective contributors.
+// All rights reserved.
+//
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include "app_helper.hpp"
-#include "gmock/gmock.h"
+
 #include <complex>
 #include <cstdint>
 
-using ::testing::HasSubstr;
+using Catch::Matchers::Contains;
 
 using cx = std::complex<double>;
 
-CLI::Option *
-add_option(CLI::App &app, std::string name, cx &variable, std::string description = "", bool defaulted = false) {
-    CLI::callback_t fun = [&variable](CLI::results_t res) {
-        double x, y;
-        bool worked = CLI::detail::lexical_cast(res[0], x) && CLI::detail::lexical_cast(res[1], y);
-        if(worked)
-            variable = cx(x, y);
-        return worked;
-    };
-
-    CLI::Option *opt = app.add_option(name, fun, description, defaulted);
-    opt->type_name("COMPLEX")->type_size(2);
-    if(defaulted) {
-        std::stringstream out;
-        out << variable;
-        opt->default_str(out.str());
-    }
-    return opt;
-}
-
-TEST_F(TApp, AddingComplexParser) {
-
-    cx comp{0, 0};
-    add_option(app, "-c,--complex", comp);
-    args = {"-c", "1.5", "2.5"};
-
-    run();
-
-    EXPECT_DOUBLE_EQ(1.5, comp.real());
-    EXPECT_DOUBLE_EQ(2.5, comp.imag());
-}
-
-TEST_F(TApp, DefaultComplex) {
-
+TEST_CASE_METHOD(TApp, "ComplexOption", "[newparse]") {
     cx comp{1, 2};
-    add_option(app, "-c,--complex", comp, "", true);
-    args = {"-c", "4", "3"};
-
-    std::string help = app.help();
-    EXPECT_THAT(help, HasSubstr("1"));
-    EXPECT_THAT(help, HasSubstr("2"));
-
-    EXPECT_DOUBLE_EQ(1, comp.real());
-    EXPECT_DOUBLE_EQ(2, comp.imag());
-
-    run();
-
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(3, comp.imag());
-}
-
-TEST_F(TApp, BuiltinComplex) {
-    cx comp{1, 2};
-    app.add_complex("-c,--complex", comp, "", true);
+    app.add_option("-c,--complex", comp)->capture_default_str();
 
     args = {"-c", "4", "3"};
 
     std::string help = app.help();
-    EXPECT_THAT(help, HasSubstr("1"));
-    EXPECT_THAT(help, HasSubstr("2"));
-    EXPECT_THAT(help, HasSubstr("COMPLEX"));
+    CHECK_THAT(help, Contains("1"));
+    CHECK_THAT(help, Contains("2"));
+    CHECK_THAT(help, Contains("COMPLEX"));
 
-    EXPECT_DOUBLE_EQ(1, comp.real());
-    EXPECT_DOUBLE_EQ(2, comp.imag());
+    CHECK(comp.real() == Approx(1));
+    CHECK(comp.imag() == Approx(2));
 
     run();
 
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(3, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(3));
 }
 
-TEST_F(TApp, BuiltinComplexFloat) {
+TEST_CASE_METHOD(TApp, "ComplexFloatOption", "[newparse]") {
     std::complex<float> comp{1, 2};
-    app.add_complex<std::complex<float>, float>("-c,--complex", comp, "", true);
+    app.add_option("-c,--complex", comp)->capture_default_str();
 
     args = {"-c", "4", "3"};
 
     std::string help = app.help();
-    EXPECT_THAT(help, HasSubstr("1"));
-    EXPECT_THAT(help, HasSubstr("2"));
-    EXPECT_THAT(help, HasSubstr("COMPLEX"));
+    CHECK_THAT(help, Contains("1"));
+    CHECK_THAT(help, Contains("2"));
+    CHECK_THAT(help, Contains("COMPLEX"));
 
-    EXPECT_FLOAT_EQ(1, comp.real());
-    EXPECT_FLOAT_EQ(2, comp.imag());
+    CHECK(comp.real() == Approx(1));
+    CHECK(comp.imag() == Approx(2));
 
     run();
 
-    EXPECT_FLOAT_EQ(4, comp.real());
-    EXPECT_FLOAT_EQ(3, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(3));
 }
 
-TEST_F(TApp, BuiltinComplexWithDelimiter) {
+TEST_CASE_METHOD(TApp, "ComplexWithDelimiterOption", "[newparse]") {
     cx comp{1, 2};
-    app.add_complex("-c,--complex", comp, "", true)->delimiter('+');
+    app.add_option("-c,--complex", comp)->capture_default_str()->delimiter('+');
 
     args = {"-c", "4+3i"};
 
     std::string help = app.help();
-    EXPECT_THAT(help, HasSubstr("1"));
-    EXPECT_THAT(help, HasSubstr("2"));
-    EXPECT_THAT(help, HasSubstr("COMPLEX"));
+    CHECK_THAT(help, Contains("1"));
+    CHECK_THAT(help, Contains("2"));
+    CHECK_THAT(help, Contains("COMPLEX"));
 
-    EXPECT_DOUBLE_EQ(1, comp.real());
-    EXPECT_DOUBLE_EQ(2, comp.imag());
+    CHECK(comp.real() == Approx(1));
+    CHECK(comp.imag() == Approx(2));
 
     run();
 
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(3, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(3));
 
     args = {"-c", "5+-3i"};
     run();
 
-    EXPECT_DOUBLE_EQ(5, comp.real());
-    EXPECT_DOUBLE_EQ(-3, comp.imag());
+    CHECK(comp.real() == Approx(5));
+    CHECK(comp.imag() == Approx(-3));
 
     args = {"-c", "6", "-4i"};
     run();
 
-    EXPECT_DOUBLE_EQ(6, comp.real());
-    EXPECT_DOUBLE_EQ(-4, comp.imag());
+    CHECK(comp.real() == Approx(6));
+    CHECK(comp.imag() == Approx(-4));
 }
 
-TEST_F(TApp, BuiltinComplexIgnoreI) {
+TEST_CASE_METHOD(TApp, "ComplexIgnoreIOption", "[newparse]") {
     cx comp{1, 2};
-    app.add_complex("-c,--complex", comp);
+    app.add_option("-c,--complex", comp);
 
     args = {"-c", "4", "3i"};
 
     run();
 
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(3, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(3));
 }
 
-TEST_F(TApp, BuiltinComplexSingleArg) {
+TEST_CASE_METHOD(TApp, "ComplexSingleArgOption", "[newparse]") {
     cx comp{1, 2};
-    app.add_complex("-c,--complex", comp);
+    app.add_option("-c,--complex", comp);
 
     args = {"-c", "4"};
     run();
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(0, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(0));
 
     args = {"-c", "4-2i"};
     run();
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(-2, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(-2));
     args = {"-c", "4+2i"};
     run();
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(2, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(2));
 
     args = {"-c", "-4+2j"};
     run();
-    EXPECT_DOUBLE_EQ(-4, comp.real());
-    EXPECT_DOUBLE_EQ(2, comp.imag());
+    CHECK(comp.real() == Approx(-4));
+    CHECK(comp.imag() == Approx(2));
 
     args = {"-c", "-4.2-2j"};
     run();
-    EXPECT_DOUBLE_EQ(-4.2, comp.real());
-    EXPECT_DOUBLE_EQ(-2, comp.imag());
+    CHECK(comp.real() == Approx(-4.2));
+    CHECK(comp.imag() == Approx(-2));
 
     args = {"-c", "-4.2-2.7i"};
     run();
-    EXPECT_DOUBLE_EQ(-4.2, comp.real());
-    EXPECT_DOUBLE_EQ(-2.7, comp.imag());
+    CHECK(comp.real() == Approx(-4.2));
+    CHECK(comp.imag() == Approx(-2.7));
 }
 
-TEST_F(TApp, BuiltinComplexSingleImag) {
+TEST_CASE_METHOD(TApp, "ComplexSingleImagOption", "[newparse]") {
     cx comp{1, 2};
-    app.add_complex("-c,--complex", comp);
+    app.add_option("-c,--complex", comp);
 
     args = {"-c", "4j"};
     run();
-    EXPECT_DOUBLE_EQ(0, comp.real());
-    EXPECT_DOUBLE_EQ(4, comp.imag());
+    CHECK(comp.real() == Approx(0));
+    CHECK(comp.imag() == Approx(4));
 
     args = {"-c", "-4j"};
     run();
-    EXPECT_DOUBLE_EQ(0, comp.real());
-    EXPECT_DOUBLE_EQ(-4, comp.imag());
+    CHECK(comp.real() == Approx(0));
+    CHECK(comp.imag() == Approx(-4));
     args = {"-c", "-4"};
     run();
-    EXPECT_DOUBLE_EQ(-4, comp.real());
-    EXPECT_DOUBLE_EQ(0, comp.imag());
+    CHECK(comp.real() == Approx(-4));
+    CHECK(comp.imag() == Approx(0));
     args = {"-c", "+4"};
     run();
-    EXPECT_DOUBLE_EQ(4, comp.real());
-    EXPECT_DOUBLE_EQ(0, comp.imag());
+    CHECK(comp.real() == Approx(4));
+    CHECK(comp.imag() == Approx(0));
 }
 
 /// Simple class containing two strings useful for testing lexical cast and conversions
@@ -225,117 +180,25 @@ template <> bool lexical_cast<spair>(const std::string &input, spair &output) {
 }  // namespace detail
 }  // namespace CLI
 
-TEST_F(TApp, custom_string_converter) {
+TEST_CASE_METHOD(TApp, "custom_string_converter", "[newparse]") {
     spair val;
     app.add_option("-d,--dual_string", val);
 
     args = {"-d", "string1:string2"};
 
     run();
-    EXPECT_EQ(val.first, "string1");
-    EXPECT_EQ(val.second, "string2");
+    CHECK("string1" == val.first);
+    CHECK("string2" == val.second);
 }
 
-TEST_F(TApp, custom_string_converterFail) {
+TEST_CASE_METHOD(TApp, "custom_string_converterFail", "[newparse]") {
     spair val;
     app.add_option("-d,--dual_string", val);
 
     args = {"-d", "string2"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
 }
-
-// an example of custom complex number converter that can be used to add new parsing options
-#if defined(__has_include)
-#if __has_include(<regex>)
-// an example of custom converter that can be used to add new parsing options
-#define HAS_REGEX_INCLUDE
-#endif
-#endif
-
-#ifdef HAS_REGEX_INCLUDE
-// Gcc 4.8 and older and the corresponding standard libraries have a broken <regex> so this would
-// fail.  And if a clang compiler is using libstd++ then this will generate an error as well so this is just a check to
-// simplify compilation and prevent a much more complicated #if expression
-#include <regex>
-namespace CLI {
-namespace detail {
-
-// On MSVC and possibly some other new compilers this can be a free standing function without the template
-// specialization but this is compiler dependent
-template <> bool lexical_cast<std::complex<double>>(const std::string &input, std::complex<double> &output) {
-    // regular expression to handle complex numbers of various formats
-    static const std::regex creg(
-        R"(([+-]?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?)\s*([+-]\s*(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?)[ji]*)");
-
-    std::smatch m;
-    double x{0.0}, y{0.0};
-    bool worked;
-    std::regex_search(input, m, creg);
-    if(m.size() == 9) {
-        worked = CLI::detail::lexical_cast(m[1], x) && CLI::detail::lexical_cast(m[6], y);
-        if(worked) {
-            if(*m[5].first == '-') {
-                y = -y;
-            }
-        }
-    } else {
-        if((input.back() == 'j') || (input.back() == 'i')) {
-            auto strval = input.substr(0, input.size() - 1);
-            CLI::detail::trim(strval);
-            worked = CLI::detail::lexical_cast(strval, y);
-        } else {
-            std::string ival = input;
-            CLI::detail::trim(ival);
-            worked = CLI::detail::lexical_cast(ival, x);
-        }
-    }
-    if(worked) {
-        output = cx{x, y};
-    }
-    return worked;
-}
-}  // namespace detail
-}  // namespace CLI
-
-TEST_F(TApp, AddingComplexParserDetail) {
-
-    bool skip_tests = false;
-    try {  // check if the library actually supports regex,  it is possible to link against a non working regex in the
-           // standard library
-        std::smatch m;
-        std::string input = "1.5+2.5j";
-        static const std::regex creg(
-            R"(([+-]?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?)\s*([+-]\s*(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?)[ji]*)");
-
-        auto rsearch = std::regex_search(input, m, creg);
-        if(!rsearch) {
-            skip_tests = true;
-        } else {
-            EXPECT_EQ(m.size(), 9u);
-        }
-
-    } catch(...) {
-        skip_tests = true;
-    }
-    if(!skip_tests) {
-        cx comp{0, 0};
-        app.add_option("-c,--complex", comp, "add a complex number option");
-        args = {"-c", "1.5+2.5j"};
-
-        run();
-
-        EXPECT_DOUBLE_EQ(1.5, comp.real());
-        EXPECT_DOUBLE_EQ(2.5, comp.imag());
-        args = {"-c", "1.5-2.5j"};
-
-        run();
-
-        EXPECT_DOUBLE_EQ(1.5, comp.real());
-        EXPECT_DOUBLE_EQ(-2.5, comp.imag());
-    }
-}
-#endif
 
 /// simple class to wrap another  with a very specific type constructor and assignment operators to test out some of the
 /// option assignments
@@ -365,14 +228,14 @@ static_assert(CLI::detail::is_direct_constructible<objWrapper<std::string>, std:
 
 static_assert(!std::is_assignable<objWrapper<std::string>, std::string>::value,
               "string wrapper is improperly assignable");
-TEST_F(TApp, stringWrapper) {
+TEST_CASE_METHOD(TApp, "stringWrapper", "[newparse]") {
     objWrapper<std::string> sWrapper;
     app.add_option("-v", sWrapper);
     args = {"-v", "string test"};
 
     run();
 
-    EXPECT_EQ(sWrapper.value(), "string test");
+    CHECK("string test" == sWrapper.value());
 }
 
 static_assert(CLI::detail::is_direct_constructible<objWrapper<double>, double>::value,
@@ -384,18 +247,18 @@ static_assert(!CLI::detail::is_direct_constructible<objWrapper<double>, int>::va
 static_assert(!CLI::detail::is_istreamable<objWrapper<double>>::value,
               "double wrapper is input streamable and it shouldn't be");
 
-TEST_F(TApp, doubleWrapper) {
+TEST_CASE_METHOD(TApp, "doubleWrapper", "[newparse]") {
     objWrapper<double> dWrapper;
     app.add_option("-v", dWrapper);
     args = {"-v", "2.36"};
 
     run();
 
-    EXPECT_EQ(dWrapper.value(), 2.36);
+    CHECK(2.36 == dWrapper.value());
 
     args = {"-v", "thing"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
 }
 
 static_assert(CLI::detail::is_direct_constructible<objWrapper<int>, int>::value,
@@ -407,17 +270,17 @@ static_assert(!CLI::detail::is_direct_constructible<objWrapper<int>, double>::va
 static_assert(!CLI::detail::is_istreamable<objWrapper<int>>::value,
               "int wrapper is input streamable and it shouldn't be");
 
-TEST_F(TApp, intWrapper) {
+TEST_CASE_METHOD(TApp, "intWrapper", "[newparse]") {
     objWrapper<int> iWrapper;
     app.add_option("-v", iWrapper);
     args = {"-v", "45"};
 
     run();
 
-    EXPECT_EQ(iWrapper.value(), 45);
+    CHECK(45 == iWrapper.value());
     args = {"-v", "thing"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
 }
 
 static_assert(!CLI::detail::is_direct_constructible<objWrapper<float>, int>::value,
@@ -428,17 +291,17 @@ static_assert(!CLI::detail::is_direct_constructible<objWrapper<float>, double>::
 static_assert(!CLI::detail::is_istreamable<objWrapper<float>>::value,
               "float wrapper is input streamable and it shouldn't be");
 
-TEST_F(TApp, floatWrapper) {
+TEST_CASE_METHOD(TApp, "floatWrapper", "[newparse]") {
     objWrapper<float> iWrapper;
     app.add_option<objWrapper<float>, float>("-v", iWrapper);
     args = {"-v", "45.3"};
 
     run();
 
-    EXPECT_EQ(iWrapper.value(), 45.3f);
+    CHECK(45.3f == iWrapper.value());
     args = {"-v", "thing"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
 }
 
 #endif
@@ -457,26 +320,26 @@ class dobjWrapper {
     int ival_{0};
 };
 
-TEST_F(TApp, dobjWrapper) {
+TEST_CASE_METHOD(TApp, "dobjWrapper", "[newparse]") {
     dobjWrapper iWrapper;
     app.add_option("-v", iWrapper);
     args = {"-v", "45"};
 
     run();
 
-    EXPECT_EQ(iWrapper.ivalue(), 45);
-    EXPECT_EQ(iWrapper.dvalue(), 0.0);
+    CHECK(45 == iWrapper.ivalue());
+    CHECK(0.0 == iWrapper.dvalue());
 
     args = {"-v", "thing"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
     iWrapper = dobjWrapper{};
 
     args = {"-v", "45.1"};
 
     run();
-    EXPECT_EQ(iWrapper.ivalue(), 0);
-    EXPECT_EQ(iWrapper.dvalue(), 45.1);
+    CHECK(0 == iWrapper.ivalue());
+    CHECK(45.1 == iWrapper.dvalue());
 }
 
 /// simple class to wrap another  with a very specific type constructor and assignment operators to test out some of the
@@ -503,23 +366,127 @@ template <class X> class AobjWrapper {
 static_assert(std::is_assignable<AobjWrapper<std::uint16_t> &, std::uint16_t>::value,
               "AobjWrapper not assignable like it should be ");
 
-TEST_F(TApp, uint16Wrapper) {
+TEST_CASE_METHOD(TApp, "uint16Wrapper", "[newparse]") {
     AobjWrapper<std::uint16_t> sWrapper;
     app.add_option<AobjWrapper<std::uint16_t>, std::uint16_t>("-v", sWrapper);
     args = {"-v", "9"};
 
     run();
 
-    EXPECT_EQ(sWrapper.value(), 9u);
+    CHECK(9u == sWrapper.value());
     args = {"-v", "thing"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
 
     args = {"-v", "72456245754"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
 
     args = {"-v", "-3"};
 
-    EXPECT_THROW(run(), CLI::ConversionError);
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
+}
+
+template <class T> class SimpleWrapper {
+  public:
+    SimpleWrapper() : val_{} {};
+    explicit SimpleWrapper(const T &initial) : val_{initial} {};
+    T &getRef() { return val_; }
+    using value_type = T;
+
+  private:
+    T val_;
+};
+
+TEST_CASE_METHOD(TApp, "wrapperInt", "[newparse]") {
+    SimpleWrapper<int> wrap;
+    app.add_option("--val", wrap);
+    args = {"--val", "2"};
+
+    run();
+    CHECK(2 == wrap.getRef());
+}
+
+TEST_CASE_METHOD(TApp, "wrapperString", "[newparse]") {
+    SimpleWrapper<std::string> wrap;
+    app.add_option("--val", wrap);
+    args = {"--val", "str"};
+
+    run();
+    CHECK("str" == wrap.getRef());
+}
+
+TEST_CASE_METHOD(TApp, "wrapperVector", "[newparse]") {
+    SimpleWrapper<std::vector<int>> wrap;
+    app.add_option("--val", wrap);
+    args = {"--val", "1", "2", "3", "4"};
+
+    run();
+    auto v1 = wrap.getRef();
+    auto v2 = std::vector<int>{1, 2, 3, 4};
+    CHECK(v2 == v1);
+}
+
+TEST_CASE_METHOD(TApp, "wrapperwrapperString", "[newparse]") {
+    SimpleWrapper<SimpleWrapper<std::string>> wrap;
+    app.add_option("--val", wrap);
+    args = {"--val", "arg"};
+
+    run();
+    auto v1 = wrap.getRef().getRef();
+    auto v2 = "arg";
+    CHECK(v2 == v1);
+}
+
+TEST_CASE_METHOD(TApp, "wrapperwrapperVector", "[newparse]") {
+    SimpleWrapper<SimpleWrapper<std::vector<int>>> wrap;
+    auto opt = app.add_option("--val", wrap);
+    args = {"--val", "1", "2", "3", "4"};
+
+    run();
+    auto v1 = wrap.getRef().getRef();
+    auto v2 = std::vector<int>{1, 2, 3, 4};
+    CHECK(v2 == v1);
+    opt->type_size(0, 5);
+
+    args = {"--val"};
+
+    run();
+    CHECK(wrap.getRef().getRef().empty());
+
+    args = {"--val", "happy", "sad"};
+
+    CHECK_THROWS_AS(run(), CLI::ConversionError);
+}
+
+TEST_CASE_METHOD(TApp, "wrapperComplex", "[newparse]") {
+    SimpleWrapper<std::complex<double>> wrap;
+    app.add_option("--val", wrap);
+    args = {"--val", "1", "2"};
+
+    run();
+    auto &v1 = wrap.getRef();
+    auto v2 = std::complex<double>{1, 2};
+    CHECK(v2.real() == v1.real());
+    CHECK(v2.imag() == v1.imag());
+    args = {"--val", "1.4-4j"};
+
+    run();
+    v2 = std::complex<double>{1.4, -4};
+    CHECK(v2.real() == v1.real());
+    CHECK(v2.imag() == v1.imag());
+}
+
+TEST_CASE_METHOD(TApp, "vectorComplex", "[newparse]") {
+    std::vector<std::complex<double>> vcomplex;
+    app.add_option("--val", vcomplex);
+    args = {"--val", "1", "2", "--val", "1.4-4j"};
+
+    run();
+
+    REQUIRE(2U == vcomplex.size());
+    CHECK(1.0 == vcomplex[0].real());
+    CHECK(2.0 == vcomplex[0].imag());
+    CHECK(1.4 == vcomplex[1].real());
+    CHECK(-4.0 == vcomplex[1].imag());
 }

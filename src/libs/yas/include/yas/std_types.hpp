@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -45,6 +45,7 @@
 #include <yas/types/std/complex.hpp>
 #include <yas/types/std/string.hpp>
 #include <yas/types/std/string_view.hpp>
+#include <yas/types/std/u16string.hpp>
 #include <yas/types/std/wstring.hpp>
 #include <yas/types/std/vector.hpp>
 #include <yas/types/std/list.hpp>

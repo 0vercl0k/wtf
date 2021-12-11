@@ -1,1 +1,0 @@
-src\x64\release\wtf.exe %*

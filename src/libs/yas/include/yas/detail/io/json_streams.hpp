@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -67,6 +67,11 @@ struct json_ostream {
 	void write(const T *ptr, std::size_t size) {
 		__YAS_THROW_WRITE_ERROR(size != os.write(ptr, size));
 	}
+
+    template<typename T>
+    void write(const asis_wrapper<T> &v) {
+        write(v.val);
+    }
 
     // for char and signed char
     template<typename T>
@@ -161,7 +166,12 @@ struct json_istream {
 		return size;
 	}
 
-	// for char and signed char
+    template<typename T>
+    void read(asis_wrapper<T> &v) {
+        read(v.val);
+    }
+
+    // for char and signed char
 	template<typename T>
 	void read(T &v, __YAS_ENABLE_IF_IS_ANY_OF(T, char, signed char)) {
 		std::int16_t t;
@@ -197,7 +207,7 @@ struct json_istream {
 	template<typename T>
 	void read(T &v, __YAS_ENABLE_IF_IS_ANY_OF(T, std::int16_t, std::int32_t, std::int64_t)) {
 		char buf[sizeof(T)*4];
-		const std::size_t n = json_read_num(is, buf, sizeof(buf));
+		const std::size_t n = json_read_num(is, buf, (std::min)(sizeof(buf), is.available()));
 		v = Trait::template atoi<T>(buf, n);
 	}
 
@@ -205,7 +215,7 @@ struct json_istream {
 	template<typename T>
 	void read(T &v, __YAS_ENABLE_IF_IS_ANY_OF(T, std::uint16_t, std::uint32_t, std::uint64_t)) {
 		char buf[sizeof(T)*4];
-		const std::size_t n = json_read_num(is, buf, sizeof(buf));
+		const std::size_t n = json_read_num(is, buf, (std::min)(sizeof(buf), is.available()));
 
 		v = Trait::template atou<T>(buf, n);
 	}
@@ -219,7 +229,7 @@ struct json_istream {
 			is.getch();
 		}
 
-		const std::size_t n = json_read_double(is, buf, sizeof(buf));
+		const std::size_t n = json_read_double(is, buf, (std::min)(sizeof(buf), is.available()));
 
 		if ( is.peekch() == '\"' ) {
 			is.getch();
@@ -237,7 +247,7 @@ struct json_istream {
 			is.getch();
 		}
 
-		const std::size_t n = json_read_double(is, buf, sizeof(buf));
+		const std::size_t n = json_read_double(is, buf, (std::min)(sizeof(buf), is.available()));
 
 		if ( is.peekch() == '\"' ) {
 			is.getch();

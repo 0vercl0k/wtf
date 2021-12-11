@@ -1,9 +1,9 @@
-use blake3::{BLOCK_LEN, CHUNK_LEN};
+use blake3::guts::{BLOCK_LEN, CHUNK_LEN};
 use serde::{Deserialize, Serialize};
 
 // A non-multiple of 4 is important, since one possible bug is to fail to emit
 // partial words.
-pub const OUTPUT_LEN: usize = 2 * blake3::BLOCK_LEN + 3;
+pub const OUTPUT_LEN: usize = 2 * BLOCK_LEN + 3;
 
 pub const TEST_CASES: &[usize] = &[
     0,
@@ -240,8 +240,9 @@ mod tests {
     ) {
         let mut out = vec![0; expected_hash.len()];
         let mut hasher = blake3::Hasher::new();
-        for &b in input {
-            hasher.update(&[b]);
+        for i in 0..input.len() {
+            hasher.update(&[input[i]]);
+            assert_eq!(i as u64 + 1, hasher.count());
         }
         hasher.finalize_xof().fill(&mut out);
         assert_eq!(expected_hash, &out[..]);
@@ -249,8 +250,9 @@ mod tests {
 
         let mut out = vec![0; expected_keyed_hash.len()];
         let mut hasher = blake3::Hasher::new_keyed(key);
-        for &b in input {
-            hasher.update(&[b]);
+        for i in 0..input.len() {
+            hasher.update(&[input[i]]);
+            assert_eq!(i as u64 + 1, hasher.count());
         }
         hasher.finalize_xof().fill(&mut out);
         assert_eq!(expected_keyed_hash, &out[..]);
@@ -258,8 +260,9 @@ mod tests {
 
         let mut out = vec![0; expected_derive_key.len()];
         let mut hasher = blake3::Hasher::new_derive_key(TEST_CONTEXT);
-        for &b in input {
-            hasher.update(&[b]);
+        for i in 0..input.len() {
+            hasher.update(&[input[i]]);
+            assert_eq!(i as u64 + 1, hasher.count());
         }
         hasher.finalize_xof().fill(&mut out);
         assert_eq!(expected_derive_key, &out[..]);
@@ -276,11 +279,12 @@ mod tests {
         assert_eq!(&expected_hash[..32], blake3::hash(input).as_bytes());
         assert_eq!(
             &expected_keyed_hash[..32],
-            &blake3::keyed_hash(key, input).as_bytes()[..],
+            blake3::keyed_hash(key, input).as_bytes(),
         );
-        let mut derive_key_out = vec![0; expected_derive_key.len()];
-        blake3::derive_key(TEST_CONTEXT, input, &mut derive_key_out);
-        assert_eq!(expected_derive_key, &derive_key_out[..],);
+        assert_eq!(
+            expected_derive_key[..32],
+            blake3::derive_key(TEST_CONTEXT, input)
+        );
     }
 
     #[test]

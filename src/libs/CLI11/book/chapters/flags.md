@@ -11,8 +11,7 @@ bool my_flag{false};
 app.add_flag("-f", my_flag, "Optional description");
 ```
 
-This will bind the flag `-f` to the boolean `my_flag`. After the parsing step, `my_flag` will be `false` if the flag was not found on the command line, or `true` if it was. By default, it will be allowed any number of times, but if you explicitly[^1] request `->take_last(false)`, it will only be allowed once; passing something like `./my_app -f -f` or `./my_app -ff` will throw a `ParseError` with a nice help description.
-
+This will bind the flag `-f` to the boolean `my_flag`. After the parsing step, `my_flag` will be `false` if the flag was not found on the command line, or `true` if it was. By default, it will be allowed any number of times, but if you explicitly\[^1\] request `->take_last(false)`, it will only be allowed once; passing something like `./my_app -f -f` or `./my_app -ff` will throw a `ParseError` with a nice help description. A flag name may start with any character except ('-', ' ', '\n', and '!'). For long flags, after the first character all characters are allowed except ('=',':','{',' ', '\n').  Names are given as a comma separated string, with the dash or dashes. An flag can have as many names as you want, and afterward, using `count`, you can use any of the names, with dashes as needed.
 
 ## Integer flags
 
@@ -65,11 +64,10 @@ After parsing, you can use `my_flag->count()` to count the number of times this 
 
 If you want to define a callback that runs when you make a flag, you can use `add_flag_function` (C++11 or newer) or `add_flag` (C++14 or newer only) to add a callback function. The function should have the signature `void(std::size_t)`. This could be useful for a version printout, etc.
 
-```
+```cpp
 auto callback = [](int count){std::cout << "This was called " << count << " times";};
 app.add_flag_function("-c", callback, "Optional description");
 ```
-
 
 ## Aliases
 
@@ -99,7 +97,7 @@ The values would be used like this:
 
 [include:"usage"](../code/flags.cpp)
 
-[Source code](https://github.com/CLIUtils/CLI11/tree/master/book/code/flags.cpp)
+[Source code](https://github.com/CLIUtils/CLI11/tree/main/book/code/flags.cpp)
 
 If you compile and run:
 
@@ -122,5 +120,4 @@ Flag int: 3
 Flag plain: 1
 ```
 
-
-[^1] It will not inherit this from the parent defaults, since this is often useful even if you don't want all options to allow multiple passed options.
+\[^1\]: It will not inherit this from the parent defaults, since this is often useful even if you don't want all options to allow multiple passed options.

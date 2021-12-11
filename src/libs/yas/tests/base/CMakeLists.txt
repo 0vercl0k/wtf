@@ -5,6 +5,12 @@ set (CMAKE_CXX_STANDARD 11)
 
 add_definitions(-UNDEBUG)
 
+if (YAS_SERIALIZE_ABSL_TYPES)
+    message("Abseil support is enabled")
+else()
+    message("Abseil support is disabled")
+endif()
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
     add_definitions(
@@ -13,6 +19,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         -DYAS_SERIALIZE_BOOST_TYPES
         -DYAS_OBJECT_MAX_MEMBERS=50
     )
+
+    if (YAS_SERIALIZE_ABSL_TYPES)
+        add_definitions(-DYAS_SERIALIZE_ABSL_TYPES)
+
+        # Process Abseil's CMake build system
+        add_subdirectory("$ENV{ABSEIL_HOME}" "build/abseil")
+    endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
     add_definitions(
@@ -21,6 +34,13 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         -DYAS_SERIALIZE_BOOST_TYPES
         -DYAS_OBJECT_MAX_MEMBERS=50
     )
+
+    if (YAS_SERIALIZE_ABSL_TYPES)
+        add_definitions(-DYAS_SERIALIZE_ABSL_TYPES)
+        
+        # Process Abseil's CMake build system
+        add_subdirectory("$ENV{ABSEIL_HOME}" "build/abseil")
+    endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(COMPILER_BITS 64)
@@ -48,6 +68,13 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
         -DYAS_OBJECT_MAX_MEMBERS=50
         -D_CRT_SECURE_NO_WARNINGS
     )
+
+    if (YAS_SERIALIZE_ABSL_TYPES)
+        add_subdirectory("C:/abseil-cpp" "build/abseil")
+    
+        # Process Abseil's CMake build system
+        add_definitions(-DYAS_SERIALIZE_ABSL_TYPES)
+    endif()
 endif()
 
 include_directories(
@@ -82,6 +109,7 @@ set(SOURCE_FILES
     include/boost_fusion_set.hpp
     include/boost_fusion_tuple.hpp
     include/boost_fusion_vector.hpp
+    include/boost_string_view.hpp
     include/boost_tuple.hpp
     include/boost_variant.hpp
     include/buffer.hpp
@@ -112,6 +140,7 @@ set(SOURCE_FILES
     include/string.hpp
     include/string_view.hpp
     include/tuple.hpp
+    include/u16string.hpp
     include/unordered_map.hpp
     include/unordered_multimap.hpp
     include/unordered_multiset.hpp
@@ -121,7 +150,16 @@ set(SOURCE_FILES
     include/version.hpp
     include/wstring.hpp
     include/yas_object.hpp
+    include/absl_cont_btree_map.hpp
+    include/absl_cont_flat_hash_map.hpp
     main.cpp
 )
 
 add_executable(yas-base-test ${SOURCE_FILES})
+
+if (YAS_SERIALIZE_ABSL_TYPES)
+    target_link_libraries(yas-base-test 
+        absl::btree
+        absl::flat_hash_map
+    )
+endif()

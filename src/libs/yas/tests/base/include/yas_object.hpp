@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -115,6 +115,20 @@ struct type6 {
     {}
 };
 YAS_DEFINE_INTRUSIVE_SERIALIZE_NVP("type6", type6, ("vv0", v0), ("vv1", v1));
+
+struct type7 {
+    int                     v0;
+    float                   v1;
+    std::string             v2;
+    std::vector<uint16_t>   v3;
+    
+    bool operator==(const type7& other) const
+    {
+        return v0 == other.v0 && v1 == other.v1 && v2 == other.v2 && v3 == other.v3;
+    }
+    
+    YAS_DEFINE_STRUCT_SERIALIZE("type7", v0, v1, v2, v3);
+};
 
 struct bigtype {
     int var1{ 0 };
@@ -476,6 +490,80 @@ bool yas_object_test(std::ostream &log, const char *archive_type, const char *te
                     YAS_TEST_REPORT(log, archive_type, test_name);
                     return false;
                 }
+            }
+        }
+    }
+    
+    {
+        _yas_object_test::type7 obj1;
+        obj1.v0 = -4;
+        obj1.v1 = 3.141592;
+        obj1.v2 = "hello world";
+        obj1.v3 = {0,1,2,3,4,5,6,7,8,9};
+        
+        {
+            const size_t expected_size = yas::saved_size<yas::binary>(obj1);
+            std::vector<char> buf;
+            buf.reserve(expected_size);
+            yas::save<yas::binary|yas::mem>(yas::vector_ostream<char>(buf), obj1);
+
+            if (expected_size != buf.size() || buf.capacity() != buf.size())
+            {
+                YAS_TEST_REPORT(log, archive_type, test_name);
+                return false;
+            }
+
+            _yas_object_test::type7 obj2;
+            yas::load<yas::binary|yas::mem>(buf, obj2);
+
+            if (!(obj1 == obj2))
+            {
+                YAS_TEST_REPORT(log, archive_type, test_name);
+                return false;
+            }
+        }
+        
+        {
+            const size_t expected_size = yas::saved_size<yas::text>(obj1);
+            std::vector<char> buf;
+            buf.reserve(expected_size);
+            yas::save<yas::text|yas::mem>(yas::vector_ostream<char>(buf), obj1);
+
+            if (expected_size != buf.size() || buf.capacity() != buf.size())
+            {
+                YAS_TEST_REPORT(log, archive_type, test_name);
+                return false;
+            }
+
+            _yas_object_test::type7 obj2;
+            yas::load<yas::text|yas::mem>(buf, obj2);
+
+            if (!(obj1 == obj2))
+            {
+                YAS_TEST_REPORT(log, archive_type, test_name);
+                return false;
+            }
+        }
+        
+        {
+            const size_t expected_size = yas::saved_size<yas::json>(obj1);
+            std::vector<char> buf;
+            buf.reserve(expected_size);
+            yas::save<yas::json|yas::mem>(yas::vector_ostream<char>(buf), obj1);
+
+            if (expected_size != buf.size() || buf.capacity() != buf.size())
+            {
+                YAS_TEST_REPORT(log, archive_type, test_name);
+                return false;
+            }
+
+            _yas_object_test::type7 obj2;
+            yas::load<yas::json|yas::mem>(buf, obj2);
+
+            if (!(obj1 == obj2))
+            {
+                YAS_TEST_REPORT(log, archive_type, test_name);
+                return false;
             }
         }
     }

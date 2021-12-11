@@ -1,8 +1,8 @@
-version: 1.9.1.{build}
+version: 2.1.2.{build}
 
 branches:
   only:
-    - master
+    - main
     - v1
 
 install:

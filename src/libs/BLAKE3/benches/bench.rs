@@ -4,8 +4,9 @@ extern crate test;
 
 use arrayref::array_ref;
 use arrayvec::ArrayVec;
+use blake3::guts::{BLOCK_LEN, CHUNK_LEN};
 use blake3::platform::{Platform, MAX_SIMD_DEGREE};
-use blake3::{BLOCK_LEN, CHUNK_LEN, OUT_LEN};
+use blake3::OUT_LEN;
 use rand::prelude::*;
 use test::Bencher;
 
@@ -91,7 +92,7 @@ fn bench_many_chunks_fn(b: &mut Bencher, platform: Platform) {
         inputs.push(RandomInput::new(b, CHUNK_LEN));
     }
     b.iter(|| {
-        let input_arrays: ArrayVec<[&[u8; CHUNK_LEN]; MAX_SIMD_DEGREE]> = inputs
+        let input_arrays: ArrayVec<&[u8; CHUNK_LEN], MAX_SIMD_DEGREE> = inputs
             .iter_mut()
             .take(degree)
             .map(|i| array_ref!(i.get(), 0, CHUNK_LEN))
@@ -158,7 +159,7 @@ fn bench_many_parents_fn(b: &mut Bencher, platform: Platform) {
         inputs.push(RandomInput::new(b, BLOCK_LEN));
     }
     b.iter(|| {
-        let input_arrays: ArrayVec<[&[u8; BLOCK_LEN]; MAX_SIMD_DEGREE]> = inputs
+        let input_arrays: ArrayVec<&[u8; BLOCK_LEN], MAX_SIMD_DEGREE> = inputs
             .iter_mut()
             .take(degree)
             .map(|i| array_ref!(i.get(), 0, BLOCK_LEN))
@@ -421,11 +422,7 @@ fn bench_reference_1024_kib(b: &mut Bencher) {
 #[cfg(feature = "rayon")]
 fn bench_rayon(b: &mut Bencher, len: usize) {
     let mut input = RandomInput::new(b, len);
-    b.iter(|| {
-        blake3::Hasher::new()
-            .update_with_join::<blake3::join::RayonJoin>(input.get())
-            .finalize()
-    });
+    b.iter(|| blake3::Hasher::new().update_rayon(input.get()).finalize());
 }
 
 #[bench]

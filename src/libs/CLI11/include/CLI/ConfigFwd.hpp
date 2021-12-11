@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020, University of Cincinnati, developed by Henry Schreiner
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
 // under NSF AWARD 1414736 and by the respective contributors.
 // All rights reserved.
 //
@@ -6,16 +6,19 @@
 
 #pragma once
 
+// [CLI11:public_includes:set]
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
+// [CLI11:public_includes:end]
 
 #include "Error.hpp"
 #include "StringTools.hpp"
 
 namespace CLI {
+// [CLI11:config_fwd_hpp:verbatim]
 
 class App;
 
@@ -71,19 +74,31 @@ class Config {
     virtual ~Config() = default;
 };
 
-/// This converter works with INI/TOML files; to write proper TOML files use ConfigTOML
+/// This converter works with INI/TOML files; to write INI files use ConfigINI
 class ConfigBase : public Config {
   protected:
     /// the character used for comments
-    char commentChar = ';';
+    char commentChar = '#';
     /// the character used to start an array '\0' is a default to not use
-    char arrayStart = '\0';
+    char arrayStart = '[';
     /// the character used to end an array '\0' is a default to not use
-    char arrayEnd = '\0';
+    char arrayEnd = ']';
     /// the character used to separate elements in an array
-    char arraySeparator = ' ';
+    char arraySeparator = ',';
     /// the character used separate the name from the value
     char valueDelimiter = '=';
+    /// the character to use around strings
+    char stringQuote = '"';
+    /// the character to use around single characters
+    char characterQuote = '\'';
+    /// the maximum number of layers to allow
+    uint8_t maximumLayers{255};
+    /// the separator used to separator parent layers
+    char parentSeparatorChar{'.'};
+    /// Specify the configuration index to use for arrayed sections
+    int16_t configIndex{-1};
+    /// Specify the configuration section that should be used
+    std::string configSection{};
 
   public:
     std::string
@@ -111,21 +126,57 @@ class ConfigBase : public Config {
         valueDelimiter = vSep;
         return this;
     }
+    /// Specify the quote characters used around strings and characters
+    ConfigBase *quoteCharacter(char qString, char qChar) {
+        stringQuote = qString;
+        characterQuote = qChar;
+        return this;
+    }
+    /// Specify the maximum number of parents
+    ConfigBase *maxLayers(uint8_t layers) {
+        maximumLayers = layers;
+        return this;
+    }
+    /// Specify the separator to use for parent layers
+    ConfigBase *parentSeparator(char sep) {
+        parentSeparatorChar = sep;
+        return this;
+    }
+    /// get a reference to the configuration section
+    std::string &sectionRef() { return configSection; }
+    /// get the section
+    const std::string &section() const { return configSection; }
+    /// specify a particular section of the configuration file to use
+    ConfigBase *section(const std::string &sectionName) {
+        configSection = sectionName;
+        return this;
+    }
+
+    /// get a reference to the configuration index
+    int16_t &indexRef() { return configIndex; }
+    /// get the section index
+    int16_t index() const { return configIndex; }
+    /// specify a particular index in the section to use (-1) for all sections to use
+    ConfigBase *index(int16_t sectionIndex) {
+        configIndex = sectionIndex;
+        return this;
+    }
 };
 
-/// the default Config is the INI file format
-using ConfigINI = ConfigBase;
+/// the default Config is the TOML file format
+using ConfigTOML = ConfigBase;
 
-/// ConfigTOML generates a TOML compliant output
-class ConfigTOML : public ConfigINI {
+/// ConfigINI generates a "standard" INI compliant output
+class ConfigINI : public ConfigTOML {
 
   public:
-    ConfigTOML() {
-        commentChar = '#';
-        arrayStart = '[';
-        arrayEnd = ']';
-        arraySeparator = ',';
+    ConfigINI() {
+        commentChar = ';';
+        arrayStart = '\0';
+        arrayEnd = '\0';
+        arraySeparator = ' ';
         valueDelimiter = '=';
     }
 };
+// [CLI11:config_fwd_hpp:end]
 }  // namespace CLI

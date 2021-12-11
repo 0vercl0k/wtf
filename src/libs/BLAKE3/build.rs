@@ -17,6 +17,10 @@ fn is_neon() -> bool {
     defined("CARGO_FEATURE_NEON")
 }
 
+fn is_no_neon() -> bool {
+    defined("CARGO_FEATURE_NO_NEON")
+}
+
 fn is_ci() -> bool {
     defined("BLAKE3_CI")
 }
@@ -42,6 +46,14 @@ fn is_x86_64() -> bool {
 fn is_x86_32() -> bool {
     let arch = &target_components()[0];
     arch == "i386" || arch == "i586" || arch == "i686"
+}
+
+fn is_arm() -> bool {
+    is_armv7() || is_aarch64() || target_components()[0] == "arm"
+}
+
+fn is_aarch64() -> bool {
+    target_components()[0] == "aarch64"
 }
 
 fn is_armv7() -> bool {
@@ -156,7 +168,7 @@ fn build_sse2_sse41_avx2_assembly() {
 
 fn build_avx512_c_intrinsics() {
     // This is required on 32-bit x86 targets, since the assembly
-    // implementation doesn't support support those.
+    // implementation doesn't support those.
     println!("cargo:rustc-cfg=blake3_avx512_ffi");
     let mut build = new_build();
     build.file("c/blake3_avx512.c");
@@ -218,6 +230,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         panic!("It doesn't make sense to enable both \"pure\" and \"neon\".");
     }
 
+    if is_no_neon() && is_neon() {
+        panic!("It doesn't make sense to enable both \"no_neon\" and \"neon\".");
+    }
+
     if is_x86_64() || is_x86_32() {
         let support = c_compiler_support();
         if is_x86_32() || should_prefer_intrinsics() || is_pure() || support == NoCompiler {
@@ -237,7 +253,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if is_neon() {
+    if (is_arm() && is_neon()) || (!is_no_neon() && !is_pure() && is_aarch64()) {
+        println!("cargo:rustc-cfg=blake3_neon");
         build_neon_c_intrinsics();
     }
 

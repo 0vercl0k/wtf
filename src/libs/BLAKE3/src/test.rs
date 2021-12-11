@@ -1,7 +1,6 @@
 use crate::{CVBytes, CVWords, IncrementCounter, BLOCK_LEN, CHUNK_LEN, OUT_LEN};
 use arrayref::array_ref;
 use arrayvec::ArrayVec;
-use core::sync::atomic::{AtomicUsize, Ordering};
 use core::usize;
 use rand::prelude::*;
 
@@ -120,7 +119,7 @@ pub fn test_hash_many_fn(
     let counter = (1u64 << 32) - 1;
 
     // First hash chunks.
-    let mut chunks = ArrayVec::<[&[u8; CHUNK_LEN]; NUM_INPUTS]>::new();
+    let mut chunks = ArrayVec::<&[u8; CHUNK_LEN], NUM_INPUTS>::new();
     for i in 0..NUM_INPUTS {
         chunks.push(array_ref!(input_buf, i * CHUNK_LEN, CHUNK_LEN));
     }
@@ -159,7 +158,7 @@ pub fn test_hash_many_fn(
     }
 
     // Then hash parents.
-    let mut parents = ArrayVec::<[&[u8; 2 * OUT_LEN]; NUM_INPUTS]>::new();
+    let mut parents = ArrayVec::<&[u8; 2 * OUT_LEN], NUM_INPUTS>::new();
     for i in 0..NUM_INPUTS {
         parents.push(array_ref!(input_buf, i * 2 * OUT_LEN, 2 * OUT_LEN));
     }
@@ -290,10 +289,18 @@ fn test_compare_reference_impl() {
             hasher.update(input);
             assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
             assert_eq!(hasher.finalize(), test_out);
+            // incremental (rayon)
+            #[cfg(feature = "rayon")]
+            {
+                let mut hasher = crate::Hasher::new();
+                hasher.update_rayon(input);
+                assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+                assert_eq!(hasher.finalize(), test_out);
+            }
             // xof
             let mut extended = [0; OUT];
             hasher.finalize_xof().fill(&mut extended);
-            assert_eq!(extended[..], expected_out[..]);
+            assert_eq!(extended, expected_out);
         }
 
         // keyed
@@ -311,10 +318,18 @@ fn test_compare_reference_impl() {
             hasher.update(input);
             assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
             assert_eq!(hasher.finalize(), test_out);
+            // incremental (rayon)
+            #[cfg(feature = "rayon")]
+            {
+                let mut hasher = crate::Hasher::new_keyed(&TEST_KEY);
+                hasher.update_rayon(input);
+                assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+                assert_eq!(hasher.finalize(), test_out);
+            }
             // xof
             let mut extended = [0; OUT];
             hasher.finalize_xof().fill(&mut extended);
-            assert_eq!(extended[..], expected_out[..]);
+            assert_eq!(extended, expected_out);
         }
 
         // derive_key
@@ -326,18 +341,25 @@ fn test_compare_reference_impl() {
             reference_hasher.finalize(&mut expected_out);
 
             // all at once
-            let mut test_out = [0; OUT];
-            crate::derive_key(context, input, &mut test_out);
-            assert_eq!(test_out[..], expected_out[..]);
+            let test_out = crate::derive_key(context, input);
+            assert_eq!(test_out, expected_out[..32]);
             // incremental
             let mut hasher = crate::Hasher::new_derive_key(context);
             hasher.update(input);
             assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
             assert_eq!(hasher.finalize(), *array_ref!(test_out, 0, 32));
+            // incremental (rayon)
+            #[cfg(feature = "rayon")]
+            {
+                let mut hasher = crate::Hasher::new_derive_key(context);
+                hasher.update_rayon(input);
+                assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+                assert_eq!(hasher.finalize(), *array_ref!(test_out, 0, 32));
+            }
             // xof
             let mut extended = [0; OUT];
             hasher.finalize_xof().fill(&mut extended);
-            assert_eq!(extended[..], expected_out[..]);
+            assert_eq!(extended, expected_out);
         }
     }
 }
@@ -406,7 +428,7 @@ fn test_fuzz_hasher() {
         let mut total_input = 0;
         // For each test, write 3 inputs of random length.
         for _ in 0..3 {
-            let input_len = rng.gen_range(0, INPUT_MAX + 1);
+            let input_len = rng.gen_range(0..(INPUT_MAX + 1));
             #[cfg(feature = "std")]
             dbg!(input_len);
             let input = &input_buf[total_input..][..input_len];
@@ -501,69 +523,74 @@ fn test_reset() {
     kdf.update(&[42; 3 * CHUNK_LEN + 7]);
     kdf.reset();
     kdf.update(&[42; CHUNK_LEN + 3]);
-    let mut expected = [0; crate::OUT_LEN];
-    crate::derive_key(context, &[42; CHUNK_LEN + 3], &mut expected);
+    let expected = crate::derive_key(context, &[42; CHUNK_LEN + 3]);
     assert_eq!(kdf.finalize(), expected);
 }
 
 #[test]
-#[cfg(feature = "rayon")]
-fn test_update_with_rayon_join() {
-    let mut input = [0; TEST_CASES_MAX];
-    paint_test_input(&mut input);
-    let rayon_hash = crate::Hasher::new()
-        .update_with_join::<crate::join::RayonJoin>(&input)
-        .finalize();
-    assert_eq!(crate::hash(&input), rayon_hash);
+fn test_hex_encoding_decoding() {
+    let digest_str = "04e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9";
+    let mut hasher = crate::Hasher::new();
+    hasher.update(b"foo");
+    let digest = hasher.finalize();
+    assert_eq!(digest.to_hex().as_str(), digest_str);
+    #[cfg(feature = "std")]
+    assert_eq!(digest.to_string(), digest_str);
+
+    // Test round trip
+    let digest = crate::Hash::from_hex(digest_str).unwrap();
+    assert_eq!(digest.to_hex().as_str(), digest_str);
+
+    // Test uppercase
+    let digest = crate::Hash::from_hex(digest_str.to_uppercase()).unwrap();
+    assert_eq!(digest.to_hex().as_str(), digest_str);
+
+    // Test string parsing via FromStr
+    let digest: crate::Hash = digest_str.parse().unwrap();
+    assert_eq!(digest.to_hex().as_str(), digest_str);
+
+    // Test errors
+    let bad_len = "04e0bb39f30b1";
+    let _result = crate::Hash::from_hex(bad_len).unwrap_err();
+    #[cfg(feature = "std")]
+    assert_eq!(_result.to_string(), "expected 64 hex bytes, received 13");
+
+    let bad_char = "Z4e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9";
+    let _result = crate::Hash::from_hex(bad_char).unwrap_err();
+    #[cfg(feature = "std")]
+    assert_eq!(_result.to_string(), "invalid hex character: 'Z'");
+
+    let _result = crate::Hash::from_hex([128; 64]).unwrap_err();
+    #[cfg(feature = "std")]
+    assert_eq!(_result.to_string(), "invalid hex character: 0x80");
 }
 
-// Test that the length values given to Join::join are what they're supposed to
-// be.
+// This test is a mimized failure case for the Windows SSE2 bug described in
+// https://github.com/BLAKE3-team/BLAKE3/issues/206.
+//
+// Before that issue was fixed, this test would fail on Windows in the following configuration:
+//
+//     cargo test --features=no_avx512,no_avx2,no_sse41 --release
+//
+// Bugs like this one (stomping on a caller's register) are very sensitive to the details of
+// surrounding code, so it's not especially likely that this test will catch another bug (or even
+// the same bug) in the future. Still, there's no harm in keeping it.
 #[test]
-fn test_join_lengths() {
-    // Use static atomics to let us safely get a couple of values in and out of
-    // CustomJoin. This avoids depending on std, though it assumes that this
-    // thread will only run once in the lifetime of the runner process.
-    static SINGLE_THREAD_LEN: AtomicUsize = AtomicUsize::new(0);
-    static CUSTOM_JOIN_CALLS: AtomicUsize = AtomicUsize::new(0);
+fn test_issue_206_windows_sse2() {
+    // This stupid loop has to be here to trigger the bug. I don't know why.
+    for _ in &[0] {
+        // The length 65 (two blocks) is significant. It doesn't repro with 64 (one block). It also
+        // doesn't repro with an all-zero input.
+        let input = &[0xff; 65];
+        let expected_hash = [
+            183, 235, 50, 217, 156, 24, 190, 219, 2, 216, 176, 255, 224, 53, 28, 95, 57, 148, 179,
+            245, 162, 90, 37, 121, 0, 142, 219, 62, 234, 204, 225, 161,
+        ];
 
-    // Use an input that's exactly (simd_degree * CHUNK_LEN) + 1. That should
-    // guarantee that compress_subtree_wide does exactly one split, with the
-    // last byte on the right side. Note that it we used
-    // Hasher::update_with_join, we would end up buffering that last byte,
-    // rather than splitting and joining it.
-    let single_thread_len = crate::platform::Platform::detect().simd_degree() * CHUNK_LEN;
-    SINGLE_THREAD_LEN.store(single_thread_len, Ordering::SeqCst);
-    let mut input_buf = [0; 2 * crate::platform::MAX_SIMD_DEGREE * CHUNK_LEN];
-    paint_test_input(&mut input_buf);
-    let input = &input_buf[..single_thread_len + 1];
+        // This throwaway call has to be here to trigger the bug.
+        crate::Hasher::new().update(input);
 
-    enum CustomJoin {}
-
-    impl crate::join::Join for CustomJoin {
-        fn join<A, B, RA, RB>(oper_a: A, oper_b: B, len_a: usize, len_b: usize) -> (RA, RB)
-        where
-            A: FnOnce() -> RA + Send,
-            B: FnOnce() -> RB + Send,
-            RA: Send,
-            RB: Send,
-        {
-            let prev_calls = CUSTOM_JOIN_CALLS.fetch_add(1, Ordering::SeqCst);
-            assert_eq!(prev_calls, 0);
-            assert_eq!(len_a, SINGLE_THREAD_LEN.load(Ordering::SeqCst));
-            assert_eq!(len_b, 1);
-            (oper_a(), oper_b())
-        }
+        // This assert fails when the bug is triggered.
+        assert_eq!(crate::Hasher::new().update(input).finalize(), expected_hash);
     }
-
-    let mut out_buf = [0; crate::platform::MAX_SIMD_DEGREE_OR_2 * CHUNK_LEN];
-    crate::compress_subtree_wide::<CustomJoin>(
-        input,
-        crate::IV,
-        0,
-        0,
-        crate::platform::Platform::detect(),
-        &mut out_buf,
-    );
-    assert_eq!(CUSTOM_JOIN_CALLS.load(Ordering::SeqCst), 1);
 }

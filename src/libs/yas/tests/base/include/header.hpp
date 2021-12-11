@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -69,6 +69,30 @@ bool header_test(std::ostream &log, const char* archive_type, const char *test_n
         yas::binary_oarchive<yas::mem_ostream> oa(os);
 
         yas::mem_istream is(os.get_intrusive_buffer());
+        yas::binary_iarchive<yas::mem_istream> ia(is);
+    }
+    
+    {
+        yas::vector_ostream<char> os;
+        yas::binary_oarchive<yas::vector_ostream<char>> oa(os);
+
+        yas::mem_istream is(os.buf);
+        yas::binary_iarchive<yas::mem_istream> ia(is);
+    }
+    
+    {
+        yas::vector_ostream<int8_t> os;
+        yas::binary_oarchive<yas::vector_ostream<int8_t>> oa(os);
+
+        yas::mem_istream is(os.buf);
+        yas::binary_iarchive<yas::mem_istream> ia(is);
+    }
+    
+    {
+        yas::vector_ostream<uint8_t> os;
+        yas::binary_oarchive<yas::vector_ostream<uint8_t>> oa(os);
+
+        yas::mem_istream is(os.buf);
         yas::binary_iarchive<yas::mem_istream> ia(is);
     }
 

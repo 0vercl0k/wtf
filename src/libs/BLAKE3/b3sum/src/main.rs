@@ -219,7 +219,7 @@ impl Input {
             // multiple threads. This doesn't work on stdin, or on some files,
             // and it can also be disabled with --no-mmap.
             Self::Mmap(cursor) => {
-                hasher.update_with_join::<blake3::join::RayonJoin>(cursor.get_ref());
+                hasher.update_rayon(cursor.get_ref());
             }
             // The slower paths, for stdin or files we didn't/couldn't mmap.
             // This is currently all single-threaded. Doing multi-threaded
@@ -308,7 +308,7 @@ fn maybe_memmap_file(file: &File) -> Result<Option<memmap::Mmap>> {
 fn write_hex_output(mut output: blake3::OutputReader, args: &Args) -> Result<()> {
     // Encoding multiples of the block size is most efficient.
     let mut len = args.len()?;
-    let mut block = [0; blake3::BLOCK_LEN];
+    let mut block = [0; blake3::guts::BLOCK_LEN];
     while len > 0 {
         output.fill(&mut block);
         let hex_str = hex::encode(&block[..]);

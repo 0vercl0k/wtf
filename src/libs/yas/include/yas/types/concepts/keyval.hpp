@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -47,27 +47,27 @@ template<std::size_t F, typename Archive, typename C>
 Archive& save(Archive &ar, const C &c) {
     __YAS_CONSTEXPR_IF ( F & yas::json ) {
         if ( c.empty() ) {
-            ar.write("{}", 2);
+            ar.write("[]", 2);
 
             return ar;
         }
 
-        ar.write("{", 1);
+        ar.write("[", 1);
         auto it = c.begin();
         ar & YAS_OBJECT_NVP(
              nullptr
-            ,("key", it->first)
-            ,("val", it->second)
+            ,("k", it->first)
+            ,("v", it->second)
         );
         for ( ++it; it != c.end(); ++it ) {
             ar.write(",", 1);
             ar & YAS_OBJECT_NVP(
                  nullptr
-                ,("key", it->first)
-                ,("val", it->second)
+                ,("k", it->first)
+                ,("v", it->second)
             );
         }
-        ar.write("}", 1);
+        ar.write("]", 1);
     } else {
         ar.write_seq_size(c.size());
         for ( const auto &it: c ) {
@@ -88,7 +88,7 @@ Archive& load(Archive &ar, C &c) {
             json_skipws(ar);
         }
 
-        __YAS_THROW_IF_BAD_JSON_CHARS(ar, "{");
+        __YAS_THROW_IF_BAD_JSON_CHARS(ar, "[");
 
         __YAS_CONSTEXPR_IF ( !(F & yas::compacted) ) {
             json_skipws(ar);
@@ -96,7 +96,7 @@ Archive& load(Archive &ar, C &c) {
 
         // case for empty object
         const char ch = ar.peekch();
-        if ( ch == '}' ) {
+        if ( ch == ']' ) {
             ar.getch();
 
             return ar;
@@ -111,8 +111,8 @@ Archive& load(Archive &ar, C &c) {
             typename C::mapped_type v = typename C::mapped_type();
             ar & YAS_OBJECT_NVP(
                  nullptr
-                ,("key", k)
-                ,("val", v)
+                ,("k", k)
+                ,("v", v)
             );
             c.emplace(std::move(k), std::move(v));
 
@@ -121,7 +121,7 @@ Archive& load(Archive &ar, C &c) {
             }
 
             const char ch2 = ar.peekch();
-            if ( ch2 == '}' ) {
+            if ( ch2 == ']' ) {
                 break;
             } else {
                 ar.getch();
@@ -132,7 +132,7 @@ Archive& load(Archive &ar, C &c) {
             }
         }
 
-        __YAS_THROW_IF_BAD_JSON_CHARS(ar, "}");
+        __YAS_THROW_IF_BAD_JSON_CHARS(ar, "]");
     } else {
         auto size = ar.read_seq_size();
         for ( ; size; --size ) {

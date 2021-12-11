@@ -377,6 +377,105 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "rcurtin",
+      "name": "Ryan Curtin",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/1845039?v=4",
+      "profile": "http://www.ratml.org/",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "mbhall88",
+      "name": "Michael Hall",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/20403931?v=4",
+      "profile": "https://mbh.sh",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "ferdymercury",
+      "name": "ferdymercury",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/10653970?v=4",
+      "profile": "https://github.com/ferdymercury",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "jakoblover",
+      "name": "Jakob Lover",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/14160441?v=4",
+      "profile": "https://github.com/jakoblover",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "ZeeD26",
+      "name": "Dominik Steinberger",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/2487468?v=4",
+      "profile": "https://github.com/ZeeD26",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "dfleury2",
+      "name": "D. Fleury",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/4805384?v=4",
+      "profile": "https://github.com/dfleury2",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "dbarowy",
+      "name": "Dan Barowy",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/573142?v=4",
+      "profile": "https://github.com/dbarowy",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "paddy-hack",
+      "name": "Olaf Meeuwissen",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6804372?v=4",
+      "profile": "https://github.com/paddy-hack",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "dryleev",
+      "name": "dryleev",
+      "avatar_url": "https://avatars.githubusercontent.com/u/83670813?v=4",
+      "profile": "https://github.com/dryleev",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "AnticliMaxtic",
+      "name": "Max",
+      "avatar_url": "https://avatars.githubusercontent.com/u/43995389?v=4",
+      "profile": "https://github.com/AnticliMaxtic",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "alexdewar",
+      "name": "Alex Dewar",
+      "avatar_url": "https://avatars.githubusercontent.com/u/23149834?v=4",
+      "profile": "https://profiles.sussex.ac.uk/p281168-alex-dewar/publications",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

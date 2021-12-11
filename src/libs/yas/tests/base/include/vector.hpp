@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -40,7 +40,7 @@
 
 template<typename archive_traits>
 bool vector_test(std::ostream &log, const char *archive_type, const char *test_name) {
-	std::vector<int> v, vv;
+	std::vector<std::uint32_t> v, vv;
 	v.push_back(65464);
 	v.push_back(32767);
 	v.push_back(2);

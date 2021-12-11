@@ -25,37 +25,47 @@
 //! # }
 //!
 //! // Print a hash as hex.
-//! println!("{}", hash1.to_hex());
+//! println!("{}", hash1);
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! # Cargo Features
 //!
-//! The `rayon` feature provides [Rayon]-based multi-threading, in particular
-//! the [`join::RayonJoin`] type for use with [`Hasher::update_with_join`]. It
-//! is disabled by default, but enabled for [docs.rs].
+//! The `std` feature (the only feature enabled by default) is required for
+//! implementations of the [`Write`] and [`Seek`] traits, and also for runtime
+//! CPU feature detection on x86. If this feature is disabled, the only way to
+//! use the x86 SIMD implementations is to enable the corresponding instruction
+//! sets globally, with e.g. `RUSTFLAGS="-C target-cpu=native"`. The resulting
+//! binary will not be portable to other machines.
 //!
-//! The `neon` feature enables ARM NEON support. Currently there is no runtime
-//! CPU feature detection for NEON, so you must only enable this feature for
-//! targets that are known to have NEON support. In particular, some ARMv7
-//! targets support NEON, and some don't.
+//! The `rayon` feature (disabled by default, but enabled for [docs.rs]) adds
+//! the [`Hasher::update_rayon`] method, for multithreaded hashing. However,
+//! even if this feature is enabled, all other APIs remain single-threaded.
 //!
-//! The `std` feature (enabled by default) is required for implementations of
-//! the [`Write`] and [`Seek`] traits, and also for runtime CPU feature
-//! detection. If this feature is disabled, the only way to use the SIMD
-//! implementations in this crate is to enable the corresponding instruction
-//! sets statically for the entire build, with e.g. `RUSTFLAGS="-C
-//! target-cpu=native"`. The resulting binary will not be portable to other
-//! machines.
+//! The NEON implementation is enabled by default for AArch64 but requires the
+//! `neon` feature for other ARM targets. Not all ARMv7 CPUs support NEON, and
+//! enabling this feature will produce a binary that's not portable to CPUs
+//! without NEON support.
 //!
+//! The `traits-preview` feature enables implementations of traits from the
+//! RustCrypto [`digest`] and [`crypto-mac`] crates, and re-exports those crates
+//! as `traits::digest` and `traits::crypto_mac`. However, the traits aren't
+//! stable, and they're expected to change in incompatible ways before those
+//! crates reach 1.0. For that reason, this crate makes no SemVer guarantees for
+//! this feature, and callers who use it should expect breaking changes between
+//! patch versions. (The "-preview" feature name follows the conventions of the
+//! RustCrypto [`signature`] crate.)
+//!
+//! [`Hasher::update_rayon`]: struct.Hasher.html#method.update_rayon
 //! [BLAKE3]: https://blake3.io
 //! [Rayon]: https://github.com/rayon-rs/rayon
-//! [`join::RayonJoin`]: join/enum.RayonJoin.html
-//! [`Hasher::update_with_join`]: struct.Hasher.html#method.update_with_join
 //! [docs.rs]: https://docs.rs/
 //! [`Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 //! [`Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
+//! [`digest`]: https://crates.io/crates/digest
+//! [`crypto-mac`]: https://crates.io/crates/crypto-mac
+//! [`signature`]: https://crates.io/crates/signature
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -69,7 +79,7 @@ mod test;
 #[doc(hidden)]
 pub mod guts;
 
-// The platform module is pub for benchmarks only. It is not stable.
+/// Undocumented and unstable, for benchmarks only.
 #[doc(hidden)]
 pub mod platform;
 
@@ -84,7 +94,7 @@ mod avx2;
 #[cfg(blake3_avx512_ffi)]
 #[path = "ffi_avx512.rs"]
 mod avx512;
-#[cfg(feature = "neon")]
+#[cfg(blake3_neon)]
 #[path = "ffi_neon.rs"]
 mod neon;
 mod portable;
@@ -101,15 +111,15 @@ mod sse41;
 #[path = "ffi_sse41.rs"]
 mod sse41;
 
+#[cfg(feature = "traits-preview")]
 pub mod traits;
 
-pub mod join;
+mod join;
 
 use arrayref::{array_mut_ref, array_ref};
 use arrayvec::{ArrayString, ArrayVec};
 use core::cmp;
 use core::fmt;
-use join::{Join, SerialJoin};
 use platform::{Platform, MAX_SIMD_DEGREE, MAX_SIMD_DEGREE_OR_2};
 
 /// The number of bytes in a [`Hash`](struct.Hash.html), 32.
@@ -118,14 +128,8 @@ pub const OUT_LEN: usize = 32;
 /// The number of bytes in a key, 32.
 pub const KEY_LEN: usize = 32;
 
-// These constants are pub for incremental use cases like `bao`, as well as
-// tests and benchmarks. Most callers should not need them.
-#[doc(hidden)]
-pub const BLOCK_LEN: usize = 64;
-#[doc(hidden)]
-pub const CHUNK_LEN: usize = 1024;
-#[doc(hidden)]
-pub const MAX_DEPTH: usize = 54; // 2^54 * CHUNK_LEN = 2^64
+const MAX_DEPTH: usize = 54; // 2^54 * CHUNK_LEN = 2^64
+use guts::{BLOCK_LEN, CHUNK_LEN};
 
 // While iterating the compression function within a chunk, the CV is
 // represented as words, to avoid doing two extra endianness conversions for
@@ -182,21 +186,8 @@ fn counter_high(counter: u64) -> u32 {
 /// conversion happens implicitly and the constant-time property is
 /// accidentally lost.
 ///
-/// `Hash` provides the [`to_hex`] method for converting to hexadecimal. It
-/// doesn't directly support converting from hexadecimal, but here's an example
-/// of doing that with the [`hex`] crate:
-///
-/// ```
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use std::convert::TryInto;
-///
-/// let hash_hex = "d74981efa70a0c880b8d8c1985d075dbcbf679b99a5f9914e5aaf96b831a9e24";
-/// let hash_bytes = hex::decode(hash_hex)?;
-/// let hash_array: [u8; blake3::OUT_LEN] = hash_bytes[..].try_into()?;
-/// let hash: blake3::Hash = hash_array.into();
-/// # Ok(())
-/// # }
-/// ```
+/// `Hash` provides the [`to_hex`] and [`from_hex`] methods for converting to
+/// and from hexadecimal. It also implements [`Display`] and [`FromStr`].
 ///
 /// [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
 /// [`Into`]: https://doc.rust-lang.org/std/convert/trait.Into.html
@@ -204,12 +195,14 @@ fn counter_high(counter: u64) -> u32 {
 /// [`Deref`]: https://doc.rust-lang.org/stable/std/ops/trait.Deref.html
 /// [`AsRef`]: https://doc.rust-lang.org/std/convert/trait.AsRef.html
 /// [`to_hex`]: #method.to_hex
-/// [`hex`]: https://crates.io/crates/hex
+/// [`from_hex`]: #method.from_hex
+/// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+/// [`FromStr`]: https://doc.rust-lang.org/std/str/trait.FromStr.html
 #[derive(Clone, Copy, Hash)]
 pub struct Hash([u8; OUT_LEN]);
 
 impl Hash {
-    /// The bytes of the `Hash`. Note that byte arrays don't provide
+    /// The raw bytes of the `Hash`. Note that byte arrays don't provide
     /// constant-time equality checking, so if  you need to compare hashes,
     /// prefer the `Hash` type.
     #[inline]
@@ -217,13 +210,15 @@ impl Hash {
         &self.0
     }
 
-    /// The hexadecimal encoding of the `Hash`. The returned [`ArrayString`] is
-    /// a fixed size and doesn't allocate memory on the heap. Note that
-    /// [`ArrayString`] doesn't provide constant-time equality checking, so if
-    /// you need to compare hashes, prefer the `Hash` type.
+    /// Encode a `Hash` in lowercase hexadecimal.
+    ///
+    /// The returned [`ArrayString`] is a fixed size and doesn't allocate memory
+    /// on the heap. Note that [`ArrayString`] doesn't provide constant-time
+    /// equality checking, so if you need to compare hashes, prefer the `Hash`
+    /// type.
     ///
     /// [`ArrayString`]: https://docs.rs/arrayvec/0.5.1/arrayvec/struct.ArrayString.html
-    pub fn to_hex(&self) -> ArrayString<[u8; 2 * OUT_LEN]> {
+    pub fn to_hex(&self) -> ArrayString<{ 2 * OUT_LEN }> {
         let mut s = ArrayString::new();
         let table = b"0123456789abcdef";
         for &b in self.0.iter() {
@@ -231,6 +226,35 @@ impl Hash {
             s.push(table[(b & 0xf) as usize] as char);
         }
         s
+    }
+
+    /// Decode a `Hash` from hexadecimal. Both uppercase and lowercase ASCII
+    /// bytes are supported.
+    ///
+    /// Any byte outside the ranges `'0'...'9'`, `'a'...'f'`, and `'A'...'F'`
+    /// results in an error. An input length other than 64 also results in an
+    /// error.
+    ///
+    /// Note that `Hash` also implements `FromStr`, so `Hash::from_hex("...")`
+    /// is equivalent to `"...".parse()`.
+    pub fn from_hex(hex: impl AsRef<[u8]>) -> Result<Self, HexError> {
+        fn hex_val(byte: u8) -> Result<u8, HexError> {
+            match byte {
+                b'A'..=b'F' => Ok(byte - b'A' + 10),
+                b'a'..=b'f' => Ok(byte - b'a' + 10),
+                b'0'..=b'9' => Ok(byte - b'0'),
+                _ => Err(HexError(HexErrorInner::InvalidByte(byte))),
+            }
+        }
+        let hex_bytes: &[u8] = hex.as_ref();
+        if hex_bytes.len() != OUT_LEN * 2 {
+            return Err(HexError(HexErrorInner::InvalidLen(hex_bytes.len())));
+        }
+        let mut hash_bytes: [u8; OUT_LEN] = [0; OUT_LEN];
+        for i in 0..OUT_LEN {
+            hash_bytes[i] = 16 * hex_val(hex_bytes[2 * i])? + hex_val(hex_bytes[2 * i + 1])?;
+        }
+        Ok(Hash::from(hash_bytes))
     }
 }
 
@@ -245,6 +269,14 @@ impl From<Hash> for [u8; OUT_LEN] {
     #[inline]
     fn from(hash: Hash) -> Self {
         hash.0
+    }
+}
+
+impl core::str::FromStr for Hash {
+    type Err = HexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Hash::from_hex(s)
     }
 }
 
@@ -264,7 +296,27 @@ impl PartialEq<[u8; OUT_LEN]> for Hash {
     }
 }
 
+/// This implementation is constant-time if the target is 32 bytes long.
+impl PartialEq<[u8]> for Hash {
+    #[inline]
+    fn eq(&self, other: &[u8]) -> bool {
+        constant_time_eq::constant_time_eq(&self.0, other)
+    }
+}
+
 impl Eq for Hash {}
+
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Formatting field as `&str` to reduce code size since the `Debug`
+        // dynamic dispatch table for `&str` is likely needed elsewhere already,
+        // but that for `ArrayString<[u8; 64]>` is not.
+        let hex = self.to_hex();
+        let hex: &str = hex.as_str();
+
+        f.write_str(hex)
+    }
+}
 
 impl fmt::Debug for Hash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -277,6 +329,40 @@ impl fmt::Debug for Hash {
         f.debug_tuple("Hash").field(&hex).finish()
     }
 }
+
+/// The error type for [`Hash::from_hex`].
+///
+/// The `.to_string()` representation of this error currently distinguishes between bad length
+/// errors and bad character errors. This is to help with logging and debugging, but it isn't a
+/// stable API detail, and it may change at any time.
+#[derive(Clone, Debug)]
+pub struct HexError(HexErrorInner);
+
+#[derive(Clone, Debug)]
+enum HexErrorInner {
+    InvalidByte(u8),
+    InvalidLen(usize),
+}
+
+impl fmt::Display for HexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.0 {
+            HexErrorInner::InvalidByte(byte) => {
+                if byte < 128 {
+                    write!(f, "invalid hex character: {:?}", byte as char)
+                } else {
+                    write!(f, "invalid hex character: 0x{:x}", byte)
+                }
+            }
+            HexErrorInner::InvalidLen(len) => {
+                write!(f, "expected 64 hex bytes, received {}", len)
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for HexError {}
 
 // Each chunk or parent node can produce either a 32-byte chaining value or, by
 // setting the ROOT flag, any number of final output bytes. The Output struct
@@ -440,7 +526,7 @@ impl fmt::Debug for ChunkState {
 // and for the incremental input with Hasher (though we have to be careful with
 // subtree boundaries in the incremental case). compress_subtree_wide() applies
 // several optimizations at the same time:
-// - Multi-threading with Rayon.
+// - Multithreading with Rayon.
 // - Parallel chunk hashing with SIMD.
 // - Parallel parent hashing with SIMD. Note that while SIMD chunk hashing
 //   maxes out at MAX_SIMD_DEGREE*CHUNK_LEN, parallel parent hashing continues
@@ -448,7 +534,7 @@ impl fmt::Debug for ChunkState {
 //   use full-width SIMD vectors for parent hashing. Without parallel parent
 //   hashing, we lose about 10% of overall throughput on AVX2 and AVX-512.
 
-// pub for benchmarks
+/// Undocumented and unstable, for benchmarks only.
 #[doc(hidden)]
 #[derive(Clone, Copy)]
 pub enum IncrementCounter {
@@ -498,7 +584,7 @@ fn compress_chunks_parallel(
     debug_assert!(input.len() <= MAX_SIMD_DEGREE * CHUNK_LEN);
 
     let mut chunks_exact = input.chunks_exact(CHUNK_LEN);
-    let mut chunks_array = ArrayVec::<[&[u8; CHUNK_LEN]; MAX_SIMD_DEGREE]>::new();
+    let mut chunks_array = ArrayVec::<&[u8; CHUNK_LEN], MAX_SIMD_DEGREE>::new();
     for chunk in &mut chunks_exact {
         chunks_array.push(array_ref!(chunk, 0, CHUNK_LEN));
     }
@@ -548,7 +634,7 @@ fn compress_parents_parallel(
     let mut parents_exact = child_chaining_values.chunks_exact(BLOCK_LEN);
     // Use MAX_SIMD_DEGREE_OR_2 rather than MAX_SIMD_DEGREE here, because of
     // the requirements of compress_subtree_wide().
-    let mut parents_array = ArrayVec::<[&[u8; BLOCK_LEN]; MAX_SIMD_DEGREE_OR_2]>::new();
+    let mut parents_array = ArrayVec::<&[u8; BLOCK_LEN], MAX_SIMD_DEGREE_OR_2>::new();
     for parent in &mut parents_exact {
         parents_array.push(array_ref!(parent, 0, BLOCK_LEN));
     }
@@ -589,8 +675,8 @@ fn compress_parents_parallel(
 //
 // Why not just have the caller split the input on the first update(), instead
 // of implementing this special rule? Because we don't want to limit SIMD or
-// multi-threading parallelism for that update().
-fn compress_subtree_wide<J: Join>(
+// multithreading parallelism for that update().
+fn compress_subtree_wide<J: join::Join>(
     input: &[u8],
     key: &CVWords,
     chunk_counter: u64,
@@ -599,7 +685,7 @@ fn compress_subtree_wide<J: Join>(
     out: &mut [u8],
 ) -> usize {
     // Note that the single chunk case does *not* bump the SIMD degree up to 2
-    // when it is 1. This allows Rayon the option of multi-threading even the
+    // when it is 1. This allows Rayon the option of multithreading even the
     // 2-chunk case, which can help performance on smaller platforms.
     if input.len() <= platform.simd_degree() * CHUNK_LEN {
         return compress_chunks_parallel(input, key, chunk_counter, flags, platform, out);
@@ -626,12 +712,11 @@ fn compress_subtree_wide<J: Join>(
     };
     let (left_out, right_out) = cv_array.split_at_mut(degree * OUT_LEN);
 
-    // Recurse! This uses multiple threads if the "rayon" feature is enabled.
+    // Recurse! For update_rayon(), this is where we take advantage of RayonJoin and use multiple
+    // threads.
     let (left_n, right_n) = J::join(
         || compress_subtree_wide::<J>(left, key, chunk_counter, flags, platform, left_out),
         || compress_subtree_wide::<J>(right, key, right_chunk_counter, flags, platform, right_out),
-        left.len(),
-        right.len(),
     );
 
     // The special case again. If simd_degree=1, then we'll have left_n=1 and
@@ -665,7 +750,7 @@ fn compress_subtree_wide<J: Join>(
 //
 // As with compress_subtree_wide(), this function is not used on inputs of 1
 // chunk or less. That's a different codepath.
-fn compress_subtree_to_parent_node<J: Join>(
+fn compress_subtree_to_parent_node<J: join::Join>(
     input: &[u8],
     key: &CVWords,
     chunk_counter: u64,
@@ -692,8 +777,7 @@ fn compress_subtree_to_parent_node<J: Join>(
 
 // Hash a complete input all at once. Unlike compress_subtree_wide() and
 // compress_subtree_to_parent_node(), this function handles the 1 chunk case.
-// Note that this we use SerialJoin here, so this is always single-threaded.
-fn hash_all_at_once(input: &[u8], key: &CVWords, flags: u8) -> Output {
+fn hash_all_at_once<J: join::Join>(input: &[u8], key: &CVWords, flags: u8) -> Output {
     let platform = Platform::detect();
 
     // If the whole subtree is one chunk, hash it directly with a ChunkState.
@@ -707,7 +791,7 @@ fn hash_all_at_once(input: &[u8], key: &CVWords, flags: u8) -> Output {
     // compress_subtree_to_parent_node().
     Output {
         input_chaining_value: *key,
-        block: compress_subtree_to_parent_node::<SerialJoin>(input, key, 0, flags, platform),
+        block: compress_subtree_to_parent_node::<J>(input, key, 0, flags, platform),
         block_len: BLOCK_LEN as u8,
         counter: 0,
         flags: flags | PARENT,
@@ -717,40 +801,43 @@ fn hash_all_at_once(input: &[u8], key: &CVWords, flags: u8) -> Output {
 
 /// The default hash function.
 ///
-/// For an incremental version that accepts multiple writes, see [`Hasher::update`].
+/// For an incremental version that accepts multiple writes, see
+/// [`Hasher::update`].
 ///
-/// This function is always single-threaded. For multi-threading support, see
-/// [`Hasher::update_with_join`].
+/// For output sizes other than 32 bytes, see [`Hasher::finalize_xof`] and
+/// [`OutputReader`].
 ///
-/// [`Hasher::update`]: struct.Hasher.html#method.update
-/// [`Hasher::update_with_join`]: struct.Hasher.html#method.update_with_join
+/// This function is always single-threaded. For multithreading support, see
+/// [`Hasher::update_rayon`](struct.Hasher.html#method.update_rayon).
 pub fn hash(input: &[u8]) -> Hash {
-    hash_all_at_once(input, IV, 0).root_hash()
+    hash_all_at_once::<join::SerialJoin>(input, IV, 0).root_hash()
 }
 
 /// The keyed hash function.
 ///
-/// This is suitable for use as a message authentication code, for
-/// example to replace an HMAC instance.
-///  In that use case, the constant-time equality checking provided by
-/// [`Hash`](struct.Hash.html) is almost always a security requirement, and
-/// callers need to be careful not to compare MACs as raw bytes.
+/// This is suitable for use as a message authentication code, for example to
+/// replace an HMAC instance. In that use case, the constant-time equality
+/// checking provided by [`Hash`](struct.Hash.html) is almost always a security
+/// requirement, and callers need to be careful not to compare MACs as raw
+/// bytes.
 ///
-/// This function is always single-threaded. For multi-threading support, see
-/// [`Hasher::update_with_join`].
+/// For output sizes other than 32 bytes, see [`Hasher::new_keyed`],
+/// [`Hasher::finalize_xof`], and [`OutputReader`].
 ///
-/// [`Hasher::update_with_join`]: struct.Hasher.html#method.update_with_join
+/// This function is always single-threaded. For multithreading support, see
+/// [`Hasher::new_keyed`] and
+/// [`Hasher::update_rayon`](struct.Hasher.html#method.update_rayon).
 pub fn keyed_hash(key: &[u8; KEY_LEN], input: &[u8]) -> Hash {
     let key_words = platform::words_from_le_bytes_32(key);
-    hash_all_at_once(input, &key_words, KEYED_HASH).root_hash()
+    hash_all_at_once::<join::SerialJoin>(input, &key_words, KEYED_HASH).root_hash()
 }
 
 /// The key derivation function.
 ///
 /// Given cryptographic key material of any length and a context string of any
-/// length, this function outputs a derived subkey of any length. **The context
-/// string should be hardcoded, globally unique, and application-specific.** A
-/// good default format for such strings is `"[application] [commit timestamp]
+/// length, this function outputs a 32-byte derived subkey. **The context string
+/// should be hardcoded, globally unique, and application-specific.** A good
+/// default format for such strings is `"[application] [commit timestamp]
 /// [purpose]"`, e.g., `"example.com 2019-12-25 16:18:03 session tokens v1"`.
 ///
 /// Key derivation is important when you want to use the same key in multiple
@@ -764,25 +851,30 @@ pub fn keyed_hash(key: &[u8; KEY_LEN], input: &[u8]) -> Hash {
 /// another algorithm. You might need to do this if you're adding features to
 /// an existing application, which does not yet use key derivation internally.
 /// However, you still must not share key material with algorithms that forbid
-/// key reuse entirely, like a one-time pad.
+/// key reuse entirely, like a one-time pad. For more on this, see sections 6.2
+/// and 7.8 of the [BLAKE3 paper](https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf).
 ///
 /// Note that BLAKE3 is not a password hash, and **`derive_key` should never be
 /// used with passwords.** Instead, use a dedicated password hash like
 /// [Argon2]. Password hashes are entirely different from generic hash
 /// functions, with opposite design requirements.
 ///
-/// This function is always single-threaded. For multi-threading support, see
-/// [`Hasher::update_with_join`].
+/// For output sizes other than 32 bytes, see [`Hasher::new_derive_key`],
+/// [`Hasher::finalize_xof`], and [`OutputReader`].
 ///
-/// [`Hasher::new_derive_key`]: struct.Hasher.html#method.new_derive_key
-/// [`Hasher::finalize_xof`]: struct.Hasher.html#method.finalize_xof
+/// This function is always single-threaded. For multithreading support, see
+/// [`Hasher::new_derive_key`] and
+/// [`Hasher::update_rayon`](struct.Hasher.html#method.update_rayon).
+///
 /// [Argon2]: https://en.wikipedia.org/wiki/Argon2
-/// [`Hasher::update_with_join`]: struct.Hasher.html#method.update_with_join
-pub fn derive_key(context: &str, key_material: &[u8], output: &mut [u8]) {
-    let context_key = hash_all_at_once(context.as_bytes(), IV, DERIVE_KEY_CONTEXT).root_hash();
+pub fn derive_key(context: &str, key_material: &[u8]) -> [u8; OUT_LEN] {
+    let context_key =
+        hash_all_at_once::<join::SerialJoin>(context.as_bytes(), IV, DERIVE_KEY_CONTEXT)
+            .root_hash();
     let context_key_words = platform::words_from_le_bytes_32(context_key.as_bytes());
-    let inner_output = hash_all_at_once(key_material, &context_key_words, DERIVE_KEY_MATERIAL);
-    OutputReader::new(inner_output).fill(output);
+    hash_all_at_once::<join::SerialJoin>(key_material, &context_key_words, DERIVE_KEY_MATERIAL)
+        .root_hash()
+        .0
 }
 
 fn parent_node_output(
@@ -807,13 +899,22 @@ fn parent_node_output(
 
 /// An incremental hash state that can accept any number of writes.
 ///
-/// In addition to its inherent methods, this type implements several commonly
-/// used traits from the [`digest`](https://crates.io/crates/digest) and
-/// [`crypto_mac`](https://crates.io/crates/crypto-mac) crates.
+/// When the `traits-preview` Cargo feature is enabled, this type implements
+/// several commonly used traits from the
+/// [`digest`](https://crates.io/crates/digest) and
+/// [`crypto_mac`](https://crates.io/crates/crypto-mac) crates. However, those
+/// traits aren't stable, and they're expected to change in incompatible ways
+/// before those crates reach 1.0. For that reason, this crate makes no SemVer
+/// guarantees for this feature, and callers who use it should expect breaking
+/// changes between patch versions.
 ///
-/// **Performance note:** The [`update`] and [`update_with_join`] methods
-/// perform poorly when the caller's input buffer is small. See their method
-/// docs below. A 16 KiB buffer is large enough to leverage all currently
+/// When the `rayon` Cargo feature is enabled, the
+/// [`update_rayon`](#method.update_rayon) method is available for multithreaded
+/// hashing.
+///
+/// **Performance note:** The [`update`](#method.update) method can't take full
+/// advantage of SIMD optimizations if its input buffer is too small or oddly
+/// sized. Using a 16 KiB buffer, or any multiple of that, enables all currently
 /// supported SIMD instruction sets.
 ///
 /// # Examples
@@ -837,9 +938,6 @@ fn parent_node_output(
 /// # Ok(())
 /// # }
 /// ```
-///
-/// [`update`]: #method.update
-/// [`update_with_join`]: #method.update_with_join
 #[derive(Clone)]
 pub struct Hasher {
     key: CVWords,
@@ -849,7 +947,7 @@ pub struct Hasher {
     // requires a 4th entry, rather than merging everything down to 1, because
     // we don't know whether more input is coming. This is different from how
     // the reference implementation does things.
-    cv_stack: ArrayVec<[CVBytes; MAX_DEPTH + 1]>,
+    cv_stack: ArrayVec<CVBytes, { MAX_DEPTH + 1 }>,
 }
 
 impl Hasher {
@@ -881,7 +979,9 @@ impl Hasher {
     ///
     /// [`derive_key`]: fn.derive_key.html
     pub fn new_derive_key(context: &str) -> Self {
-        let context_key = hash_all_at_once(context.as_bytes(), IV, DERIVE_KEY_CONTEXT).root_hash();
+        let context_key =
+            hash_all_at_once::<join::SerialJoin>(context.as_bytes(), IV, DERIVE_KEY_CONTEXT)
+                .root_hash();
         let context_key_words = platform::words_from_le_bytes_32(context_key.as_bytes());
         Self::new_internal(&context_key_words, DERIVE_KEY_MATERIAL)
     }
@@ -889,10 +989,7 @@ impl Hasher {
     /// Reset the `Hasher` to its initial state.
     ///
     /// This is functionally the same as overwriting the `Hasher` with a new
-    /// one, using the same key or context string if any. However, depending on
-    /// how much inlining the optimizer does, moving a `Hasher` might copy its
-    /// entire CV stack, most of which is useless uninitialized bytes. This
-    /// methods avoids that copy.
+    /// one, using the same key or context string if any.
     pub fn reset(&mut self) -> &mut Self {
         self.chunk_state = ChunkState::new(
             &self.key,
@@ -972,8 +1069,9 @@ impl Hasher {
     /// Add input bytes to the hash state. You can call this any number of
     /// times.
     ///
-    /// This method is always single-threaded. For multi-threading support, see
-    /// `update_with_join` below.
+    /// This method is always single-threaded. For multithreading support, see
+    /// [`update_rayon`](#method.update_rayon) below (enabled with the `rayon`
+    /// Cargo feature).
     ///
     /// Note that the degree of SIMD parallelism that `update` can use is
     /// limited by the size of this input buffer. The 8 KiB buffer currently
@@ -983,44 +1081,34 @@ impl Hasher {
     ///
     /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
     pub fn update(&mut self, input: &[u8]) -> &mut Self {
-        self.update_with_join::<SerialJoin>(input)
+        self.update_with_join::<join::SerialJoin>(input)
     }
 
-    /// Add input bytes to the hash state, as with `update`, but potentially
-    /// using multi-threading. See the example below, and the
-    /// [`join`](join/index.html) module for a more detailed explanation.
+    /// Identical to [`update`](Hasher::update), but using Rayon-based
+    /// multithreading internally.
     ///
-    /// To get any performance benefit from multi-threading, the input buffer
-    /// size needs to be very large. As a rule of thumb on x86_64, there is no
-    /// benefit to multi-threading inputs less than 128 KiB. Other platforms
-    /// have different thresholds, and in general you need to benchmark your
-    /// specific use case. Where possible, memory mapping an entire input file
-    /// is recommended, to take maximum advantage of multi-threading without
-    /// needing to tune a specific buffer size. Where memory mapping is not
-    /// possible, good multi-threading performance requires doing IO on a
-    /// background thread, to avoid sleeping all your worker threads while the
-    /// input buffer is (serially) refilled. This is quite complicated compared
-    /// to memory mapping.
+    /// This method is gated by the `rayon` Cargo feature, which is disabled by
+    /// default but enabled on [docs.rs](https://docs.rs).
     ///
-    /// # Example
+    /// To get any performance benefit from multithreading, the input buffer
+    /// needs to be large. As a rule of thumb on x86_64, `update_rayon` is
+    /// _slower_ than `update` for inputs under 128 KiB. That threshold varies
+    /// quite a lot across different processors, and it's important to benchmark
+    /// your specific use case.
     ///
-    /// ```
-    /// // Hash a large input using multi-threading. Note that multi-threading
-    /// // comes with some overhead, and it can actually hurt performance for small
-    /// // inputs. The meaning of "small" varies, however, depending on the
-    /// // platform and the number of threads. (On x86_64, the cutoff tends to be
-    /// // around 128 KiB.) You should benchmark your own use case to see whether
-    /// // multi-threading helps.
-    /// # #[cfg(feature = "rayon")]
-    /// # {
-    /// # fn some_large_input() -> &'static [u8] { b"foo" }
-    /// let input: &[u8] = some_large_input();
-    /// let mut hasher = blake3::Hasher::new();
-    /// hasher.update_with_join::<blake3::join::RayonJoin>(input);
-    /// let hash = hasher.finalize();
-    /// # }
-    /// ```
-    pub fn update_with_join<J: Join>(&mut self, mut input: &[u8]) -> &mut Self {
+    /// Memory mapping an entire input file is a simple way to take advantage of
+    /// multithreading without needing to carefully tune your buffer size or
+    /// offload IO. However, on spinning disks where random access is expensive,
+    /// that approach can lead to disk thrashing and terrible IO performance.
+    /// Note that OS page caching can mask this problem, in which case it might
+    /// only appear for files larger than available RAM. Again, benchmarking
+    /// your specific use case is important.
+    #[cfg(feature = "rayon")]
+    pub fn update_rayon(&mut self, input: &[u8]) -> &mut Self {
+        self.update_with_join::<join::RayonJoin>(input)
+    }
+
+    fn update_with_join<J: join::Join>(&mut self, mut input: &[u8]) -> &mut Self {
         // If we have some partial chunk bytes in the internal chunk_state, we
         // need to finish that chunk first.
         if self.chunk_state.len() > 0 {
@@ -1049,7 +1137,7 @@ impl Hasher {
         // Now the chunk_state is clear, and we have more input. If there's
         // more than a single chunk (so, definitely not the root chunk), hash
         // the largest whole subtree we can, with the full benefits of SIMD and
-        // multi-threading parallelism. Two restrictions:
+        // multithreading parallelism. Two restrictions:
         // - The subtree has to be a power-of-2 number of chunks. Only subtrees
         //   along the right edge can be incomplete, and we don't know where
         //   the right edge is going to be until we get to finalize().
@@ -1213,6 +1301,11 @@ impl Hasher {
     pub fn finalize_xof(&self) -> OutputReader {
         OutputReader::new(self.final_output())
     }
+
+    /// Return the total number of bytes hashed so far.
+    pub fn count(&self) -> u64 {
+        self.chunk_state.chunk_counter * CHUNK_LEN as u64 + self.chunk_state.len() as u64
+    }
 }
 
 // Don't derive(Debug), because the state may be secret.
@@ -1249,6 +1342,17 @@ impl std::io::Write for Hasher {
 
 /// An incremental reader for extended output, returned by
 /// [`Hasher::finalize_xof`](struct.Hasher.html#method.finalize_xof).
+///
+/// Outputs shorter than the default length of 32 bytes (256 bits)
+/// provide less security. An N-bit BLAKE3 output is intended to provide
+/// N bits of first and second preimage resistance and N/2 bits of
+/// collision resistance, for any N up to 256. Longer outputs don't
+/// provide any additional security.
+///
+/// Shorter BLAKE3 outputs are prefixes of longer ones. Explicitly
+/// requesting a short output is equivalent to truncating the
+/// default-length output. (Note that this is different between BLAKE2
+/// and BLAKE3.)
 #[derive(Clone)]
 pub struct OutputReader {
     inner: Output,
@@ -1293,10 +1397,13 @@ impl OutputReader {
         }
     }
 
-    /// Return the current read position in the output stream. The position of
-    /// a new `OutputReader` starts at 0, and each call to [`fill`] or
-    /// [`Read::read`] moves the position forward by the number of bytes read.
+    /// Return the current read position in the output stream. This is
+    /// equivalent to [`Seek::stream_position`], except that it doesn't return
+    /// a `Result`. The position of a new `OutputReader` starts at 0, and each
+    /// call to [`fill`] or [`Read::read`] moves the position forward by the
+    /// number of bytes read.
     ///
+    /// [`Seek::stream_position`]: #method.stream_position
     /// [`fill`]: #method.fill
     /// [`Read::read`]: #method.read
     pub fn position(&self) -> u64 {

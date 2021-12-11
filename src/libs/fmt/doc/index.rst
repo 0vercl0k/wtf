@@ -26,21 +26,23 @@ is safer, simpler and several times `faster
 <https://www.zverovich.net/2020/06/13/fast-int-to-string-revisited.html>`_
 than common standard library implementations.
 The `format string syntax <syntax.html>`_ is similar to the one used by
-`str.format <http://docs.python.org/3/library/stdtypes.html#str.format>`_ in
+`str.format <https://docs.python.org/3/library/stdtypes.html#str.format>`_ in
 Python:
 
 .. code:: c++
 
-  fmt::format("The answer is {}.", 42);
+  std::string s = fmt::format("The answer is {}.", 42);
   
 The ``fmt::format`` function returns a string "The answer is 42.". You can use
 ``fmt::memory_buffer`` to avoid constructing ``std::string``:
 
 .. code:: c++
 
-  fmt::memory_buffer out;
-  format_to(out, "For a moment, {} happened.", "nothing");
-  out.data(); // returns a pointer to the formatted data
+  auto out = fmt::memory_buffer();
+  format_to(std::back_inserter(out),
+            "For a moment, {} happened.", "nothing");
+  auto data = out.data(); // pointer to the formatted data
+  auto size = out.size(); // size of the formatted data
 
 The ``fmt::print`` function performs formatting and writes the result to a stream:
 
@@ -108,16 +110,10 @@ The following code
   fmt::format("Cyrillic letter {}", L'\x42e');
   
 produces a compile-time error because wide character ``L'\x42e'`` cannot be
-formatted into a narrow string. You can use a wide format string instead:
-
-.. code:: c++
-
-  fmt::format(L"Cyrillic letter {}", L'\x42e');
-
-For comparison, writing a wide character to ``std::ostream`` results in
-its numeric value being written to the stream (i.e. 1070 instead of letter 'ю'
-which is represented by ``L'\x42e'`` if we use Unicode) which is rarely
-desirable.
+formatted into a narrow string. For comparison, writing a wide character to
+``std::ostream`` results in its numeric value being written to the stream
+(i.e. 1070 instead of letter 'ю' which is represented by ``L'\x42e'`` if we
+use Unicode) which is rarely desirable.
 
 Compact Binary Code
 -------------------
@@ -166,7 +162,7 @@ The library is highly portable and relies only on a small set of C++11 features:
 * deleted functions
 * alias templates
 
-These are available in GCC 4.8, Clang 3.0, MSVC 19.0 (2015) and more recent
+These are available in GCC 4.8, Clang 3.4, MSVC 19.0 (2015) and more recent
 compiler version. For older compilers use {fmt} `version 4.x
 <https://github.com/fmtlib/fmt/releases/tag/4.1.0>`_ which is maintained and
 only requires C++98.
@@ -190,11 +186,13 @@ just three header files and no external dependencies.
 A permissive MIT `license <https://github.com/fmtlib/fmt#license>`_ allows
 using the library both in open-source and commercial projects.
 
+`Learn more... <contents.html>`_
+
 .. raw:: html
 
   <a class="btn btn-success" href="https://github.com/fmtlib/fmt">GitHub Repository</a>
 
   <div class="section footer">
-    <iframe src="http://ghbtns.com/github-btn.html?user=fmtlib&amp;repo=fmt&amp;type=watch&amp;count=true"
+    <iframe src="https://ghbtns.com/github-btn.html?user=fmtlib&amp;repo=fmt&amp;type=watch&amp;count=true"
             class="github-btn" width="100" height="20"></iframe>
   </div>

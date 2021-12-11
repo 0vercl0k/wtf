@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020, University of Cincinnati, developed by Henry Schreiner
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
 // under NSF AWARD 1414736 and by the respective contributors.
 // All rights reserved.
 //
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     int min{0}, max{0}, step{1};
     ogroup->add_option("--min,-m", min, "The minimum")->required();
     ogroup->add_option("--max,-M", max, "The maximum")->required();
-    ogroup->add_option("--step,-s", step, "The step", true);
+    ogroup->add_option("--step,-s", step, "The step")->capture_default_str();
 
     app.require_option(1);
 

@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -65,6 +65,11 @@ struct text_ostream {
     template<typename T>
     void write(const T *ptr, std::size_t size) {
         __YAS_THROW_WRITE_ERROR(size != os.write(ptr, size));
+    }
+
+    template<typename T>
+    void write(const asis_wrapper<T> &v) {
+        write(v.val);
     }
 
     // for chars only
@@ -153,6 +158,11 @@ struct text_istream {
         __YAS_THROW_READ_ERROR(size != is.read(ptr, size));
 
         return size;
+    }
+
+    template<typename T>
+    void read(asis_wrapper<T> &v) {
+        read(v.val);
     }
 
     // for chars only

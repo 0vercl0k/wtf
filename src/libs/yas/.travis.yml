@@ -25,6 +25,9 @@ before_install:
   - wget http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.bz2
   - tar -jxf boost_1_64_0.tar.bz2
   - sudo cp -r boost_1_64_0/boost /usr/local/include
+  - wget https://github.com/abseil/abseil-cpp/archive/20200923.2.zip && unzip 20200923.2.zip && mv abseil-cpp-20200923.2 abseil-cpp
+  - export ABSEIL_HOME=`pwd`/abseil-cpp
+  - echo $ABSEIL_HOME
 
 install:
   - g++ -v
@@ -35,9 +38,9 @@ before_script:
   - cd $TRAVIS_BUILD_DIR/tests/base
   - mkdir build
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - cmake -DCMAKE_BUILD_TYPE=Release -DYAS_SERIALIZE_ABSL_TYPES=TRUE ..
 
 script:
   - cd $TRAVIS_BUILD_DIR/tests/base/build
-  - cmake --build . --config Release
+  - cmake --build . --config Release --target yas-base-test
   - ./yas-base-test binary && ./yas-base-test binary compacted && ./yas-base-test json && ./yas-base-test json compacted && ./yas-base-test text

@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -61,6 +61,9 @@
 #      define __YAS_FALLTHROUGH
 #   endif /* __GNUC__ >= 7 */
 #endif // __YAS_FALLTHROUGH
+
+#define __YAS_LIKELY(...) __builtin_expect(!!(__VA_ARGS__), 1)
+#define __YAS_UNLIKELY(...) __builtin_expect(!!(__VA_ARGS__), 0)
 
 /***************************************************************************/
 

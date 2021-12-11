@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -35,6 +35,8 @@
 
 #ifndef __yas__types__concepts__array_hpp
 #define __yas__types__concepts__array_hpp
+
+#include <vector>
 
 namespace yas {
 namespace detail {

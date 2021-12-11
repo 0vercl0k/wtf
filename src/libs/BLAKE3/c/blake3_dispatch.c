@@ -14,6 +14,8 @@
 #endif
 #endif
 
+#define MAYBE_UNUSED(x) (void)((x))
+
 #if defined(IS_X86)
 static uint64_t xgetbv() {
 #if defined(_MSC_VER)
@@ -137,6 +139,7 @@ void blake3_compress_in_place(uint32_t cv[8],
                               uint8_t flags) {
 #if defined(IS_X86)
   const enum cpu_feature features = get_cpu_features();
+  MAYBE_UNUSED(features);
 #if !defined(BLAKE3_NO_AVX512)
   if (features & AVX512VL) {
     blake3_compress_in_place_avx512(cv, block, block_len, counter, flags);
@@ -165,6 +168,7 @@ void blake3_compress_xof(const uint32_t cv[8],
                          uint8_t out[64]) {
 #if defined(IS_X86)
   const enum cpu_feature features = get_cpu_features();
+  MAYBE_UNUSED(features);
 #if !defined(BLAKE3_NO_AVX512)
   if (features & AVX512VL) {
     blake3_compress_xof_avx512(cv, block, block_len, counter, flags, out);
@@ -193,6 +197,7 @@ void blake3_hash_many(const uint8_t *const *inputs, size_t num_inputs,
                       uint8_t flags_start, uint8_t flags_end, uint8_t *out) {
 #if defined(IS_X86)
   const enum cpu_feature features = get_cpu_features();
+  MAYBE_UNUSED(features);
 #if !defined(BLAKE3_NO_AVX512)
   if ((features & (AVX512F|AVX512VL)) == (AVX512F|AVX512VL)) {
     blake3_hash_many_avx512(inputs, num_inputs, blocks, key, counter,
@@ -227,7 +232,7 @@ void blake3_hash_many(const uint8_t *const *inputs, size_t num_inputs,
 #endif
 #endif
 
-#if defined(BLAKE3_USE_NEON)
+#if BLAKE3_USE_NEON == 1
   blake3_hash_many_neon(inputs, num_inputs, blocks, key, counter,
                         increment_counter, flags, flags_start, flags_end, out);
   return;
@@ -242,6 +247,7 @@ void blake3_hash_many(const uint8_t *const *inputs, size_t num_inputs,
 size_t blake3_simd_degree(void) {
 #if defined(IS_X86)
   const enum cpu_feature features = get_cpu_features();
+  MAYBE_UNUSED(features);
 #if !defined(BLAKE3_NO_AVX512)
   if ((features & (AVX512F|AVX512VL)) == (AVX512F|AVX512VL)) {
     return 16;
@@ -263,7 +269,7 @@ size_t blake3_simd_degree(void) {
   }
 #endif
 #endif
-#if defined(BLAKE3_USE_NEON)
+#if BLAKE3_USE_NEON == 1
   return 4;
 #endif
   return 1;

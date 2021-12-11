@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -61,6 +61,9 @@
 #ifndef __YAS_FALLTHROUGH
 #   define __YAS_FALLTHROUGH
 #endif // __YAS_FALLTHROUGH
+
+#define __YAS_LIKELY(...) (__VA_ARGS__)
+#define __YAS_UNLIKELY(...) (__VA_ARGS__)
 
 /***************************************************************************/
 

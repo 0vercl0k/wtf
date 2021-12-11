@@ -1,6 +1,6 @@
 [package]
 name = "blake3"
-version = "0.3.7"
+version = "1.2.0"
 authors = ["Jack O'Connor <oconnor663@gmail.com>"]
 description = "the BLAKE3 hash function"
 repository = "https://github.com/BLAKE3-team/BLAKE3"
@@ -26,9 +26,17 @@ neon = []
 std = ["digest/std"]
 
 # The "rayon" feature (defined below as an optional dependency) enables the
-# join::RayonJoin type, which can be used with Hasher::update_with_join to
-# perform multi-threaded hashing. However, even if this feature is enabled, all
-# other APIs remain single-threaded.
+# `Hasher::update_rayon` method, for multithreaded hashing. However, even if
+# this feature is enabled, all other APIs remain single-threaded.
+
+# This crate implements traits from the RustCrypto project, exposed here as the
+# "traits-preview" feature. However, these traits aren't stable, and they're
+# expected to change in incompatible ways before they reach 1.0. For that
+# reason, this crate makes no SemVer guarantees for this feature, and callers
+# who use it should expect breaking changes between patch versions of this
+# crate. (The "*-preview" feature name follows the conventions of the RustCrypto
+# "signature" crate.)
+traits-preview = ["digest", "crypto-mac"]
 
 # ---------- Features below this line are for internal testing only. ----------
 
@@ -65,25 +73,26 @@ no_sse2 = []
 no_sse41 = []
 no_avx2 = []
 no_avx512 = []
+no_neon = []
 
 [package.metadata.docs.rs]
-# Document blake3::join::RayonJoin on docs.rs.
+# Document Hasher::update_rayon on docs.rs.
 features = ["rayon"]
 
 [dependencies]
 arrayref = "0.3.5"
-arrayvec = { version = "0.5.1", default-features = false, features = ["array-sizes-33-128"] }
+arrayvec = { version = "0.7.0", default-features = false }
 constant_time_eq = "0.1.5"
 rayon = { version = "1.2.1", optional = true }
-cfg-if = "0.1.10"
-digest = "0.9.0"
-crypto-mac = "0.8.0"
+cfg-if = "1.0.0"
+digest = { version = "0.9.0", optional = true }
+crypto-mac = { version = "0.11.0", optional = true }
 
 [dev-dependencies]
 hex = "0.4.2"
 page_size = "0.4.1"
-rand = "0.7.2"
-rand_chacha = "0.2.1"
+rand = "0.8.0"
+rand_chacha = "0.3.0"
 reference_impl = { path = "./reference_impl" }
 
 [build-dependencies]

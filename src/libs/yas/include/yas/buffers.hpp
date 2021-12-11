@@ -1,5 +1,5 @@
 
-// Copyright (c) 2010-2019 niXman (i dot nixman dog gmail dot com). All
+// Copyright (c) 2010-2021 niXman (github dot nixman at pm dot me). All
 // rights reserved.
 //
 // This file is part of YAS(https://github.com/niXman/yas) project.
@@ -40,6 +40,7 @@
 
 #include <cstring>
 #include <memory>
+#include <vector>
 
 namespace yas {
 
@@ -54,6 +55,21 @@ struct intrusive_buffer {
     intrusive_buffer(const intrusive_buffer& o)
         :data(o.data)
         ,size(o.size)
+    {}
+    
+    intrusive_buffer(const std::vector<char>& buf)
+        :data(buf.data())
+        ,size(buf.size())
+    {}
+    
+    intrusive_buffer(const std::vector<int8_t>& buf)
+        :data(reinterpret_cast<const char*>(buf.data()))
+        ,size(buf.size())
+    {}
+    
+    intrusive_buffer(const std::vector<uint8_t>& buf)
+        :data(reinterpret_cast<const char*>(buf.data()))
+        ,size(buf.size())
     {}
 
     const char *data;

@@ -1,15 +1,19 @@
+// Copyright (c) 2017-2021, University of Cincinnati, developed by Henry Schreiner
+// under NSF AWARD 1414736 and by the respective contributors.
+// All rights reserved.
+//
+// SPDX-License-Identifier: BSD-3-Clause
+
 #ifdef CLI11_SINGLE_FILE
 #include "CLI11.hpp"
 #else
 #include "CLI/CLI.hpp"
 #endif
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include "catch.hpp"
 #include <fstream>
 
-using ::testing::HasSubstr;
-using ::testing::Not;
+using Catch::Matchers::Contains;
 
 class SimpleFormatter : public CLI::FormatterBase {
   public:
@@ -20,17 +24,17 @@ class SimpleFormatter : public CLI::FormatterBase {
     }
 };
 
-TEST(Formatter, Nothing) {
+TEST_CASE("Formatter: Nothing", "[formatter]") {
     CLI::App app{"My prog"};
 
     app.formatter(std::make_shared<SimpleFormatter>());
 
     std::string help = app.help();
 
-    EXPECT_EQ(help, "This is really simple");
+    CHECK("This is really simple" == help);
 }
 
-TEST(Formatter, NothingLambda) {
+TEST_CASE("Formatter: NothingLambda", "[formatter]") {
     CLI::App app{"My prog"};
 
     app.formatter_fn(
@@ -38,10 +42,10 @@ TEST(Formatter, NothingLambda) {
 
     std::string help = app.help();
 
-    EXPECT_EQ(help, "This is really simple");
+    CHECK("This is really simple" == help);
 }
 
-TEST(Formatter, OptCustomize) {
+TEST_CASE("Formatter: OptCustomize", "[formatter]") {
     CLI::App app{"My prog"};
 
     auto optfmt = std::make_shared<CLI::Formatter>();
@@ -54,16 +58,15 @@ TEST(Formatter, OptCustomize) {
 
     std::string help = app.help();
 
-    EXPECT_THAT(help, HasSubstr("(MUST HAVE)"));
-    EXPECT_EQ(help,
-              "My prog\n"
-              "Usage: [OPTIONS]\n\n"
-              "Options:\n"
-              "  -h,--help              Print this help message and exit\n"
-              "  --opt INT (MUST HAVE)  Something\n\n");
+    CHECK_THAT(help, Contains("(MUST HAVE)"));
+    CHECK(help == "My prog\n"
+                  "Usage: [OPTIONS]\n\n"
+                  "Options:\n"
+                  "  -h,--help              Print this help message and exit\n"
+                  "  --opt INT (MUST HAVE)  Something\n\n");
 }
 
-TEST(Formatter, OptCustomizeSimple) {
+TEST_CASE("Formatter: OptCustomizeSimple", "[formatter]") {
     CLI::App app{"My prog"};
 
     app.get_formatter()->column_width(25);
@@ -74,16 +77,33 @@ TEST(Formatter, OptCustomizeSimple) {
 
     std::string help = app.help();
 
-    EXPECT_THAT(help, HasSubstr("(MUST HAVE)"));
-    EXPECT_EQ(help,
-              "My prog\n"
-              "Usage: [OPTIONS]\n\n"
-              "Options:\n"
-              "  -h,--help              Print this help message and exit\n"
-              "  --opt INT (MUST HAVE)  Something\n\n");
+    CHECK_THAT(help, Contains("(MUST HAVE)"));
+    CHECK(help == "My prog\n"
+                  "Usage: [OPTIONS]\n\n"
+                  "Options:\n"
+                  "  -h,--help              Print this help message and exit\n"
+                  "  --opt INT (MUST HAVE)  Something\n\n");
 }
 
-TEST(Formatter, FalseFlagExample) {
+TEST_CASE("Formatter: OptCustomizeOptionText", "[formatter]") {
+    CLI::App app{"My prog"};
+
+    app.get_formatter()->column_width(25);
+
+    int v{0};
+    app.add_option("--opt", v, "Something")->option_text("(ARG)");
+
+    std::string help = app.help();
+
+    CHECK_THAT(help, Contains("(ARG)"));
+    CHECK(help == "My prog\n"
+                  "Usage: [OPTIONS]\n\n"
+                  "Options:\n"
+                  "  -h,--help              Print this help message and exit\n"
+                  "  --opt (ARG)            Something\n\n");
+}
+
+TEST_CASE("Formatter: FalseFlagExample", "[formatter]") {
     CLI::App app{"My prog"};
 
     app.get_formatter()->column_width(25);
@@ -97,12 +117,12 @@ TEST(Formatter, FalseFlagExample) {
 
     std::string help = app.help();
 
-    EXPECT_THAT(help, HasSubstr("--no_opt{false}"));
-    EXPECT_THAT(help, HasSubstr("--no_opt2{false}"));
-    EXPECT_THAT(help, HasSubstr("-O{false}"));
+    CHECK_THAT(help, Contains("--no_opt{false}"));
+    CHECK_THAT(help, Contains("--no_opt2{false}"));
+    CHECK_THAT(help, Contains("-O{false}"));
 }
 
-TEST(Formatter, AppCustomize) {
+TEST_CASE("Formatter: AppCustomize", "[formatter]") {
     CLI::App app{"My prog"};
     app.add_subcommand("subcom1", "This");
 
@@ -114,17 +134,16 @@ TEST(Formatter, AppCustomize) {
     app.add_subcommand("subcom2", "This");
 
     std::string help = app.help();
-    EXPECT_EQ(help,
-              "My prog\n"
-              "Run: [OPTIONS] [SUBCOMMAND]\n\n"
-              "Options:\n"
-              "  -h,--help         Print this help message and exit\n\n"
-              "Subcommands:\n"
-              "  subcom1           This\n"
-              "  subcom2           This\n\n");
+    CHECK(help == "My prog\n"
+                  "Run: [OPTIONS] [SUBCOMMAND]\n\n"
+                  "Options:\n"
+                  "  -h,--help         Print this help message and exit\n\n"
+                  "Subcommands:\n"
+                  "  subcom1           This\n"
+                  "  subcom2           This\n\n");
 }
 
-TEST(Formatter, AppCustomizeSimple) {
+TEST_CASE("Formatter: AppCustomizeSimple", "[formatter]") {
     CLI::App app{"My prog"};
     app.add_subcommand("subcom1", "This");
 
@@ -134,48 +153,47 @@ TEST(Formatter, AppCustomizeSimple) {
     app.add_subcommand("subcom2", "This");
 
     std::string help = app.help();
-    EXPECT_EQ(help,
-              "My prog\n"
-              "Run: [OPTIONS] [SUBCOMMAND]\n\n"
-              "Options:\n"
-              "  -h,--help         Print this help message and exit\n\n"
-              "Subcommands:\n"
-              "  subcom1           This\n"
-              "  subcom2           This\n\n");
+    CHECK(help == "My prog\n"
+                  "Run: [OPTIONS] [SUBCOMMAND]\n\n"
+                  "Options:\n"
+                  "  -h,--help         Print this help message and exit\n\n"
+                  "Subcommands:\n"
+                  "  subcom1           This\n"
+                  "  subcom2           This\n\n");
 }
 
-TEST(Formatter, AllSub) {
+TEST_CASE("Formatter: AllSub", "[formatter]") {
     CLI::App app{"My prog"};
     CLI::App *sub = app.add_subcommand("subcom", "This");
     sub->add_flag("--insub", "MyFlag");
 
     std::string help = app.help("", CLI::AppFormatMode::All);
-    EXPECT_THAT(help, HasSubstr("--insub"));
-    EXPECT_THAT(help, HasSubstr("subcom"));
+    CHECK_THAT(help, Contains("--insub"));
+    CHECK_THAT(help, Contains("subcom"));
 }
 
-TEST(Formatter, AllSubRequired) {
+TEST_CASE("Formatter: AllSubRequired", "[formatter]") {
     CLI::App app{"My prog"};
     CLI::App *sub = app.add_subcommand("subcom", "This");
     sub->add_flag("--insub", "MyFlag");
     sub->required();
     std::string help = app.help("", CLI::AppFormatMode::All);
-    EXPECT_THAT(help, HasSubstr("--insub"));
-    EXPECT_THAT(help, HasSubstr("subcom"));
-    EXPECT_THAT(help, HasSubstr("REQUIRED"));
+    CHECK_THAT(help, Contains("--insub"));
+    CHECK_THAT(help, Contains("subcom"));
+    CHECK_THAT(help, Contains("REQUIRED"));
 }
 
-TEST(Formatter, NamelessSub) {
+TEST_CASE("Formatter: NamelessSub", "[formatter]") {
     CLI::App app{"My prog"};
     CLI::App *sub = app.add_subcommand("", "This subcommand");
     sub->add_flag("--insub", "MyFlag");
 
     std::string help = app.help("", CLI::AppFormatMode::Normal);
-    EXPECT_THAT(help, HasSubstr("--insub"));
-    EXPECT_THAT(help, HasSubstr("This subcommand"));
+    CHECK_THAT(help, Contains("--insub"));
+    CHECK_THAT(help, Contains("This subcommand"));
 }
 
-TEST(Formatter, NamelessSubInGroup) {
+TEST_CASE("Formatter: NamelessSubInGroup", "[formatter]") {
     CLI::App app{"My prog"};
     CLI::App *sub = app.add_subcommand("", "This subcommand");
     CLI::App *sub2 = app.add_subcommand("sub2", "subcommand2");
@@ -185,9 +203,9 @@ TEST(Formatter, NamelessSubInGroup) {
     sub->group("group1");
     sub2->group("group1");
     std::string help = app.help("", CLI::AppFormatMode::Normal);
-    EXPECT_THAT(help, HasSubstr("--insub"));
-    EXPECT_THAT(help, HasSubstr("This subcommand"));
-    EXPECT_THAT(help, HasSubstr("group1"));
-    EXPECT_THAT(help, HasSubstr("sub2"));
-    EXPECT_TRUE(help.find("pos") == std::string::npos);
+    CHECK_THAT(help, Contains("--insub"));
+    CHECK_THAT(help, Contains("This subcommand"));
+    CHECK_THAT(help, Contains("group1"));
+    CHECK_THAT(help, Contains("sub2"));
+    CHECK(help.find("pos") == std::string::npos);
 }
