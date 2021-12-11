@@ -20,11 +20,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifdef KVM_LOGGING_ON
-#define KvmDebugPrint(Format, ...) fmt::print("kvm: " Format, ##__VA_ARGS__)
-#else
-#define KvmDebugPrint(Format, ...) /* nuthin' */
-#endif
+constexpr bool KvmLoggingOn = false;
+
+template <typename... Args_t>
+void KvmDebugPrint(const char *Format, const Args_t &...args) {
+  if constexpr (UCrashDetectionLoggingOn) {
+    fmt::print("kvm: ");
+    fmt::print(Format, args...);
+  }
+}
 
 const uint64_t PfVector = 14;
 

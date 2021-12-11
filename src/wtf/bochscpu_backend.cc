@@ -11,18 +11,24 @@
 //#define BOCHS_LOGGING_ON
 //#define BOCHSHOOKS_LOGGING_ON
 
-#ifdef BOCHS_LOGGING_ON
-#define BochsDebugPrint(Format, ...) fmt::print("bochs: " Format, ##__VA_ARGS__)
-#else
-#define BochsDebugPrint(Format, ...) /* nuthin' */
-#endif
+constexpr bool BochsLoggingOn = false;
+constexpr bool BochsHooksLoggingOn = false;
 
-#ifdef BOCHSHOOKS_LOGGING_ON
-#define BochsHooksDebugPrint(Format, ...)                                      \
-  fmt::print("bochshooks: " Format, ##__VA_ARGS__)
-#else
-#define BochsHooksDebugPrint(fmt, ...) /* nuthin' */
-#endif
+template <typename... Args_t>
+void BochsDebugPrint(const char *Format, const Args_t &...args) {
+  if constexpr (BochsLoggingOn) {
+    fmt::print("bochs: ");
+    fmt::print(Format, args...);
+  }
+}
+
+template <typename... Args_t>
+void BochsHooksDebugPrint(const char *Format, const Args_t &...args) {
+  if constexpr (BochsHooksLoggingOn) {
+    fmt::print("bochshooks: ");
+    fmt::print(Format, args...);
+  }
+}
 
 //
 // This is a function that gets called when there is missing physical memory.

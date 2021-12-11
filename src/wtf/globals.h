@@ -16,35 +16,6 @@
 
 namespace fs = std::filesystem;
 
-//
-// Turn the below switches on to enable spew in the various subsystem.
-//
-
-//#define ALL_LOGGING_ON
-//#define HARDCORE_LOGGING_ON
-
-#ifdef ALL_LOGGING_ON
-#define FUZZER_LOGGING_ON
-#define HANDLETABLE_LOGGING_ON
-#define FSHOOKS_LOGGING_ON
-#define FILESTREAM_LOGGING_ON
-#define BACKEND_LOGGING_ON
-#define UCRASHDETECTIONSHOOKS_LOGGING_ON
-//#define FILESTREAM_SNOOP_READS
-//#define FILESTREAM_SNOOP_WRITES
-//#define GEN_LINUX_SYMBOLS
-#endif
-
-#ifdef BACKEND_LOGGING_ON
-#define BOCHS_LOGGING_ON
-#define WHV_LOGGING_ON
-#define KVM_LOGGING_ON
-#endif
-
-#ifdef HARDCORE_LOGGING_ON
-#define FUZZERHOOKS_LOGGING_ON
-#endif
-
 struct Zmm_t {
   uint64_t Q[8];
 
