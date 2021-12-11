@@ -7,9 +7,9 @@
 constexpr bool FsHooksLoggingOn = false;
 
 template <typename... Args_t>
-void FsDebugPrint(const char *Format, const Args_t &... args) {
+void FsDebugPrint(const char *Format, const Args_t &...args) {
   if constexpr (FsHooksLoggingOn) {
-    fmt::print("fs:");
+    fmt::print("fs: ");
     fmt::print(Format, args...);
   }
 }

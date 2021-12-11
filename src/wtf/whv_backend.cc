@@ -7,13 +7,15 @@
 #include <algorithm>
 #include <fstream>
 
-//#define WHV_LOGGING_ON
+constexpr bool WhvLoggingOn = false;
 
-#ifdef WHV_LOGGING_ON
-#define WhvDebugPrint(Format, ...) fmt::print("whv: " Format, ##__VA_ARGS__)
-#else
-#define WhvDebugPrint(Format, ...) /* nuthin' */
-#endif
+template <typename... Args_t>
+void WhvDebugPrint(const char *Format, const Args_t &...args) {
+  if constexpr (WhvLoggingOn) {
+    fmt::print("whv: ");
+    fmt::print(Format, args...);
+  }
+}
 
 //
 // Auto-initialization for WHV_REGISTER_VALUE.
