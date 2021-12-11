@@ -1,0 +1,31 @@
+image:
+  - Visual Studio 2019
+
+platform:
+  - x64
+  - x32
+
+configuration:
+  - Release
+
+environment:
+  BOOST_LIB32: C:\local\boost_1_66_0\lib32-msvc-14.1
+  BOOST_LIB64: C:\local\boost_1_66_0\lib64-msvc-14.1
+
+cache:
+  - c:\local\boost_1_66_0
+
+install:
+  - ps: Write-Host "Checking for Boost 1.66.0 x32...";$boostdir = Test-Path $Env:BOOST_LIB32;If ($boostdir -eq $False) {Write-Host "Downloading Boost 1.66.0 x32...";$exePath = "$Env:TEMP\boost_1_66_0-msvc-14.1-32.exe";(New-Object Net.WebClient).DownloadFile('https://bintray.com/boostorg/release/download_file?file_path=1.66.0%2Fbinaries%2Fboost_1_66_0-msvc-14.1-32.exe', $exePath);Write-Host "Installing Boost 1.66.0 x32...";cmd /c start /wait "$exePath" /verysilent;del $exePath};Write-Host "Boost 1.66.0 x32 installed!" -ForegroundColor Green
+  - ps: Write-Host "Checking for Boost 1.66.0 x64...";$boostdir = Test-Path $Env:BOOST_LIB64;If ($boostdir -eq $False) {Write-Host "Downloading Boost 1.66.0 x64...";$exePath = "$Env:TEMP\boost_1_66_0-msvc-14.1-64.exe";(New-Object Net.WebClient).DownloadFile('https://bintray.com/boostorg/release/download_file?file_path=1.66.0%2Fbinaries%2Fboost_1_66_0-msvc-14.1-64.exe', $exePath);Write-Host "Installing Boost 1.66.0 x64...";cmd /c start /wait "$exePath" /verysilent;del $exePath};Write-Host "Boost 1.66.0 x64 installed!" -ForegroundColor Green
+
+build_script:
+  - git clone --depth 1 --branch 20200923.2 https://github.com/abseil/abseil-cpp.git C:/abseil-cpp
+  - dir "C:/local/boost_1_66_0"
+  - cd ../yas/tests/base
+  - echo Build for %platform%-%configuration%
+  - mkdir build
+  - cd build
+  - cmake .. -DYAS_SERIALIZE_ABSL_TYPES=TRUE
+  - cmake --build . --config %configuration% --target yas-base-test
+  - Release\yas-base-test.exe binary

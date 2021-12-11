@@ -1,0 +1,46 @@
+language: cpp
+
+os:
+  - linux
+#  - osx
+
+dist: trusty
+sudo: required
+
+compiler:
+  - gcc
+  - clang
+
+notifications:
+ email:
+   on_success: change
+   on_failure: always
+
+before_install:
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo /etc/init.d/postgresql stop; fi
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo apt-get remove postgresql-9.* -y; fi
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo apt-get update -q; fi
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo apt-get upgrade -y; fi
+  - wget http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.bz2
+  - tar -jxf boost_1_64_0.tar.bz2
+  - sudo cp -r boost_1_64_0/boost /usr/local/include
+  - wget https://github.com/abseil/abseil-cpp/archive/20200923.2.zip && unzip 20200923.2.zip && mv abseil-cpp-20200923.2 abseil-cpp
+  - export ABSEIL_HOME=`pwd`/abseil-cpp
+  - echo $ABSEIL_HOME
+
+install:
+  - g++ -v
+  - clang -v
+  - cmake --version
+
+before_script:
+  - cd $TRAVIS_BUILD_DIR/tests/base
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release -DYAS_SERIALIZE_ABSL_TYPES=TRUE ..
+
+script:
+  - cd $TRAVIS_BUILD_DIR/tests/base/build
+  - cmake --build . --config Release --target yas-base-test
+  - ./yas-base-test binary && ./yas-base-test binary compacted && ./yas-base-test json && ./yas-base-test json compacted && ./yas-base-test text
