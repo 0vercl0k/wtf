@@ -328,6 +328,12 @@ class Server_t {
   tsl::robin_set<Gva_t> Coverage_;
 
   //
+  // File where the aggregated code-coverage is written.
+  //
+
+  FILE *FileCoverage_ = nullptr;
+
+  //
   // Number of mutations we have performed.
   //
 
@@ -345,6 +351,11 @@ public:
   //
 
   ~Server_t() {
+    if (FileCoverage_) {
+      fclose(FileCoverage_);
+      FileCoverage_ = nullptr;
+    }
+
     for (const auto &[Fd, _] : Clients_) {
       CloseSocket(Fd);
     }
@@ -364,6 +375,23 @@ public:
     //
 
     fmt::print("Seeded with {}\n", Opts_.Seed);
+
+    //
+    // Open the file where the aggregated coverage is written to.
+    //
+
+    constexpr std::string_view FileCoverageName("aggregate.cov");
+    if (fs::exists(FileCoverageName)) {
+      fmt::print("Please remove / save the {} file to continue\n",
+                 FileCoverageName);
+      return EXIT_FAILURE;
+    }
+
+    FileCoverage_ = fopen(FileCoverageName.data(), "a");
+    if (FileCoverage_ == nullptr) {
+      fmt::print("Failed to open {}\n", FileCoverageName);
+      return EXIT_FAILURE;
+    }
 
     //
     // Initialize our internal state.
@@ -856,12 +884,15 @@ private:
     if (Coverage.size() > 0) {
 
       //
-      // Emplace the new coverage in our data.
+      // Emplace the new coverage in our data and update the file on disk.
       //
 
       const size_t SizeBefore = Coverage_.size();
       for (const auto &Gva : Coverage) {
-        Coverage_.emplace(Gva);
+        const auto &[_, NewCoverage] = Coverage_.emplace(Gva);
+        if (NewCoverage) {
+          fmt::print(FileCoverage_, "{:#x}\n", Gva.U64());
+        }
       }
 
       //
@@ -871,6 +902,13 @@ private:
 
       const bool NewCoverage = Coverage_.size() > SizeBefore;
       if (NewCoverage) {
+
+        //
+        // New coverage means that we added new content to the file, so let's
+        // flush it.
+        //
+
+        fflush(FileCoverage_);
 
         //
         // Allocate a test that will get moved into the corpus and maybe
