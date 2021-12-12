@@ -9,7 +9,7 @@
 #include <fstream>
 
 constexpr bool BochsLoggingOn = false;
-constexpr bool BochsHooksLoggingOn = true;
+constexpr bool BochsHooksLoggingOn = false;
 
 template <typename... Args_t>
 void BochsDebugPrint(const char *Format, const Args_t &...args) {
