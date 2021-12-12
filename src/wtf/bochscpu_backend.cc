@@ -9,7 +9,7 @@
 #include <fstream>
 
 constexpr bool BochsLoggingOn = false;
-constexpr bool BochsHooksLoggingOn = false;
+constexpr bool BochsHooksLoggingOn = true;
 
 template <typename... Args_t>
 void BochsDebugPrint(const char *Format, const Args_t &...args) {
@@ -1114,6 +1114,8 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
   // Dump register deltas.
   //
 
+  bool NeedNewLine = false;
+
 #define __DeltaRegister(Reg, Comma)                                            \
   {                                                                            \
     if (bochscpu_cpu_##Reg(Cpu_) != Tenet_.CpuStatePrev_.Reg || Force) {       \
@@ -1121,6 +1123,7 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
       if (Comma) {                                                             \
         fmt::print(TraceFile_, ",");                                           \
       }                                                                        \
+      NeedNewLine = true;                                                      \
     }                                                                          \
   }
 
@@ -1196,6 +1199,7 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
 
     fmt::print(TraceFile_, ",{}={:#x}:{}", MemoryType,
                AccessInfo.VirtualAddress, HexString);
+    NeedNewLine = true;
   }
 
   //
@@ -1208,5 +1212,7 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
   // End of deltas.
   //
 
-  fmt::print(TraceFile_, "\n");
+  if (NeedNewLine) {
+    fmt::print(TraceFile_, "\n");
+  }
 }
