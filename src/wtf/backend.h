@@ -563,10 +563,10 @@ public:
   virtual bool RevokeLastNewCoverage() = 0;
 
   //
-  // Show the registers.
+  // Print the registers.
   //
 
-  void ShowRegisters();
+  void PrintRegisters();
 };
 
 //

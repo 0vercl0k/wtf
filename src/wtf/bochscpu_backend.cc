@@ -259,11 +259,6 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
 
   LoadState(CpuState);
   Seed_ = CpuState.Seed;
-
-  //
-  // XXX: disable kd: nt!KdpOweBreakpoint / nt!KdDebuggerEnabled
-  //
-
   return true;
 }
 
