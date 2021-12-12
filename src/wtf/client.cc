@@ -115,7 +115,18 @@ TestcaseResult_t RunTestcaseAndRestore(const Target_t &Target,
   }
 
   //
-  // Let know the stats that we finished a testcase.
+  // If we triggered a time out testcase, we ask the backend to invalidate
+  // the new coverage it has triggered.
+  //
+
+  const bool Timedout = std::holds_alternative<Timedout_t>(*Res);
+  if (Timedout) {
+    g_Backend->RevokeLastNewCoverage();
+  }
+
+  //
+  // Let know the stats that we finished a testcase. Make sure to not count
+  // coverage if the testcase timed-out as it'll get revoked.
   //
 
   const auto &LastNewCoverage = g_Backend->LastNewCoverage();
@@ -232,16 +243,6 @@ int Client_t::Run(const Target_t &Target, const CpuState_t &CpuState) {
 
     const TestcaseResult_t TestcaseResult = RunTestcaseAndRestore(
         Target, CpuState, {(uint8_t *)Testcase.data(), Testcase.size()});
-
-    //
-    // If we triggered a time out testcase, we ask the backend to invalidate
-    // the new coverage it has triggered. On top of that, we lie to the
-    // server by telling it that we haven't hit new coverage.
-    //
-
-    if (std::holds_alternative<Timedout_t>(TestcaseResult)) {
-      g_Backend->RevokeLastNewCoverage();
-    }
 
     //
     // Send the result back to the server.
