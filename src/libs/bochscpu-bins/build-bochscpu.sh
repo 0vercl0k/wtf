@@ -1,7 +1,7 @@
 # Axel '0vercl0k' Souchet - May 2 2020
 # Configure / clone the bochs repository.
 cd bochscpu-build
-sh prep.sh && cd bochs && sh .conf.cpu && make || true
+export BOCHS_REV=14331 && sh prep.sh && cd bochs && sh .conf.cpu && make || true
 
 # Remove old files in bochscpu.
 rm -rf ../../bochscpu/bochs

@@ -91,6 +91,7 @@ if (WIN32)
         dbgeng.lib
         winhvplatform.lib
         delayimp.lib
+        bcrypt.lib
     )
 else (WIN32)
     enable_language(ASM)
