@@ -262,7 +262,7 @@ In this section I briefly mention various differences between the execution back
 
 ## Build
 
-The [CI](https://github.com/0vercl0k/wtf/blob/main/.github/workflows/wtf.yml) builds *wtf* on Ubuntu 20.04 using [clang++-11](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
+The [CI](https://github.com/0vercl0k/wtf/blob/main/.github/workflows/wtf.yml) builds *wtf* on Ubuntu 20.04 using [clang++-13](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
 
 To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](https://github.com/0vercl0k/wtf/blob/main/src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](https://github.com/0vercl0k/wtf/blob/main/src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
 
