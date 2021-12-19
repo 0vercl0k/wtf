@@ -3,17 +3,16 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdlib>
+#include <ostream>
 #include <new>
-
-static const uint32_t BOCHSCPU_HOOK_MEM_EXECUTE = 2;
 
 static const uint32_t BOCHSCPU_HOOK_MEM_READ = 0;
 
-static const uint32_t BOCHSCPU_HOOK_MEM_RW = 3;
-
 static const uint32_t BOCHSCPU_HOOK_MEM_WRITE = 1;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_CONTEXTSWITCH = 14;
+static const uint32_t BOCHSCPU_HOOK_MEM_EXECUTE = 2;
+
+static const uint32_t BOCHSCPU_HOOK_MEM_RW = 3;
 
 static const uint32_t BOCHSCPU_HOOK_TLB_CR0 = 10;
 
@@ -21,36 +20,19 @@ static const uint32_t BOCHSCPU_HOOK_TLB_CR3 = 11;
 
 static const uint32_t BOCHSCPU_HOOK_TLB_CR4 = 12;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_INVEPT = 16;
+static const uint32_t BOCHSCPU_HOOK_TLB_TASKSWITCH = 13;
+
+static const uint32_t BOCHSCPU_HOOK_TLB_CONTEXTSWITCH = 14;
 
 static const uint32_t BOCHSCPU_HOOK_TLB_INVLPG = 15;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_INVPCID = 18;
+static const uint32_t BOCHSCPU_HOOK_TLB_INVEPT = 16;
 
 static const uint32_t BOCHSCPU_HOOK_TLB_INVVPID = 17;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_TASKSWITCH = 13;
+static const uint32_t BOCHSCPU_HOOK_TLB_INVPCID = 18;
 
 using bochscpu_cpu_t = void*;
-
-using Address = uint64_t;
-
-struct Seg {
-  bool present;
-  uint16_t selector;
-  Address base;
-  uint32_t limit;
-  uint16_t attr;
-};
-
-using bochscpu_cpu_seg_t = Seg;
-
-struct GlobalSeg {
-  Address base;
-  uint16_t limit;
-};
-
-using bochscpu_cpu_global_seg_t = GlobalSeg;
 
 /// FFI Hook object
 ///
@@ -87,6 +69,21 @@ struct bochscpu_hooks_t {
   void (*phy_access)(void*, uint32_t, uint64_t, uintptr_t, uint32_t, uint32_t);
   void (*wrmsr)(void*, uint32_t, uint32_t, uint64_t);
   void (*vmexit)(void*, uint32_t, uint32_t, uint64_t);
+};
+
+using Address = uint64_t;
+
+struct Seg {
+  bool present;
+  uint16_t selector;
+  Address base;
+  uint32_t limit;
+  uint16_t attr;
+};
+
+struct GlobalSeg {
+  Address base;
+  uint16_t limit;
 };
 
 struct Zmm {
@@ -160,41 +157,15 @@ struct State {
 
 using bochscpu_cpu_state_t = State;
 
+using bochscpu_cpu_seg_t = Seg;
+
+using bochscpu_cpu_global_seg_t = GlobalSeg;
+
 using bochscpu_cpu_zmm_t = Zmm;
 
 using bochscpu_instr_t = const void*;
 
 extern "C" {
-
-uint64_t bochscpu_cpu_cr2(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_cr3(bochscpu_cpu_t p);
-
-void bochscpu_cpu_cs(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
-
-/// Delete a cpu
-void bochscpu_cpu_delete(bochscpu_cpu_t p);
-
-void bochscpu_cpu_ds(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_es(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_forget(bochscpu_cpu_t p);
-
-/// Create a new Cpu
-///
-/// Instantiate an already existing cpu with the specified id.
-bochscpu_cpu_t bochscpu_cpu_from(uint32_t id);
-
-void bochscpu_cpu_fs(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_gdtr(bochscpu_cpu_t p, bochscpu_cpu_global_seg_t *s);
-
-void bochscpu_cpu_gs(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_idtr(bochscpu_cpu_t p, bochscpu_cpu_global_seg_t *s);
-
-void bochscpu_cpu_ldtr(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
 
 /// Create a new Cpu
 ///
@@ -202,41 +173,17 @@ void bochscpu_cpu_ldtr(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
 /// ignored.
 bochscpu_cpu_t bochscpu_cpu_new(uint32_t id);
 
-uint64_t bochscpu_cpu_r10(bochscpu_cpu_t p);
+/// Create a new Cpu
+///
+/// Instantiate an already existing cpu with the specified id.
+bochscpu_cpu_t bochscpu_cpu_from(uint32_t id);
 
-uint64_t bochscpu_cpu_r11(bochscpu_cpu_t p);
+void bochscpu_cpu_forget(bochscpu_cpu_t p);
 
-uint64_t bochscpu_cpu_r12(bochscpu_cpu_t p);
+/// Delete a cpu
+void bochscpu_cpu_delete(bochscpu_cpu_t p);
 
-uint64_t bochscpu_cpu_r13(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_r14(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_r15(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_r8(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_r9(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rax(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rbp(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rbx(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rcx(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rdi(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rdx(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rflags(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rip(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rsi(bochscpu_cpu_t p);
-
-uint64_t bochscpu_cpu_rsp(bochscpu_cpu_t p);
+void bochscpu_cpu_set_mode(bochscpu_cpu_t p);
 
 /// Start emulation
 ///
@@ -244,85 +191,139 @@ uint64_t bochscpu_cpu_rsp(bochscpu_cpu_t p);
 /// bochscpu_hooks_t structs.
 void bochscpu_cpu_run(bochscpu_cpu_t p, bochscpu_hooks_t **h);
 
-void bochscpu_cpu_set_cr2(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_cr3(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_cs(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_ds(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_es(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_exception(bochscpu_cpu_t p, uint32_t vector, uint16_t error);
-
-void bochscpu_cpu_set_fs(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_gdtr(bochscpu_cpu_t p, const bochscpu_cpu_global_seg_t *s);
-
-void bochscpu_cpu_set_gs(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_idtr(bochscpu_cpu_t p, const bochscpu_cpu_global_seg_t *s);
-
-void bochscpu_cpu_set_ldtr(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_mode(bochscpu_cpu_t p);
-
-void bochscpu_cpu_set_r10(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r11(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r12(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r13(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r14(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r15(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r8(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_r9(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rax(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rbp(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rbx(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rcx(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rdi(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rdx(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rflags(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rip(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rsi(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_rsp(bochscpu_cpu_t p, uint64_t val);
-
-void bochscpu_cpu_set_ss(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_state(bochscpu_cpu_t p, const bochscpu_cpu_state_t *s);
-
-void bochscpu_cpu_set_tr(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_set_zmm(bochscpu_cpu_t p, uintptr_t idx, const bochscpu_cpu_zmm_t *z);
-
-void bochscpu_cpu_ss(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
-
-void bochscpu_cpu_state(bochscpu_cpu_t p, bochscpu_cpu_state_t *s);
-
 /// Stop emulation
 ///
 void bochscpu_cpu_stop(bochscpu_cpu_t p);
 
+void bochscpu_cpu_state(bochscpu_cpu_t p, bochscpu_cpu_state_t *s);
+
+void bochscpu_cpu_set_state(bochscpu_cpu_t p, const bochscpu_cpu_state_t *s);
+
+void bochscpu_cpu_set_exception(bochscpu_cpu_t p, uint32_t vector, uint16_t error);
+
+uint64_t bochscpu_cpu_rax(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rax(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rcx(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rcx(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rdx(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rdx(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rbx(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rbx(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rsp(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rsp(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rbp(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rbp(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rsi(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rsi(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rdi(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rdi(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r8(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r8(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r9(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r9(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r10(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r10(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r11(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r11(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r12(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r12(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r13(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r13(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r14(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r14(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_r15(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_r15(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rip(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rip(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_rflags(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_rflags(bochscpu_cpu_t p, uint64_t val);
+
+void bochscpu_cpu_es(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_es(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_cs(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_cs(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_ss(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_ss(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_ds(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_ds(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_fs(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_fs(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_gs(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_gs(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_ldtr(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_set_ldtr(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
 void bochscpu_cpu_tr(bochscpu_cpu_t p, bochscpu_cpu_seg_t *s);
 
+void bochscpu_cpu_set_tr(bochscpu_cpu_t p, const bochscpu_cpu_seg_t *s);
+
+void bochscpu_cpu_gdtr(bochscpu_cpu_t p, bochscpu_cpu_global_seg_t *s);
+
+void bochscpu_cpu_set_gdtr(bochscpu_cpu_t p, const bochscpu_cpu_global_seg_t *s);
+
+void bochscpu_cpu_idtr(bochscpu_cpu_t p, bochscpu_cpu_global_seg_t *s);
+
+void bochscpu_cpu_set_idtr(bochscpu_cpu_t p, const bochscpu_cpu_global_seg_t *s);
+
+uint64_t bochscpu_cpu_cr2(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_cr2(bochscpu_cpu_t p, uint64_t val);
+
+uint64_t bochscpu_cpu_cr3(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_cr3(bochscpu_cpu_t p, uint64_t val);
+
 void bochscpu_cpu_zmm(bochscpu_cpu_t p, uintptr_t idx, bochscpu_cpu_zmm_t *z);
+
+void bochscpu_cpu_set_zmm(bochscpu_cpu_t p, uintptr_t idx, const bochscpu_cpu_zmm_t *z);
 
 uint32_t bochscpu_instr_bx_opcode(bochscpu_instr_t p);
 
@@ -332,7 +333,19 @@ uint32_t bochscpu_instr_imm32(bochscpu_instr_t p);
 
 uint64_t bochscpu_instr_imm64(bochscpu_instr_t p);
 
-void bochscpu_log_set_level(uintptr_t level);
+/// Add GPA mapping to HVA
+///
+/// If the GPA was already mapped, this replaces the existing mapping
+///
+/// # Panics
+///
+/// Panics if the added page is not page aligned.
+void bochscpu_mem_page_insert(uint64_t gpa, uint8_t *hva);
+
+/// Delete GPA mapping
+///
+/// If the GPA is not valid, this is a no-op.
+void bochscpu_mem_page_remove(uint64_t gpa);
 
 /// Install a physical page fault handler
 ///
@@ -350,29 +363,6 @@ void bochscpu_log_set_level(uintptr_t level);
 /// handler will overwrite the existing handler.
 void bochscpu_mem_missing_page(void (*handler)(uint64_t gpa));
 
-/// Add GPA mapping to HVA
-///
-/// If the GPA was already mapped, this replaces the existing mapping
-///
-/// # Panics
-///
-/// Panics if the added page is not page aligned.
-void bochscpu_mem_page_insert(uint64_t gpa, uint8_t *hva);
-
-/// Delete GPA mapping
-///
-/// If the GPA is not valid, this is a no-op.
-void bochscpu_mem_page_remove(uint64_t gpa);
-
-/// Read from GPA
-///
-/// # Panics
-///
-/// If the GPA does not exist, it will call the missing page function. If
-/// that function does not exist or does not resolve the fault, this routine
-/// will panic
-void bochscpu_mem_phy_read(uint64_t gpa, uint8_t *hva, uintptr_t sz);
-
 /// Translate GPA to HVA
 ///
 /// # Panics
@@ -384,6 +374,24 @@ void bochscpu_mem_phy_read(uint64_t gpa, uint8_t *hva, uintptr_t sz);
 /// # Example
 uint8_t *bochscpu_mem_phy_translate(uint64_t gpa);
 
+/// Translate GVA to GPA
+///
+/// Use the provided cr3 to translate the GVA into a GPA.
+///
+/// # Returns
+///
+/// Translated gpa on success, -1 on failure
+uint64_t bochscpu_mem_virt_translate(uint64_t cr3, uint64_t gva);
+
+/// Read from GPA
+///
+/// # Panics
+///
+/// If the GPA does not exist, it will call the missing page function. If
+/// that function does not exist or does not resolve the fault, this routine
+/// will panic
+void bochscpu_mem_phy_read(uint64_t gpa, uint8_t *hva, uintptr_t sz);
+
 /// Write to GPA
 ///
 /// # Panics
@@ -392,6 +400,15 @@ uint8_t *bochscpu_mem_phy_translate(uint64_t gpa);
 /// that function does not exist or does not resolve the fault, this routine
 /// will panic
 void bochscpu_mem_phy_write(uint64_t gpa, const uint8_t *hva, uintptr_t sz);
+
+/// Write to GVA
+///
+/// Write to GVA, using specified cr3 to translate.
+///
+/// # Returns
+///
+/// Zero on success, non-zero on failure
+int32_t bochscpu_mem_virt_write(uint64_t cr3, uint64_t gva, const uint8_t *hva, uintptr_t sz);
 
 /// Read from GVA
 ///
@@ -402,22 +419,6 @@ void bochscpu_mem_phy_write(uint64_t gpa, const uint8_t *hva, uintptr_t sz);
 /// Zero on success, non-zero on failure
 int32_t bochscpu_mem_virt_read(uint64_t cr3, uint64_t gva, uint8_t *hva, uintptr_t sz);
 
-/// Translate GVA to GPA
-///
-/// Use the provided cr3 to translate the GVA into a GPA.
-///
-/// # Returns
-///
-/// Translated gpa on success, -1 on failure
-uint64_t bochscpu_mem_virt_translate(uint64_t cr3, uint64_t gva);
-
-/// Write to GVA
-///
-/// Write to GVA, using specified cr3 to translate.
-///
-/// # Returns
-///
-/// Zero on success, non-zero on failure
-int32_t bochscpu_mem_virt_write(uint64_t cr3, uint64_t gva, const uint8_t *hva, uintptr_t sz);
+void bochscpu_log_set_level(uintptr_t level);
 
 } // extern "C"

@@ -267,32 +267,29 @@ public:
   // Hooks.
   //
 
-  virtual void PhyAccessHook(/*void *Context, */ uint32_t Id,
-                             uint64_t PhysicalAddress, uintptr_t Len,
-                             uint32_t MemType, uint32_t MemAccess);
+  void PhyAccessHook(/*void *Context, */ uint32_t Id, uint64_t PhysicalAddress,
+                     uintptr_t Len, uint32_t MemType, uint32_t MemAccess);
 
-  virtual void AfterExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
+  void AfterExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
 
-  virtual void BeforeExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
+  void BeforeExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
 
-  virtual void LinAccessHook(/*void *Context, */ uint32_t Id,
-                             uint64_t VirtualAddress, uint64_t PhysicalAddress,
-                             uintptr_t Len, uint32_t MemType,
-                             uint32_t MemAccess);
+  void LinAccessHook(/*void *Context, */ uint32_t Id, uint64_t VirtualAddress,
+                     uint64_t PhysicalAddress, uintptr_t Len, uint32_t MemType,
+                     uint32_t MemAccess);
 
-  virtual void InterruptHook(/*void *Context, */ uint32_t Id, uint32_t Vector);
+  void InterruptHook(/*void *Context, */ uint32_t Id, uint32_t Vector);
 
-  virtual void ExceptionHook(/*void *Context, */ uint32_t Id, uint32_t Vector,
-                             uint32_t ErrorCode);
+  void ExceptionHook(/*void *Context, */ uint32_t Id, uint32_t Vector,
+                     uint32_t ErrorCode);
 
-  virtual void TlbControlHook(/*void *Context, */ uint32_t Id, uint32_t What,
-                              uint64_t NewCrValue);
+  void TlbControlHook(/*void *Context, */ uint32_t Id, uint32_t What,
+                      uint64_t NewCrValue);
 
-  virtual void OpcodeHook(/*void *Context, */ uint32_t Id, const void *Ins,
-                          const uint8_t *Opcode, uintptr_t Len, bool Is32,
-                          bool Is64);
+  void OpcodeHook(/*void *Context, */ uint32_t Id, const void *Ins,
+                  const uint8_t *Opcode, uintptr_t Len, bool Is32, bool Is64);
 
-  virtual void OpcodeHlt(/*void *Context, */ uint32_t Cpu);
+  void OpcodeHlt(/*void *Context, */ uint32_t Cpu);
 
 private:
   //
