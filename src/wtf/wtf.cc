@@ -113,6 +113,16 @@ int main(int argc, const char *argv[]) {
         }
 
         //
+        // If a trace type was specified but no path, then defaults it
+        // to the cwd.
+        //
+
+        if (Opts.Run.TraceType != TraceType_t::NoTrace &&
+            Opts.Run.BaseTracePath.empty()) {
+          Opts.Run.BaseTracePath = fs::current_path();
+        }
+
+        //
         // Ensure that they exist just as a quick check.
         //
 
@@ -154,8 +164,7 @@ int main(int argc, const char *argv[]) {
   const std::unordered_map<std::string, TraceType_t> TraceTypeMap = {
       {"rip", TraceType_t::Rip},
       {"cov", TraceType_t::UniqueRip},
-      {"tenet", TraceType_t::Tenet}
-  };
+      {"tenet", TraceType_t::Tenet}};
 
   TraceOpt->add_option("--trace-type", Opts.Run.TraceType, "Trace type")
       ->transform(CLI::CheckedTransformer(TraceTypeMap, CLI::ignore_case))
