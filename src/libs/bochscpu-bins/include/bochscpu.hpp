@@ -32,6 +32,10 @@ static const uint32_t BOCHSCPU_HOOK_TLB_INVVPID = 17;
 
 static const uint32_t BOCHSCPU_HOOK_TLB_INVPCID = 18;
 
+static const uint32_t BOCHSCPU_OPCODE_ERROR = 0;
+
+static const uint32_t BOCHSCPU_OPCODE_INSERTED = 1;
+
 using bochscpu_cpu_t = void*;
 
 /// FFI Hook object

@@ -399,8 +399,7 @@ __declspec(safebuffers)
 #endif
     void BochscpuBackend_t::BeforeExecutionHook(
         /*void *Context, */ uint32_t, void *Ins) {
-  constexpr uint32_t BX_INSERTED_OPCODE = 1;
-  if (bochscpu_instr_bx_opcode(Ins) == BX_INSERTED_OPCODE) {
+  if (bochscpu_instr_bx_opcode(Ins) == BOCHSCPU_OPCODE_INSERTED) {
 
     //
     // We ignore the opcodes that bochs created as they aren't 'real'
