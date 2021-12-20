@@ -295,6 +295,13 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   RunStats_.Reset();
 
   //
+  // Reset Tenet state.
+  //
+
+  Tenet_.MemAccesses_.clear();
+  Tenet_.PastFirstInstruction_ = false;
+
+  //
   // Force dumping all the registers if this is a Tenet trace.
   //
 
@@ -1108,10 +1115,13 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
   // Dump register deltas.
   //
 
+  bool NeedNewLine = false;
+
 #define __DeltaRegister(Reg, Comma)                                            \
   {                                                                            \
     if (bochscpu_cpu_##Reg(Cpu_) != Tenet_.CpuStatePrev_.Reg || Force) {       \
       fmt::print(TraceFile_, #Reg "={:#x}", bochscpu_cpu_##Reg(Cpu_));         \
+      NeedNewLine = true;                                                      \
       if (Comma) {                                                             \
         fmt::print(TraceFile_, ",");                                           \
       }                                                                        \
@@ -1190,6 +1200,8 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
 
     fmt::print(TraceFile_, ",{}={:#x}:{}", MemoryType,
                AccessInfo.VirtualAddress, HexString);
+
+    NeedNewLine = true;
   }
 
   //
@@ -1202,5 +1214,7 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
   // End of deltas.
   //
 
-  fmt::print(TraceFile_, "\n");
+  if (NeedNewLine) {
+    fmt::print(TraceFile_, "\n");
+  }
 }
