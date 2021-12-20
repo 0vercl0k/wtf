@@ -11,11 +11,7 @@ REM   - If you want to build it yourself though, there is bochscpu-build which c
 REM   and where you actually compile bochs. Once you are done with it you drop the .lib I mentioned
 REM   above in the bochscpu 'lib' folder, same with the 'bochs' tree.
 REM
-REM  If you want to enable source debugging, you should edit the bochs\Makefile, bochs\cpu\Makefile,
-REM  bochs\cpu\fpu\Makefile and bochs\cpu\avx\Makefile and add to the CFLAGS/CXXFLAGS '/Z7' and to
-REM  LDFLAGS '/DEBUG:FULL'. Not sure if this is the optimal way of doing this, but it at least works.
-REM
-REM  Peace in the middle east.
+REM  If you want to enable source debugging, you can set _CL_=/Z7, set _LINK_=/DEBUG:FULL.
 
 REM Use WSL to configure / clone the bochs repository.
 bash -c "cd bochscpu-build && sh prep.sh && cd bochs && sh .conf.cpu-msvc"

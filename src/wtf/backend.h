@@ -518,6 +518,14 @@ public:
   void Rdx(const uint64_t Value);
   void Rdx(const Gva_t Value);
 
+  uint64_t Rsi();
+  void Rsi(const uint64_t Value);
+  void Rsi(const Gva_t Value);
+
+  uint64_t Rdi();
+  void Rdi(const uint64_t Value);
+  void Rdi(const Gva_t Value);
+
   uint64_t R8();
   void R8(const uint64_t Value);
   void R8(const Gva_t Value);
@@ -563,10 +571,10 @@ public:
   virtual bool RevokeLastNewCoverage() = 0;
 
   //
-  // Show the registers.
+  // Print the registers.
   //
 
-  void ShowRegisters();
+  void PrintRegisters();
 };
 
 //

@@ -225,6 +225,14 @@ uint64_t Backend_t::Rdx() { return GetReg(Registers_t::Rdx); }
 void Backend_t::Rdx(const uint64_t Value) { SetReg(Registers_t::Rdx, Value); }
 void Backend_t::Rdx(const Gva_t Value) { Rdx(Value.U64()); }
 
+uint64_t Backend_t::Rsi() { return GetReg(Registers_t::Rsi); }
+void Backend_t::Rsi(const uint64_t Value) { SetReg(Registers_t::Rsi, Value); }
+void Backend_t::Rsi(const Gva_t Value) { Rsi(Value.U64()); }
+
+uint64_t Backend_t::Rdi() { return GetReg(Registers_t::Rdi); }
+void Backend_t::Rdi(const uint64_t Value) { SetReg(Registers_t::Rdi, Value); }
+void Backend_t::Rdi(const Gva_t Value) { Rdi(Value.U64()); }
+
 uint64_t Backend_t::R8() { return GetReg(Registers_t::R8); }
 void Backend_t::R8(const uint64_t Value) { SetReg(Registers_t::R8, Value); }
 void Backend_t::R8(const Gva_t Value) { R8(Value.U64()); }
@@ -257,7 +265,7 @@ uint64_t Backend_t::R15() { return GetReg(Registers_t::R15); }
 void Backend_t::R15(const uint64_t Value) { SetReg(Registers_t::R15, Value); }
 void Backend_t::R15(const Gva_t Value) { R15(Value.U64()); }
 
-void Backend_t::ShowRegisters() {
+void Backend_t::PrintRegisters() {
   const uint64_t Rax = GetReg(Registers_t::Rax), Rbx = GetReg(Registers_t::Rbx),
                  Rcx = GetReg(Registers_t::Rcx);
   fmt::print("rax={:016x} rbx={:016x} rcx={:016x}\n", Rax, Rbx, Rcx);

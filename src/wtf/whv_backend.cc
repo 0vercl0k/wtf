@@ -853,7 +853,7 @@ std::optional<TestcaseResult_t> WhvBackend_t::Run(const uint8_t *Buffer,
 
       fmt::print("WHvRunVirtualProcessor exited with {}\n",
                  ExitReasonToStr(ExitContext.ExitReason));
-      ShowRegisters();
+      PrintRegisters();
       std::abort();
       Stop_ = true;
       TestcaseRes_ = Crash_t();

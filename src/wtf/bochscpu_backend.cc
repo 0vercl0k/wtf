@@ -259,11 +259,6 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
 
   LoadState(CpuState);
   Seed_ = CpuState.Seed;
-
-  //
-  // XXX: disable kd: nt!KdpOweBreakpoint / nt!KdDebuggerEnabled
-  //
-
   return true;
 }
 
@@ -298,6 +293,13 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   //
 
   RunStats_.Reset();
+
+  //
+  // Reset Tenet state.
+  //
+
+  Tenet_.MemAccesses_.clear();
+  Tenet_.PastFirstInstruction_ = false;
 
   //
   // Force dumping all the registers if this is a Tenet trace.
@@ -403,7 +405,16 @@ void BochscpuBackend_t::AfterExecutionHook(/*void *Context, */ uint32_t,
 __declspec(safebuffers)
 #endif
     void BochscpuBackend_t::BeforeExecutionHook(
-        /*void *Context, */ uint32_t, void *) {
+        /*void *Context, */ uint32_t, void *Ins) {
+  if (bochscpu_instr_bx_opcode(Ins) == BOCHSCPU_OPCODE_INSERTED) {
+
+    //
+    // We ignore the opcodes that bochs created as they aren't 'real'
+    // instructions. Some more details are in #45.
+    //
+
+    return;
+  }
 
   //
   // Grab the rip register off the cpu.
@@ -582,36 +593,26 @@ void BochscpuBackend_t::OpcodeHook(/*void *Context, */ uint32_t,
   //  __debugbreak();
   //}
   // return;
-#define BX_IA_CMP_RAXId 0x491
-#define BX_IA_CMP_EqsIb 0x4a3
-#define BX_IA_CMP_EqId 0x49a
+  constexpr uint32_t BX_IA_CMP_RAXId = 0x491;
+  constexpr uint32_t BX_IA_CMP_EqsIb = 0x4a3;
+  constexpr uint32_t BX_IA_CMP_EqId = 0x49a;
   if (Op == BX_IA_CMP_RAXId || Op == BX_IA_CMP_EqId || Op == BX_IA_CMP_EqsIb) {
     fmt::print("cmp with imm64 {:#x}\n", bochscpu_instr_imm64(Ins));
   }
-#undef BX_IA_CMP_RAXId
-#undef BX_IA_CMP_EqsIb
-#undef BX_IA_CMP_EqId
 
-#define BX_IA_CMP_EAXId 0x38
-#define BX_IA_CMP_EdId 0x61
-#define BX_IA_CMP_EdsIb 0x6a
+  constexpr uint32_t BX_IA_CMP_EAXId = 0x38;
+  constexpr uint32_t BX_IA_CMP_EdId = 0x61;
+  constexpr uint32_t BX_IA_CMP_EdsIb = 0x6a;
   if (Op == BX_IA_CMP_EAXId || Op == BX_IA_CMP_EdId || Op == BX_IA_CMP_EdsIb) {
     fmt::print("cmp with imm32 {:#x}\n", bochscpu_instr_imm32(Ins));
   }
 
-#undef BX_IA_CMP_EAXId
-#undef BX_IA_CMP_EdId
-#undef BX_IA_CMP_EdsIb
-
-#define BX_IA_CMP_AXIw 0x2f
-#define BX_IA_CMP_EwIw 0x4f
-#define BX_IA_CMP_EwsIb 0x58
+  constexpr uint32_t BX_IA_CMP_AXIw = 0x2f;
+  constexpr uint32_t BX_IA_CMP_EwIw = 0x4f;
+  constexpr uint32_t BX_IA_CMP_EwsIb = 0x58;
   if (Op == BX_IA_CMP_AXIw || Op == BX_IA_CMP_EwIw || Op == BX_IA_CMP_EwsIb) {
     fmt::print("cmp with imm16 {:#x}\n", bochscpu_instr_imm16(Ins));
   }
-#undef BX_IA_CMP_AXIw
-#undef BX_IA_CMP_EwIw
-#undef BX_IA_CMP_EwsIb
 }
 
 void BochscpuBackend_t::OpcodeHlt(/*void *Context, */ uint32_t) {
@@ -1114,10 +1115,13 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
   // Dump register deltas.
   //
 
+  bool NeedNewLine = false;
+
 #define __DeltaRegister(Reg, Comma)                                            \
   {                                                                            \
     if (bochscpu_cpu_##Reg(Cpu_) != Tenet_.CpuStatePrev_.Reg || Force) {       \
       fmt::print(TraceFile_, #Reg "={:#x}", bochscpu_cpu_##Reg(Cpu_));         \
+      NeedNewLine = true;                                                      \
       if (Comma) {                                                             \
         fmt::print(TraceFile_, ",");                                           \
       }                                                                        \
@@ -1196,6 +1200,8 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
 
     fmt::print(TraceFile_, ",{}={:#x}:{}", MemoryType,
                AccessInfo.VirtualAddress, HexString);
+
+    NeedNewLine = true;
   }
 
   //
@@ -1208,5 +1214,7 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
   // End of deltas.
   //
 
-  fmt::print(TraceFile_, "\n");
+  if (NeedNewLine) {
+    fmt::print(TraceFile_, "\n");
+  }
 }
