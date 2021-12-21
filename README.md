@@ -95,7 +95,7 @@ The main mechanism available to instrospect in an execution backend is to genera
 This is how you would generate an execution trace for the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0` test-case:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu  --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-path=. --trace-type=rip
+..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu  --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=rip
 ```
 
 <p align='center'>
@@ -112,6 +112,19 @@ symbolizer.exe --input crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.t
 
 <p align='center'>
 <img src='pics/symbolizer.gif'>
+</p>
+
+## Generating Tenet traces
+
+If you see yourself needing more contextual awareness, the *bochscpu* backend allows you to generate execution traces that can be loaded in the [Tenet](https://github.com/gaasedelen/tenet) trace explorer. In the below, I start from a crash in `memmove` and walk back to find out where the source pointer is coming from (user-mode!):
+
+```
+..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu  --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=tenet
+```
+
+
+<p align='center'>
+<img src='pics/tenet.gif'>
 </p>
 
 ### Generating code-coverage traces
@@ -145,6 +158,8 @@ And finally, you can load those up in [lighthouse](https://github.com/gaasedelen
 <p align='center'>
 <img src='pics/lighthouse.gif'>
 </p>
+
+Also if you don't care about individual code-coverage, the master maintains a `coverage.cov` file contains the unique aggregated code-coverage that has been exercised. It makes it easy to check on the global code-coverage really quick during a fuzzing job. 
 
 ## How does it work?
 
@@ -250,7 +265,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Timeout is implemented with a timer,
 - ✔ Only code-coverage traces are supported,
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
-- ☑ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
+- ✔ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
 
 ### KVM
 - ✔ Code-coverage via software breakpoints,
