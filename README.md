@@ -265,7 +265,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Timeout is implemented with a timer,
 - ✔ Only code-coverage traces are supported,
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
-- ☑ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
+- ✔ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
 
 ### KVM
 - ✔ Code-coverage via software breakpoints,
