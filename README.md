@@ -114,9 +114,9 @@ symbolizer.exe --input crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.t
 <img src='pics/symbolizer.gif'>
 </p>
 
-## Generating tenet traces
+## Generating Tenet traces
 
-If you see yourself needing more contextual awareness, the *bochscpu* backend allows to generate execution traces that can be loaded in the [Tenet](https://github.com/gaasedelen/tenet) trace explorer. In the below, I start from a crash in `memmove` and walk back until finding out where the source of the buffer is coming from:
+If you see yourself needing more contextual awareness, the *bochscpu* backend allows you to generate execution traces that can be loaded in the [Tenet](https://github.com/gaasedelen/tenet) trace explorer. In the below, I start from a crash in `memmove` and walk back to find out where the source pointer is coming from (user-mode!):
 
 <p align='center'>
 <img src='pics/tenet.gif'>
