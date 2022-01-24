@@ -51,7 +51,7 @@ The client nodes run a test-case that has been generated and distributed by the 
 This is how you would start a client node that uses the *bochscpu* backend:
 
 ```text
-..\..\src\build\wtf.exe fuzz --backend=bochscpu --name hevd --max_len 1028 --limit 10000000
+..\..\src\build\wtf.exe fuzz --backend=bochscpu --name hevd --limit 10000000
 ```
 
 The `fuzz` subcommand is used with the `name` option to specify which fuzzer module needs to be used, `backend` specifies the execution backend and `limit` the maximum number of instruction to execute per testcase (depending on the backend, this option has different meaning).

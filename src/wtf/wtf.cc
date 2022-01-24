@@ -296,12 +296,6 @@ int main(int argc, const char *argv[]) {
       ->description(
           "Target directory which contains state/ inputs/ outputs/ folders.");
 
-  FuzzCmd
-      ->add_option("--max_len", Opts.Fuzz.TestcaseBufferMaxSize,
-                   "Testcase size")
-      ->description("Maximum size of a generated testcase.")
-      ->required();
-
   FuzzCmd->add_option("--limit", Opts.Limit, "Limit")
       ->description("Limit per testcase (instruction count for bochscpu, time "
                     "in second for whv).");
