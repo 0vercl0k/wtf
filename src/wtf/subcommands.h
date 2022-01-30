@@ -7,7 +7,7 @@
 // Handles the 'master' subcommand.
 //
 
-int MasterSubcommand(const Options_t &Opts);
+int MasterSubcommand(const Options_t &Opts, const Target_t &Target);
 
 //
 // Handles the 'run' subcommand.

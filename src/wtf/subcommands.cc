@@ -96,6 +96,6 @@ int FuzzSubcommand(const Options_t &Opts, const Target_t &Target,
   return Client_t(Opts).Run(Target, CpuState);
 }
 
-int MasterSubcommand(const Options_t &Opts) {
-  return Server_t(Opts.Master).Run();
+int MasterSubcommand(const Options_t &Opts, const Target_t &Target) {
+  return Server_t(Opts.Master).Run(Target);
 }

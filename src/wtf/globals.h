@@ -1195,6 +1195,12 @@ struct FuzzOptions_t {
   fs::path TargetPath;
 
   //
+  // The maximum size of a generated testcase.
+  //
+
+  uint64_t TestcaseBufferMaxSize = 0;
+
+  //
   // Seed for RNG.
   //
 
@@ -1246,6 +1252,13 @@ struct MasterOptions_t {
   //
 
   uint64_t TestcaseBufferMaxSize = 0;
+
+
+  //
+  // Maximum count of testcases for multi input fuzzing.
+  //
+
+  uint64_t MaxTestcaseCount = 0;
 
   //
   // Path to the target folder.
