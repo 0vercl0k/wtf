@@ -1195,12 +1195,6 @@ struct FuzzOptions_t {
   fs::path TargetPath;
 
   //
-  // The maximum size of a generated testcase.
-  //
-
-  uint64_t TestcaseBufferMaxSize = 0;
-
-  //
   // Seed for RNG.
   //
 
