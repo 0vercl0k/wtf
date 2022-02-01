@@ -76,12 +76,6 @@ int main(int argc, const char *argv[]) {
                    "Testcase size")
       ->description("Maximum size of a generated testcase.")
       ->required();
-
-  MasterCmd
-    ->add_option("--max_testcase_count", Opts.Master.MaxTestcaseCount,
-                 "Testcase count")
-    ->description("For multi input fuzzing, Maximum count of testcases.")
-    ->default_val(1);
   
     MasterCmd->add_option("--name", Opts.TargetName, "Target name")
       ->description("Name of the target fuzzer.")

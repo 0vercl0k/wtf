@@ -26,6 +26,8 @@ std::unique_ptr<LibfuzzerMutator_t> Mutator_ = NULL;
 vector<pair<uint8_t *, uint32_t> *> Testcases_;
 size_t Testcase_CurIdx;
 size_t Testcase_LastIdx;
+uint64_t MaxTestcaseCount = 100;
+uint64_t SingleTestcaseMaxSize = 0x3FF;
 
 uint64_t g_Rsp, g_Rip, g_Rax, g_Rbx, g_Rcx, g_Rdx, g_Rsi, g_Rdi,
          g_R8, g_R9, g_R10, g_R11, g_R12, g_R13, g_R14, g_R15;
@@ -246,14 +248,40 @@ size_t CustomMutate(uint8_t *Data, const size_t DataLen, const size_t MaxSize, s
     }
 
     while(idx < DataLen) {
+      /**************************************************************
+        multi input testcase layout
+
+            +-----------------------------------+
+            |                                   |
+            |  size of 1th testcase( 4 bytes )  |
+            |                                   |
+            +-----------------------------------+
+            |                                   |
+            |      1th testcase( x bytes )      |
+            |                                   |
+            +-----------------------------------+
+                              .
+                              .
+                              .
+            +-----------------------------------+
+            |                                   |
+            |  size of Nth testcase( 4 bytes )  |
+            |                                   |
+            +-----------------------------------+
+            |                                   |
+            |      Nth testcase( y bytes )      |
+            |                                   |
+            +-----------------------------------+
+      **************************************************************/
+
       testcase_size = *((uint32_t *)&Data[idx]);
       idx += 4;
 
-      testcase_ptr = (uint8_t *)calloc(1, MaxSize);
+      testcase_ptr = (uint8_t *)calloc(1, SingleTestcaseMaxSize);
       memcpy(testcase_ptr, &Data[idx], testcase_size);
       idx += testcase_size;
 
-      testcase_size = Mutator_->Mutate(testcase_ptr, testcase_size, MaxSize);
+      testcase_size = Mutator_->Mutate(testcase_ptr, testcase_size, SingleTestcaseMaxSize);
       mutated_testcases.push_back(make_pair(testcase_ptr, testcase_size));
     }
 

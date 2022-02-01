@@ -1247,13 +1247,6 @@ struct MasterOptions_t {
 
   uint64_t TestcaseBufferMaxSize = 0;
 
-
-  //
-  // Maximum count of testcases for multi input fuzzing.
-  //
-
-  uint64_t MaxTestcaseCount = 0;
-
   //
   // Path to the target folder.
   //

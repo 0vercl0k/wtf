@@ -340,12 +340,6 @@ class Server_t {
 
   uint64_t Mutations_ = 0;
 
-  //
-  // Max Size of testcase(s)
-  //
-
-  uint64_t RealTestcaseBufferMaxSize = 0;
-
 public:
   explicit Server_t(const MasterOptions_t &Opts)
       : Opts_(Opts), Rng_(Opts.Seed), Corpus_(Opts.OutputsPath, Rng_) {
@@ -400,42 +394,6 @@ public:
       return EXIT_FAILURE;
     }
 
-    if(Opts_.MaxTestcaseCount == 1) {
-      RealTestcaseBufferMaxSize = Opts_.TestcaseBufferMaxSize;
-    }
-    else {
-
-      /**************************************************************
-        multi input testcase layout
-
-            +-----------------------------------+
-            |                                   |
-            |  size of 1th testcase( 4 bytes )  |
-            |                                   |
-            +-----------------------------------+
-            |                                   |
-            |      1th testcase( x bytes )      |
-            |                                   |
-            +-----------------------------------+
-                              .
-                              .
-                              .
-            +-----------------------------------+
-            |                                   |
-            |  size of Nth testcase( 4 bytes )  |
-            |                                   |
-            +-----------------------------------+
-            |                                   |
-            |      Nth testcase( y bytes )      |
-            |                                   |
-            +-----------------------------------+
-      **************************************************************/
-
-      fmt::print("calculating maximum size for multiple testcases\n");
-      RealTestcaseBufferMaxSize = (Opts_.TestcaseBufferMaxSize * Opts_.MaxTestcaseCount) + (Opts_.MaxTestcaseCount * 4);
-      fmt::print("Opts_.TestcaseBufferMaxSize({:#x}) -> RealTestcaseBufferMaxSize({:#x})\n", Opts_.TestcaseBufferMaxSize, RealTestcaseBufferMaxSize);
-    }
-
     //
     // Initialize our internal state.
     //
@@ -443,7 +401,7 @@ public:
     ScratchBufferGrip_ = std::make_unique<uint8_t[]>(_1MB);
     ScratchBuffer_ = {ScratchBufferGrip_.get(), _1MB};
 
-    if (RealTestcaseBufferMaxSize > ScratchBuffer_.size_bytes()) {
+    if (Opts_.TestcaseBufferMaxSize > ScratchBuffer_.size_bytes()) {
       fmt::print("The biggest testcase would not fit in the scratch buffer\n");
       return EXIT_FAILURE;
     }
@@ -740,12 +698,12 @@ private:
         //
 
         const bool Valid =
-            BufferSize > 0 && BufferSize <= RealTestcaseBufferMaxSize;
+            BufferSize > 0 && BufferSize <= Opts_.TestcaseBufferMaxSize;
 
         if (!Valid) {
           fmt::print("Skipping because {} size is zero or bigger than the max "
                      "({} vs {})\n",
-                     Path.string(), BufferSize, RealTestcaseBufferMaxSize);
+                     Path.string(), BufferSize, Opts_.TestcaseBufferMaxSize);
         }
 
         //
@@ -792,7 +750,7 @@ private:
     // If the testcase is too big, abort as this should not happen.
     //
 
-    if (Testcase->BufferSize_ > RealTestcaseBufferMaxSize) {
+    if (Testcase->BufferSize_ > Opts_.TestcaseBufferMaxSize) {
       fmt::print(
           "The testcase buffer len is bigger than the testcase buffer max "
           "size.\n");
