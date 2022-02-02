@@ -76,7 +76,11 @@ int main(int argc, const char *argv[]) {
                    "Testcase size")
       ->description("Maximum size of a generated testcase.")
       ->required();
-
+  
+    MasterCmd->add_option("--name", Opts.TargetName, "Target name")
+      ->description("Name of the target fuzzer.")
+      ->required();
+  
   MasterCmd->add_option("--target", Opts.Master.TargetPath, "Target path")
       ->description("Target directory")
       ->required();
@@ -322,14 +326,6 @@ int main(int argc, const char *argv[]) {
   CLI11_PARSE(Wtf, argc, argv);
 
   //
-  // If we are in master mode, no need to initialize the heavy machinery.
-  //
-
-  if (Wtf.got_subcommand("master")) {
-    return MasterSubcommand(Opts);
-  }
-
-  //
   // Check if the user has the right target before doing any heavy lifting.
   //
 
@@ -338,6 +334,14 @@ int main(int argc, const char *argv[]) {
   if (Target == nullptr) {
     Targets.DisplayRegisteredTargets();
     return EXIT_FAILURE;
+  }
+
+  //
+  // If we are in master mode, no need to initialize the heavy machinery.
+  //
+
+  if (Wtf.got_subcommand("master")) {
+    return MasterSubcommand(Opts, *Target);
   }
 
   //

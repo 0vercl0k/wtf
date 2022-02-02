@@ -1,6 +1,7 @@
 // Axel '0vercl0k' Souchet - August 23 2020
 #pragma once
 #include "globals.h"
+#include "corpus.h"
 #include <cstdint>
 #include <vector>
 
@@ -13,15 +14,21 @@ struct Target_t {
   using Init_t = bool (*)(const Options_t &, const CpuState_t &);
   using InsertTestcase_t = bool (*)(const uint8_t *, const size_t);
   using Restore_t = bool (*)();
+  using CustomMutate_t = size_t(*)(uint8_t *, const size_t, const size_t, std::mt19937_64);
+  using PostMutate_t = void(*)(Testcase_t *);
 
   explicit Target_t(const std::string &_Name, const Init_t _Init,
                     const InsertTestcase_t _InsertTestcase,
-                    const Restore_t _Restore);
+                    const Restore_t _Restore,
+                    const CustomMutate_t _CustomMutate,
+                    const PostMutate_t _PostMutate);
 
   std::string Name;
   Init_t Init;
   InsertTestcase_t InsertTestcase;
   Restore_t Restore;
+  CustomMutate_t CustomMutate;
+  PostMutate_t PostMutate;
 };
 
 //

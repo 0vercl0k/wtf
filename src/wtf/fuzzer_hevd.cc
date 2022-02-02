@@ -140,6 +140,6 @@ bool Restore() { return true; }
 // Register the target.
 //
 
-Target_t Hevd("hevd", Init, InsertTestcase, Restore);
+Target_t Hevd("hevd", Init, InsertTestcase, Restore, NULL, NULL);
 
 } // namespace Hevd

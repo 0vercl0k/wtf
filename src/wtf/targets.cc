@@ -10,9 +10,11 @@
 
 Target_t::Target_t(const std::string &_Name, const Init_t _Init,
                    const InsertTestcase_t _InsertTestcase,
-                   const Restore_t _Restore)
+                   const Restore_t _Restore,
+                   const CustomMutate_t _CustomMutate,
+                   const PostMutate_t _PostMutate)
     : Name(_Name), Init(_Init), InsertTestcase(_InsertTestcase),
-      Restore(_Restore) {
+      Restore(_Restore), CustomMutate(_CustomMutate), PostMutate(_PostMutate) {
   Targets_t::Instance().Registers(*this);
 }
 

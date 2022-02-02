@@ -33,6 +33,6 @@ bool Restore() { return true; }
 // Register the target.
 //
 
-Target_t Dummy("dummy", Init, InsertTestcase, Restore);
+Target_t Dummy("dummy", Init, InsertTestcase, Restore, NULL, NULL);
 
 } // namespace Dummy

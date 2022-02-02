@@ -7,6 +7,7 @@
 #include "socket.h"
 #include "tsl/robin_set.h"
 #include "utils.h"
+#include "targets.h"
 #include <chrono>
 #include <fmt/format.h>
 #include <memory>
@@ -368,7 +369,7 @@ public:
   // Run the server.
   //
 
-  int Run() {
+  int Run(const Target_t &Target) {
 
     //
     // Set up RNG.
@@ -415,11 +416,13 @@ public:
     WriteFds.reserve(FD_SETSIZE);
     Clients_.reserve(FD_SETSIZE);
 
-    //
-    // Instantiate the mutator.
-    //
+    if(Target.CustomMutate == NULL) {
+      //
+      // Instantiate the mutator.
+      //
 
-    Mutator_ = std::make_unique<LibfuzzerMutator_t>(Rng_);
+      Mutator_ = std::make_unique<LibfuzzerMutator_t>(Rng_);
+    }
 
     //
     // Prepare initial seeds.
@@ -519,7 +522,6 @@ public:
       //
 
       for (const auto &Fd : ReadFds) {
-
         //
         // If the Fd is not in the read set, let's continue.
         //
@@ -552,7 +554,7 @@ public:
         // Otherwise, it means a client sent us a new result so handle that.
         //
 
-        if (!HandleNewResult(Fd)) {
+        if (!HandleNewResult(Fd, Target)) {
 
           //
           // If we failed handling of the result, let's just disconnect the
@@ -604,7 +606,7 @@ public:
         // disconnect the client.
         //
 
-        if (!HandleNewRequest(Fd) && !Disconnect(Fd)) {
+        if (!HandleNewRequest(Fd, Target) && !Disconnect(Fd)) {
 
           //
           // If we failed to disconnect the client... let's just call it quits.
@@ -654,7 +656,7 @@ private:
   // Generates a testcase.
   //
 
-  std::string GetTestcase() {
+  std::string GetTestcase(const Target_t &Target) {
     std::string TestcaseContent;
 
     //
@@ -766,9 +768,14 @@ private:
     // Mutate in the scratch buffer.
     //
 
-    const size_t TestcaseBufferSize =
-        Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
-                         Opts_.TestcaseBufferMaxSize);
+    size_t TestcaseBufferSize = 0;
+
+    if(Target.CustomMutate == NULL) {
+      TestcaseBufferSize = Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_, Opts_.TestcaseBufferMaxSize);
+    }
+    else {
+      TestcaseBufferSize = Target.CustomMutate(ScratchBuffer_.data(), Testcase->BufferSize_, Opts_.TestcaseBufferMaxSize, Rng_);
+    }
 
     //
     // Copy the testcase in its own buffer before sending it to the
@@ -807,13 +814,13 @@ private:
   // The client wants a new testcase.
   //
 
-  bool HandleNewRequest(const SocketFd_t Fd) {
+  bool HandleNewRequest(const SocketFd_t Fd, const Target_t &Target) {
 
     //
     // Prepare a message to send to a client.
     //
 
-    const std::string Testcase = GetTestcase();
+    const std::string Testcase = GetTestcase(Target);
 
     //
     // Send the testcase.
@@ -850,7 +857,7 @@ private:
   // The client sent a result.
   //
 
-  bool HandleNewResult(const SocketFd_t Fd) {
+  bool HandleNewResult(const SocketFd_t Fd, const Target_t &Target) {
 
     //
     // Receive client data into the scratch buffer.
@@ -902,7 +909,6 @@ private:
 
       const bool NewCoverage = Coverage_.size() > SizeBefore;
       if (NewCoverage) {
-
         //
         // New coverage means that we added new content to the file, so let's
         // flush it.
@@ -918,12 +924,20 @@ private:
         Testcase_t Testcase((uint8_t *)ReceivedTestcase.data(),
                             ReceivedTestcase.size());
 
-        //
-        // Before moving the buffer into the corpus, set up cross over with
-        // it.
-        //
+        if(Target.CustomMutate == NULL) {
+        
+          //
+          // Before moving the buffer into the corpus, set up cross over with
+          // it.
+          //
 
-        Mutator_->SetCrossOverWith(Testcase);
+          Mutator_->SetCrossOverWith(Testcase);
+        }
+        else {
+          if(Target.PostMutate != NULL) {
+            Target.PostMutate(&Testcase);
+          }
+        }
 
         //
         // Ready to move the buffer into the corpus now.
