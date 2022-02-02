@@ -134,12 +134,10 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   return true;
 }
 
-bool Restore() { return true; }
-
 //
 // Register the target.
 //
 
-Target_t Hevd("hevd", Init, InsertTestcase, Restore, NULL, NULL);
+Target_t Hevd("hevd", Init, InsertTestcase);
 
 } // namespace Hevd

@@ -70,13 +70,13 @@ jobs:
           src/build/symsrv.dll
 
   Linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         compiler: ['clang', 'gcc']
 
-    name: Ubuntu 20.04 / ${{ matrix.compiler }}
+    name: Ubuntu latest / ${{ matrix.compiler }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
