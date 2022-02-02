@@ -336,7 +336,7 @@ public:
       Offset = SymbolAddress - Base;
     }
 
-    SymbolCache_.emplace(SymbolAddress, fmt::format("{}+{:#x}"));
+    SymbolCache_.emplace(SymbolAddress, fmt::format("{}+{:#x}", Buffer, Offset));
     return SymbolCache_.at(SymbolAddress);
   }
 };
