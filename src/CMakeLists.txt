@@ -93,6 +93,16 @@ if (WIN32)
         delayimp.lib
         bcrypt.lib
     )
+
+    add_executable(
+        tlv_server
+        tlv_server/tlv_server.cc
+    )
+
+    add_executable(
+        hevd_client
+        hevd_client/hevd_client.cc
+    )
 else (WIN32)
     enable_language(ASM)
     find_package(Threads)
