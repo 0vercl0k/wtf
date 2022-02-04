@@ -1,5 +1,4 @@
-// y0ny0ns0n - February 1 2022
-// Axel '0vercl0k' Souchet - February 1 2022
+// y0ny0ns0n / Axel '0vercl0k' Souchet - February 1 2022
 #include <algorithm>
 #include <cinttypes>
 #include <cstdint>
@@ -15,6 +14,7 @@ enum class Command_t : uint32_t { Allocate, Edit, Delete };
 
 struct CommonPacketHeader_t {
   Command_t CommandId;
+  uint32_t ChunkId;
   uint32_t BodySize;
 };
 
@@ -24,46 +24,50 @@ struct Chunk_t {
   std::unique_ptr<uint8_t[]> Buf;
 };
 
-const uint32_t ChunkListNumberEntries = 256;
-std::unique_ptr<Chunk_t> ChunkList[ChunkListNumberEntries] = {};
+std::unique_ptr<Chunk_t> ChunkList[4] = {};
 
 void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
   auto Header = (CommonPacketHeader_t *)Packet;
 
-#ifdef PATCHED
-  if (Header->BodySize < (PacketSize - sizeof(*Header))) {
-    printf("[!] Header->BodySize < (PacketSize - sizeof(*Header))\n");
+  if (PacketSize < sizeof(*Header)) {
+    printf("[!] Packet is not big enough to check the header\n");
     return;
   }
-#endif
+
+  if (Header->BodySize != (PacketSize - sizeof(*Header))) {
+    printf("[!] Body size is not accurate\n");
+    return;
+  }
 
   const auto CommandId = Header->CommandId;
-  printf("[+] CommandId = %d\n", CommandId);
   const auto Body = (uint8_t *)(Header + 1);
+  printf("[+] CommandId = %d\n", CommandId);
 
   switch (CommandId) {
   case Command_t::Allocate: {
-    const auto &ChunkId = *(uint32_t *)Body;
+    const auto &ChunkId = Header->ChunkId;
     const auto &FreeChunkPtr =
         std::find_if(ChunkList, std::end(ChunkList),
-                     [&](const auto &Entry) { return Entry != nullptr; });
+                     [&](const auto &Entry) { return Entry == nullptr; });
 
+#ifdef PATCHED
     if (FreeChunkPtr == std::end(ChunkList)) {
       printf("[!] there's no available slot.\n");
       return;
     }
+#endif
 
     auto Chunk = std::make_unique<Chunk_t>();
     Chunk->Id = ChunkId;
-    Chunk->Size = Header->BodySize - sizeof(uint32_t);
+    Chunk->Size = Header->BodySize;
     Chunk->Buf = std::make_unique<uint8_t[]>(Chunk->Size);
-    memcpy(Chunk->Buf.get(), Body + sizeof(uint32_t), Chunk->Size);
+    memcpy(Chunk->Buf.get(), Body, Chunk->Size);
     *FreeChunkPtr = std::move(Chunk);
     break;
   }
 
   case Command_t::Edit: {
-    const auto &ChunkId = *(uint32_t *)Body;
+    const auto &ChunkId = Header->ChunkId;
     const auto &MatchingChunkPtr = std::find_if(
         std::begin(ChunkList), std::end(ChunkList), [&](const auto &Entry) {
           return Entry != nullptr && Entry->Id == ChunkId;
@@ -75,24 +79,19 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
     }
 
     auto MatchingChunk = MatchingChunkPtr->get();
-
-    //
-    // Integer underflow bug here which will lead to skipping the next check and
-    // will lead to ~wild overflow of the chunk's buffer.
-    //
-
-    const uint32_t NewBufSize = Header->BodySize - sizeof(uint32_t);
+    const uint32_t NewBufSize = Header->BodySize;
 
     if (NewBufSize > MatchingChunk->Size) {
       MatchingChunk->Buf = std::make_unique<uint8_t[]>(NewBufSize);
+      MatchingChunk->Size = NewBufSize;
     }
 
-    memcpy(MatchingChunk->Buf.get(), Body + sizeof(uint32_t), NewBufSize);
+    memcpy(MatchingChunk->Buf.get(), Body, NewBufSize);
     break;
   }
 
   case Command_t::Delete: {
-    const auto &ChunkId = *(uint32_t *)Body;
+    const auto &ChunkId = Header->ChunkId;
     const auto &MatchingChunkPtr = std::find_if(
         std::begin(ChunkList), std::end(ChunkList), [&](const auto &Entry) {
           return Entry != nullptr && Entry->Id == ChunkId;
@@ -104,10 +103,6 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
     }
 
     MatchingChunkPtr->reset();
-    break;
-  }
-
-  default: {
     break;
   }
   }
@@ -140,7 +135,7 @@ int main() {
   const uint16_t ListenPort = 4444;
   LoopbackAddr.sin_family = AF_INET;
   LoopbackAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-  LoopbackAddr.sin_port = ListenPort;
+  LoopbackAddr.sin_port = htons(ListenPort);
   if (bind(ListenSocket, (sockaddr *)&LoopbackAddr, sizeof(LoopbackAddr)) ==
       SOCKET_ERROR) {
     printf("[!] bind failed, WSA GLE = 0x%08x\n", WSAGetLastError());
@@ -148,7 +143,7 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  printf("[+] Listening PORT %" PRIu16 "...\n", ListenPort);
+  printf("[+] Listening on tcp:%" PRIu16 "...\n", ListenPort);
   if (listen(ListenSocket, 1) == SOCKET_ERROR) {
     printf("[!] listen failed, WSA GLE = 0x%08x\n", WSAGetLastError());
     closesocket(ListenSocket);
@@ -170,7 +165,8 @@ int main() {
         recv(ClientSocket, (char *)&BufferSize, sizeof(BufferSize), 0);
 
     if (Received != sizeof(BufferSize)) {
-      printf("[!] recv failed, WSA GLE = 0x%08x\n", WSAGetLastError());
+      printf("[!] recv failed or didn't receive enough, WSA GLE = 0x%08x\n",
+             WSAGetLastError());
       break;
     }
 
@@ -194,12 +190,6 @@ int main() {
 
   for (auto &Chunk : ChunkList) {
     Chunk.reset();
-  }
-
-  if (shutdown(ClientSocket, SD_SEND) == SOCKET_ERROR) {
-    printf("shutdown failed, WSA GLE = 0x%08x\n", WSAGetLastError());
-    closesocket(ClientSocket);
-    return EXIT_FAILURE;
   }
 
   closesocket(ClientSocket);
