@@ -1,5 +1,4 @@
 // y0ny0ns0n - February 1 2022
-// Axel '0vercl0k' Souchet - February 1 2022
 #include "backend.h"
 #include "crash_detection_umode.h"
 #include "mutator.h"
