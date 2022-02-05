@@ -5,9 +5,9 @@
 #include "globals.h"
 #include "mutator.h"
 #include "socket.h"
+#include "targets.h"
 #include "tsl/robin_set.h"
 #include "utils.h"
-#include "targets.h"
 #include <chrono>
 #include <fmt/format.h>
 #include <memory>
@@ -416,7 +416,7 @@ public:
     WriteFds.reserve(FD_SETSIZE);
     Clients_.reserve(FD_SETSIZE);
 
-    if(Target.CustomMutate == NULL) {
+    if (Target.CustomMutate == nullptr) {
       //
       // Instantiate the mutator.
       //
@@ -770,11 +770,14 @@ private:
 
     size_t TestcaseBufferSize = 0;
 
-    if(Target.CustomMutate == NULL) {
-      TestcaseBufferSize = Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_, Opts_.TestcaseBufferMaxSize);
-    }
-    else {
-      TestcaseBufferSize = Target.CustomMutate(ScratchBuffer_.data(), Testcase->BufferSize_, Opts_.TestcaseBufferMaxSize, Rng_);
+    if (Target.CustomMutate == nullptr) {
+      TestcaseBufferSize =
+          Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
+                           Opts_.TestcaseBufferMaxSize);
+    } else {
+      TestcaseBufferSize =
+          Target.CustomMutate(ScratchBuffer_.data(), Testcase->BufferSize_,
+                              Opts_.TestcaseBufferMaxSize, Rng_);
     }
 
     //
@@ -924,17 +927,16 @@ private:
         Testcase_t Testcase((uint8_t *)ReceivedTestcase.data(),
                             ReceivedTestcase.size());
 
-        if(Target.CustomMutate == NULL) {
-        
+        if (Target.CustomMutate == nullptr) {
+
           //
           // Before moving the buffer into the corpus, set up cross over with
           // it.
           //
 
           Mutator_->SetCrossOverWith(Testcase);
-        }
-        else {
-          if(Target.PostMutate != NULL) {
+        } else {
+          if (Target.PostMutate != nullptr) {
             Target.PostMutate(&Testcase);
           }
         }

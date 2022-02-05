@@ -171,7 +171,7 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
   // Force CR8 to 0 if RIP is usermode.
   //
 
-  if (CpuState.Rip < 0x7fffffff0000ULL && CpuState.Cr8 != 0) {
+  if (CpuState.Rip < 0x7f'ff'ff'ff'00'00ULL && CpuState.Cr8 != 0) {
     CpuState.Cr8 = 0;
     fmt::print("Force cr8 to 0 as rip is in usermode.\n");
   }
