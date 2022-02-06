@@ -11,8 +11,12 @@ public:
   Mutator_t() = default;
   virtual ~Mutator_t() = default;
   virtual size_t Mutate(uint8_t *Data, const size_t DataLen,
-                        const size_t MaxSize) = 0;
-  virtual void SetCrossOverWith(const Testcase_t &Testcase) = 0;
+                        const size_t MaxSize) {
+    fmt::print("You need to override Mutator_t::Mutate!\n");
+    std::abort();
+  }
+
+  virtual void SetCrossOverWith(const Testcase_t &Testcase) {}
 };
 
 class LibfuzzerMutator_t : public Mutator_t {

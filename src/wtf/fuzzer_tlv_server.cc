@@ -1,4 +1,4 @@
-// y0ny0ns0n / Axel'0vercl0k' Souchet - February 3 2022
+// y0ny0ns0n / Axel '0vercl0k' Souchet - February 3 2022
 #include "backend.h"
 #include "crash_detection_umode.h"
 #include "mutator.h"
@@ -29,6 +29,16 @@ struct Packet_t {
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Packet_t, Command, Id, BodySize, Body);
 };
 
+struct Packets_t {
+  std::vector<Packet_t> Packets;
+  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Packets_t, Packets);
+};
+
+Packets_t Deserialize(const uint8_t *Buffer, const size_t BufferSize) {
+  const auto &Root = json::json::parse(Buffer, Buffer + BufferSize);
+  return Root.get<Packets_t>();
+}
+
 struct {
   std::deque<Packet_t> Testcases;
   CpuState_t Context;
@@ -52,18 +62,15 @@ struct {
     B->R14(C.R14);
     B->R15(C.R15);
   }
-
 } GlobalState;
 
 bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
-  const auto &J = json::json::parse(Buffer, Buffer + BufferSize);
-  const auto &Packets = J["Packets"];
-  for (const auto &Packet : Packets) {
-    auto DeserializedPacket = Packet.get<Packet_t>();
+  const auto &DeserializedPackets = Deserialize(Buffer, BufferSize);
+  for (auto DeserializedPacket : DeserializedPackets.Packets) {
     GlobalState.Testcases.emplace_back(std::move(DeserializedPacket));
   }
 
-  return GlobalState.Testcases.size() > 0;
+  return true;
 }
 
 bool Init(const Options_t &Opts, const CpuState_t &State) {
@@ -186,10 +193,123 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
 
 bool Restore() { return true; }
 
+class CustomMutator_ : public Mutator_t {
+public:
+  explicit CustomMutator_(std::mt19937_64 &Rng) : Rng_(Rng), HongFuzz_(Rng) {}
+
+  size_t Mutate(uint8_t *Data, const size_t DataLen,
+                const size_t MaxSize) override {
+    auto Root = Deserialize(Data, DataLen);
+    auto &Packets = Root.Packets;
+    DebugPrint("Mutate: {} packets\n", Packets.size());
+    const uint32_t Transformation = GetUint32(0, 2);
+    switch (Transformation) {
+    case 0: {
+      MutationInsertPacket(Packets);
+      break;
+    }
+
+    case 1: {
+      MutationCopyField(Packets);
+      break;
+
+      break;
+    }
+
+    case 2: {
+      MutationDeletePacket(Packets);
+      break;
+    }
+    }
+
+    json::json Serialized;
+    to_json(Serialized, Root);
+    std::string S = Serialized.dump();
+    if (S.size() > MaxSize) {
+      return DataLen;
+    }
+
+    memcpy(Data, S.data(), S.size());
+    return S.size();
+  }
+
+  uint32_t GetUint32(const uint32_t A, const uint32_t B) {
+    return std::uniform_int_distribution<uint32_t>(A, B)(Rng_);
+  }
+
+  void MutationCopyField(std::vector<Packet_t> &Packets) {
+
+    //
+    // Copy a field from another packet.
+    //
+
+    const uint32_t SrcIdx = GetUint32(0, Packets.size() - 1);
+    const uint32_t DstIdx = GetUint32(0, Packets.size() - 1);
+    const uint32_t FieldIdx = GetUint32(0, 3);
+    const auto &Src = Packets[SrcIdx];
+    auto &Dst = Packets[DstIdx];
+    switch (FieldIdx) {
+    case 0: {
+      Dst.Id = Src.Id;
+      break;
+    }
+
+    case 1: {
+      Dst.Command = Src.Command;
+      break;
+    }
+
+    case 2: {
+      Dst.BodySize = Src.BodySize;
+      break;
+    }
+
+    case 3: {
+      Dst.Body = Src.Body;
+      break;
+    }
+    }
+  }
+
+  void MutationInsertPacket(std::vector<Packet_t> &Packets) {
+
+    //
+    // Insert a packet somewhere.
+    //
+
+    if (Packets.size() > 10) {
+      return;
+    }
+
+    const uint32_t FromIdx = GetUint32(0, Packets.size() - 1);
+    const uint32_t ToIdx = GetUint32(0, Packets.size());
+    Packets.insert(Packets.begin() + ToIdx, Packets[FromIdx]);
+  }
+
+  void MutationDeletePacket(std::vector<Packet_t> &Packets) {
+
+    //
+    // Delete a packet.
+    //
+
+    const uint32_t SrcIdx = GetUint32(0, Packets.size() - 1);
+    Packets.erase(Packets.begin() + SrcIdx);
+  }
+
+  static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng) {
+    return std::make_unique<CustomMutator_>(Rng);
+  }
+
+private:
+  std::mt19937_64 &Rng_;
+  HonggfuzzMutator_t HongFuzz_;
+};
+
 //
 // Register the target.
 //
 
-Target_t TlvServer("tlv_server", Init, InsertTestcase, Restore);
+Target_t TlvServer("tlv_server", Init, InsertTestcase, Restore,
+                   CustomMutator_::Create);
 
 } // namespace TlvServer
