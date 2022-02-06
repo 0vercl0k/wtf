@@ -29,8 +29,8 @@ bool SetupUsermodeCrashDetectionHooks() {
                                   CrashDetectionPrint("Perf interrupt\n");
                                   Backend->Stop(Timedout_t());
                                 })) {
-    fmt::print("Could not set a breakpoint on hal!HalpPerfInterrupt, but "
-               "carrying on..\n");
+    fmt::print(
+        "Failed to set breakpoint on HalpPerfInterrupt, but ignoring..\n");
   }
 
   //
@@ -38,6 +38,7 @@ bool SetupUsermodeCrashDetectionHooks() {
   //
 
   if (!g_Backend->SetCrashBreakpoint("nt!KeBugCheck2")) {
+    fmt::print("Failed to SetBreakpoint on KeBugCheck2\n");
     return false;
   }
 
@@ -45,6 +46,7 @@ bool SetupUsermodeCrashDetectionHooks() {
         CrashDetectionPrint("nt!SwapContext\n");
         Backend->Stop(Cr3Change_t());
       })) {
+    fmt::print("Failed to SetBreakpoint on SwapContext\n");
     return false;
   }
 
@@ -57,7 +59,10 @@ bool SetupUsermodeCrashDetectionHooks() {
             //    _In_ PCONTEXT Context)
             const Gva_t ExceptionRecordPtr = Backend->GetArgGva(0);
             wtf::EXCEPTION_RECORD ExceptionRecord;
-            Backend->VirtReadStruct(ExceptionRecordPtr, &ExceptionRecord);
+            if (!Backend->VirtReadStruct(ExceptionRecordPtr,
+                                         &ExceptionRecord)) {
+              std::abort();
+            }
 
             //
             // Let's ignore the less interesting stuff; DbgPrint, C++
@@ -117,6 +122,7 @@ bool SetupUsermodeCrashDetectionHooks() {
                                 ExceptionAddress);
             Backend->SaveCrash(ExceptionAddress, ExceptionCode);
           })) {
+    fmt::print("Failed to SetBreakpoint on RtlDispatchException\n");
     return false;
   }
 
@@ -139,7 +145,20 @@ bool SetupUsermodeCrashDetectionHooks() {
                 ExceptionAddress);
             Backend->SaveCrash(ExceptionAddress, STATUS_STACK_BUFFER_OVERRUN);
           })) {
+    fmt::print("Failed to SetBreakpoint on KiRaiseSecurityCheckFailure\n");
     return false;
+  }
+
+  if (g_Dbg.GetModuleBase("verifier") > 0) {
+    if (!g_Backend->SetBreakpoint(
+            "verifier!VerifierStopMessage", [](Backend_t *Backend) {
+              const uint64_t Unique = Backend->Rsp();
+              CrashDetectionPrint("VerifierStopMessage @ {:#x}!\n", Unique);
+              Backend->SaveCrash(Gva_t(Unique), STATUS_HEAP_CORRUPTION);
+            })) {
+      fmt::print("Failed to SetBreakpoint on VerifierStopMessage\n");
+      return false;
+    }
   }
 
   return true;
