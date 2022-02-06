@@ -190,6 +190,6 @@ bool Restore() { return true; }
 // Register the target.
 //
 
-Target_t tlv_server("tlv_server", Init, InsertTestcase, Restore);
+Target_t TlvServer("tlv_server", Init, InsertTestcase, Restore);
 
 } // namespace TlvServer

@@ -661,7 +661,7 @@ private:
 
     //
     // If we have paths, it means we haven't finished to run through the corpus
-    // yet, so this takes priority mutation stage.
+    // yet, so this takes priority over mutation stage.
     //
 
     if (Paths_.size() > 0) {
@@ -912,6 +912,7 @@ private:
 
       const bool NewCoverage = Coverage_.size() > SizeBefore;
       if (NewCoverage) {
+
         //
         // New coverage means that we added new content to the file, so let's
         // flush it.
@@ -927,7 +928,7 @@ private:
         Testcase_t Testcase((uint8_t *)ReceivedTestcase.data(),
                             ReceivedTestcase.size());
 
-        if (Target.CustomMutate == nullptr) {
+        if (Target.PostMutate == nullptr) {
 
           //
           // Before moving the buffer into the corpus, set up cross over with
@@ -936,9 +937,7 @@ private:
 
           Mutator_->SetCrossOverWith(Testcase);
         } else {
-          if (Target.PostMutate != nullptr) {
-            Target.PostMutate(&Testcase);
-          }
+          Target.PostMutate(&Testcase);
         }
 
         //
