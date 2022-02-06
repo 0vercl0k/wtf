@@ -2,6 +2,7 @@
 #pragma once
 #include "corpus.h"
 #include "globals.h"
+#include "mutator.h"
 #include <cstdint>
 #include <vector>
 
@@ -14,22 +15,19 @@ struct Target_t {
   using Init_t = bool (*)(const Options_t &, const CpuState_t &);
   using InsertTestcase_t = bool (*)(const uint8_t *, const size_t);
   using Restore_t = bool (*)();
-  using CustomMutate_t = size_t (*)(uint8_t *, const size_t, const size_t,
-                                    std::mt19937_64);
-  using PostMutate_t = void (*)(Testcase_t *);
+  using CreateMutator_t = std::unique_ptr<Mutator_t> (*)(std::mt19937_64 &);
 
-  explicit Target_t(const std::string &_Name, const Init_t _Init,
-                    const InsertTestcase_t _InsertTestcase,
-                    const Restore_t _Restore = nullptr,
-                    const CustomMutate_t _CustomMutate = nullptr,
-                    const PostMutate_t _PostMutate = nullptr);
+  explicit Target_t(
+      const std::string &_Name, const Init_t _Init,
+      const InsertTestcase_t _InsertTestcase,
+      const Restore_t _Restore = []() { return true; },
+      const CreateMutator_t _CreateMutator = LibfuzzerMutator_t::Create);
 
   std::string Name;
   Init_t Init = nullptr;
   InsertTestcase_t InsertTestcase = nullptr;
   Restore_t Restore = nullptr;
-  CustomMutate_t CustomMutate = nullptr;
-  PostMutate_t PostMutate = nullptr;
+  CreateMutator_t CreateMutator = nullptr;
 };
 
 //

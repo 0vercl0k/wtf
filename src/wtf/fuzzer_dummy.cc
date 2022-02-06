@@ -27,12 +27,10 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   return true;
 }
 
-bool Restore() { return true; }
-
 //
 // Register the target.
 //
 
-Target_t Dummy("dummy", Init, InsertTestcase, Restore, NULL, NULL);
+Target_t Dummy("dummy", Init, InsertTestcase);
 
 } // namespace Dummy

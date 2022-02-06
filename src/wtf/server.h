@@ -294,7 +294,7 @@ class Server_t {
   // Mutator.
   //
 
-  std::unique_ptr<LibfuzzerMutator_t> Mutator_;
+  std::unique_ptr<Mutator_t> Mutator_;
 
   //
   // Master options.
@@ -416,13 +416,11 @@ public:
     WriteFds.reserve(FD_SETSIZE);
     Clients_.reserve(FD_SETSIZE);
 
-    if (Target.CustomMutate == nullptr) {
-      //
-      // Instantiate the mutator.
-      //
+    //
+    // Instantiate the mutator.
+    //
 
-      Mutator_ = std::make_unique<LibfuzzerMutator_t>(Rng_);
-    }
+    Mutator_ = Target.CreateMutator(Rng_);
 
     //
     // Prepare initial seeds.
@@ -768,17 +766,9 @@ private:
     // Mutate in the scratch buffer.
     //
 
-    size_t TestcaseBufferSize = 0;
-
-    if (Target.CustomMutate == nullptr) {
-      TestcaseBufferSize =
-          Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
-                           Opts_.TestcaseBufferMaxSize);
-    } else {
-      TestcaseBufferSize =
-          Target.CustomMutate(ScratchBuffer_.data(), Testcase->BufferSize_,
-                              Opts_.TestcaseBufferMaxSize, Rng_);
-    }
+    const size_t TestcaseBufferSize =
+        Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
+                         Opts_.TestcaseBufferMaxSize);
 
     //
     // Copy the testcase in its own buffer before sending it to the
@@ -928,17 +918,12 @@ private:
         Testcase_t Testcase((uint8_t *)ReceivedTestcase.data(),
                             ReceivedTestcase.size());
 
-        if (Target.PostMutate == nullptr) {
+        //
+        // Before moving the buffer into the corpus, set up cross over with
+        // it.
+        //
 
-          //
-          // Before moving the buffer into the corpus, set up cross over with
-          // it.
-          //
-
-          Mutator_->SetCrossOverWith(Testcase);
-        } else {
-          Target.PostMutate(&Testcase);
-        }
+        Mutator_->SetCrossOverWith(Testcase);
 
         //
         // Ready to move the buffer into the corpus now.

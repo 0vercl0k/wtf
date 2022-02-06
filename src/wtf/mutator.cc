@@ -5,6 +5,11 @@ namespace fuzzer {
 ExternalFunctions *EF = new ExternalFunctions();
 }
 
+std::unique_ptr<Mutator_t> LibfuzzerMutator_t::Create(std::mt19937_64 &Rng) {
+  auto Ptr = std::make_unique<LibfuzzerMutator_t>(Rng);
+  return Ptr;
+}
+
 LibfuzzerMutator_t::LibfuzzerMutator_t(std::mt19937_64 &Rng)
     : Rand_(Rng()), Mut_(Rand_, fuzzer::FuzzingOptions()) {}
 
@@ -21,6 +26,11 @@ void LibfuzzerMutator_t::SetCrossOverWith(const Testcase_t &Testcase) {
   CrossOverWith_ = std::make_unique<fuzzer::Unit>(
       Testcase.Buffer_.get(), Testcase.Buffer_.get() + Testcase.BufferSize_);
   Mut_.SetCrossOverWith(CrossOverWith_.get());
+}
+
+std::unique_ptr<Mutator_t> HonggfuzzMutator_t::Create(std::mt19937_64 &Rng) {
+  auto Ptr = std::make_unique<HonggfuzzMutator_t>(Rng);
+  return Ptr;
 }
 
 HonggfuzzMutator_t::HonggfuzzMutator_t(std::mt19937_64 &Rng)
