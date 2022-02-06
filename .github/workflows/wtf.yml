@@ -39,7 +39,7 @@ jobs:
         .\build-release.bat
 
     - name: Build with msvc
-      if: matrix.generator == 'msvc'
+      if: matrix.generator == 'msvc
       run: |
         cd src\build
         .\build-release-msvc.bat
