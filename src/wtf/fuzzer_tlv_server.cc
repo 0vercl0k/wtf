@@ -15,10 +15,12 @@ constexpr bool LoggingOn = true;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
-  if constexpr (LoggingOn) {
-    fmt::print("tlv_server: ");
-    fmt::print(Format, args...);
+  if constexpr (!LoggingOn) {
+    return;
   }
+
+  fmt::print("tlv_server: ");
+  fmt::print(Format, args...);
 }
 
 struct Packet_t {
