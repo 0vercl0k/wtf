@@ -45,7 +45,7 @@ jobs:
         .\build-release-msvc.bat
 
     - name: Perform CodeQL Analysis
-      if: matrix.generator == 'msvc
+      if: matrix.generator == 'msvc'
       uses: github/codeql-action/analyze@v1
 
     - name: Copy dbghelp/symsrv
