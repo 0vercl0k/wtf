@@ -6,8 +6,7 @@ ExternalFunctions *EF = new ExternalFunctions();
 }
 
 std::unique_ptr<Mutator_t> LibfuzzerMutator_t::Create(std::mt19937_64 &Rng) {
-  auto Ptr = std::make_unique<LibfuzzerMutator_t>(Rng);
-  return Ptr;
+  return std::make_unique<LibfuzzerMutator_t>(Rng);
 }
 
 LibfuzzerMutator_t::LibfuzzerMutator_t(std::mt19937_64 &Rng)
@@ -29,8 +28,7 @@ void LibfuzzerMutator_t::SetCrossOverWith(const Testcase_t &Testcase) {
 }
 
 std::unique_ptr<Mutator_t> HonggfuzzMutator_t::Create(std::mt19937_64 &Rng) {
-  auto Ptr = std::make_unique<HonggfuzzMutator_t>(Rng);
-  return Ptr;
+  return std::make_unique<HonggfuzzMutator_t>(Rng);
 }
 
 HonggfuzzMutator_t::HonggfuzzMutator_t(std::mt19937_64 &Rng)
