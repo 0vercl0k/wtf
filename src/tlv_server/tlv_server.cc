@@ -12,50 +12,38 @@
 
 enum class Command_t : uint32_t { Allocate, Edit, Delete };
 
-struct CommonPacketHeader_t {
+struct Header_t {
   Command_t CommandId;
-  uint32_t ChunkId;
-  uint32_t BodySize;
+  uint16_t ChunkId;
+  uint16_t BodySize;
 };
 
 struct Chunk_t {
-  uint32_t Id;
-  int32_t Size;
+  uint16_t Id;
+  uint16_t Size;
   std::unique_ptr<uint8_t[]> Buf;
 };
 
 std::unique_ptr<Chunk_t> ChunkList[4] = {};
 
 void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
-  auto Header = (CommonPacketHeader_t *)Packet;
+  auto Header = (Header_t *)Packet;
 
   if (PacketSize < sizeof(*Header)) {
     printf("[!] Packet is not big enough to check the header\n");
     return;
   }
 
-  if (Header->BodySize != (PacketSize - sizeof(*Header))) {
-    printf("[!] Body size is not accurate\n");
-    return;
-  }
-
   const auto CommandId = Header->CommandId;
   const auto Body = (uint8_t *)(Header + 1);
-  printf("[+] CommandId = %d\n", CommandId);
 
   switch (CommandId) {
   case Command_t::Allocate: {
+    printf("Allocate command\n");
     const auto &ChunkId = Header->ChunkId;
     const auto &FreeChunkPtr =
-        std::find_if(ChunkList, std::end(ChunkList),
-                     [&](const auto &Entry) { return Entry == nullptr; });
-
-#ifdef PATCHED
-    if (FreeChunkPtr == std::end(ChunkList)) {
-      printf("[!] there's no available slot.\n");
-      return;
-    }
-#endif
+        std::find_if(std::begin(ChunkList), std::end(ChunkList),
+                     [](const auto &Entry) { return Entry == nullptr; });
 
     auto Chunk = std::make_unique<Chunk_t>();
     Chunk->Id = ChunkId;
@@ -67,6 +55,7 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
   }
 
   case Command_t::Edit: {
+    printf("Edit command\n");
     const auto &ChunkId = Header->ChunkId;
     const auto &MatchingChunkPtr = std::find_if(
         std::begin(ChunkList), std::end(ChunkList), [&](const auto &Entry) {
@@ -79,18 +68,12 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
     }
 
     auto MatchingChunk = MatchingChunkPtr->get();
-    const uint32_t NewBufSize = Header->BodySize;
-
-    if (NewBufSize > MatchingChunk->Size) {
-      MatchingChunk->Buf = std::make_unique<uint8_t[]>(NewBufSize);
-      MatchingChunk->Size = NewBufSize;
-    }
-
-    memcpy(MatchingChunk->Buf.get(), Body, NewBufSize);
+    memcpy(MatchingChunk->Buf.get(), Body, Header->BodySize);
     break;
   }
 
   case Command_t::Delete: {
+    printf("Delete command\n");
     const auto &ChunkId = Header->ChunkId;
     const auto &MatchingChunkPtr = std::find_if(
         std::begin(ChunkList), std::end(ChunkList), [&](const auto &Entry) {
@@ -170,14 +153,12 @@ int main() {
       break;
     }
 
-    if (BufferSize == 0 || BufferSize >= 0x4'00) {
+    if (BufferSize == 0 || BufferSize > 0x1'000) {
       printf("[!] BufSize(0x%" PRIx32 ") too big, skipping\n ", BufferSize);
       continue;
     }
 
     auto Buffer = std::make_unique<uint8_t[]>(BufferSize);
-    printf("[+] BufferSize = %" PRIx32 "\n", BufferSize);
-
     Received = recv(ClientSocket, (char *)Buffer.get(), BufferSize, 0);
 
     if (Received != BufferSize) {

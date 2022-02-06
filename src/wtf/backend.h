@@ -498,6 +498,10 @@ public:
   void Rsp(const uint64_t Value);
   void Rsp(const Gva_t Value);
 
+  uint64_t Rbp();
+  void Rbp(const uint64_t Value);
+  void Rbp(const Gva_t Value);
+
   uint64_t Rip();
   void Rip(const uint64_t Value);
   void Rip(const Gva_t Value);

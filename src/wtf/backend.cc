@@ -205,6 +205,10 @@ uint64_t Backend_t::Rsp() { return GetReg(Registers_t::Rsp); }
 void Backend_t::Rsp(const uint64_t Value) { SetReg(Registers_t::Rsp, Value); }
 void Backend_t::Rsp(const Gva_t Value) { Rsp(Value.U64()); }
 
+uint64_t Backend_t::Rbp() { return GetReg(Registers_t::Rbp); }
+void Backend_t::Rbp(const uint64_t Value) { SetReg(Registers_t::Rbp, Value); }
+void Backend_t::Rbp(const Gva_t Value) { Rbp(Value.U64()); }
+
 uint64_t Backend_t::Rip() { return GetReg(Registers_t::Rip); }
 void Backend_t::Rip(const uint64_t Value) { SetReg(Registers_t::Rip, Value); }
 void Backend_t::Rip(const Gva_t Value) { Rip(Value.U64()); }
