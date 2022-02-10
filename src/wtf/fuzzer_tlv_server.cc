@@ -194,11 +194,39 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
 bool Restore() { return true; }
 
 class CustomMutator_ : public Mutator_t {
-public:
-  explicit CustomMutator_(std::mt19937_64 &Rng) : Rng_(Rng), HongFuzz_(Rng) {}
+  std::unique_ptr<uint8_t[]> ScratchBuffer__;
+  std::span<uint8_t> ScratchBuffer_;
 
-  size_t Mutate(uint8_t *Data, const size_t DataLen,
-                const size_t MaxSize) override {
+public:
+  static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng) {
+    return std::make_unique<CustomMutator_>(Rng);
+  }
+
+  explicit CustomMutator_(std::mt19937_64 &Rng) : Rng_(Rng), HongFuzz_(Rng) {
+    ScratchBuffer__ = std::make_unique<uint8_t[]>(_1MB);
+    ScratchBuffer_ = {ScratchBuffer__.get(), _1MB};
+  }
+
+  std::string GetNewTestcase(const Corpus_t &Corpus) override {
+    const Testcase_t *Testcase = Corpus.PickTestcase();
+    if (!Testcase) {
+      fmt::print("The corpus is empty, exiting\n");
+      std::abort();
+    }
+
+    //
+    // Copy the input in a buffer we're going to mutate.
+    //
+
+    memcpy(ScratchBuffer_.data(), Testcase->Buffer_.get(),
+           Testcase->BufferSize_);
+    return Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
+                  ScratchBuffer_.size_bytes());
+  }
+
+private:
+  std::string Mutate(uint8_t *Data, const size_t DataLen,
+                     const size_t MaxSize) {
     auto Root = Deserialize(Data, DataLen);
     auto &Packets = Root.Packets;
     DebugPrint("Mutate: {} packets\n", Packets.size());
@@ -212,8 +240,6 @@ public:
     case 1: {
       MutationCopyField(Packets);
       break;
-
-      break;
     }
 
     case 2: {
@@ -224,13 +250,7 @@ public:
 
     json::json Serialized;
     to_json(Serialized, Root);
-    std::string S = Serialized.dump();
-    if (S.size() > MaxSize) {
-      return DataLen;
-    }
-
-    memcpy(Data, S.data(), S.size());
-    return S.size();
+    return Serialized.dump();
   }
 
   uint32_t GetUint32(const uint32_t A, const uint32_t B) {
@@ -294,10 +314,6 @@ public:
 
     const uint32_t SrcIdx = GetUint32(0, Packets.size() - 1);
     Packets.erase(Packets.begin() + SrcIdx);
-  }
-
-  static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng) {
-    return std::make_unique<CustomMutator_>(Rng);
   }
 
 private:

@@ -279,7 +279,7 @@ class Server_t {
   Corpus_t Corpus_;
 
   //
-  // Scratch buffer that we use to receive data and mutate testcases.
+  // Scratch buffer that we use to receive data.
   //
 
   std::unique_ptr<uint8_t[]> ScratchBufferGrip_;
@@ -655,7 +655,6 @@ private:
   //
 
   std::string GetTestcase(const Target_t &Target) {
-    std::string TestcaseContent;
 
     //
     // If we have paths, it means we haven't finished to run through the corpus
@@ -727,6 +726,7 @@ private:
       //
 
       if (FoundFile) {
+        std::string TestcaseContent;
         TestcaseContent.resize(BufferSize);
         memcpy(TestcaseContent.data(), Buffer.get(), BufferSize);
         return TestcaseContent;
@@ -734,51 +734,11 @@ private:
     }
 
     //
-    // If we get here, it means that we are ready to mutate.
-    // First thing we do is to grab a seed.
+    // Ask the mutator to generate a testcase.
     //
 
-    const Testcase_t *Testcase = Corpus_.PickTestcase();
-    if (!Testcase) {
-      fmt::print("The corpus is empty, exiting\n");
-      std::abort();
-    }
-
-    //
-    // If the testcase is too big, abort as this should not happen.
-    //
-
-    if (Testcase->BufferSize_ > Opts_.TestcaseBufferMaxSize) {
-      fmt::print(
-          "The testcase buffer len is bigger than the testcase buffer max "
-          "size.\n");
-      std::abort();
-    }
-
-    //
-    // Copy the input in a buffer we're going to mutate.
-    //
-
-    memcpy(ScratchBuffer_.data(), Testcase->Buffer_.get(),
-           Testcase->BufferSize_);
-
-    //
-    // Mutate in the scratch buffer.
-    //
-
-    const size_t TestcaseBufferSize =
-        Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
-                         Opts_.TestcaseBufferMaxSize);
-
-    //
-    // Copy the testcase in its own buffer before sending it to the
-    // consumer.
-    //
-
-    TestcaseContent.resize(TestcaseBufferSize);
-    memcpy(TestcaseContent.data(), ScratchBuffer_.data(), TestcaseBufferSize);
     Mutations_++;
-    return TestcaseContent;
+    return Mutator_->GetNewTestcase(Corpus_);
   }
 
   //
@@ -923,7 +883,7 @@ private:
         // it.
         //
 
-        Mutator_->SetCrossOverWith(Testcase);
+        Mutator_->OnNewCoverage(Testcase);
 
         //
         // Ready to move the buffer into the corpus now.

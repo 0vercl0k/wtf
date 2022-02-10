@@ -86,7 +86,7 @@ public:
     return true;
   }
 
-  [[nodiscard]] const Testcase_t *PickTestcase() {
+  [[nodiscard]] const Testcase_t *PickTestcase() const {
 
     //
     // Try to grab a testcase for the user.
