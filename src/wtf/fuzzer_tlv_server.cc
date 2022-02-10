@@ -195,14 +195,17 @@ bool Restore() { return true; }
 
 class CustomMutator_ : public Mutator_t {
   std::unique_ptr<uint8_t[]> ScratchBuffer__;
-  std::span<uint8_t> ScratchBuffer_;
+  span_u8 ScratchBuffer_;
+  size_t TestcaseMaxSize_ = 0;
 
 public:
-  static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng) {
-    return std::make_unique<CustomMutator_>(Rng);
+  static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng,
+                                           const size_t TestcaseMaxSize) {
+    return std::make_unique<CustomMutator_>(Rng, TestcaseMaxSize);
   }
 
-  explicit CustomMutator_(std::mt19937_64 &Rng) : Rng_(Rng), HongFuzz_(Rng) {
+  explicit CustomMutator_(std::mt19937_64 &Rng, const size_t TestcaseMaxSize)
+      : Rng_(Rng), TestcaseMaxSize_(TestcaseMaxSize) {
     ScratchBuffer__ = std::make_unique<uint8_t[]>(_1MB);
     ScratchBuffer_ = {ScratchBuffer__.get(), _1MB};
   }
@@ -318,7 +321,6 @@ private:
 
 private:
   std::mt19937_64 &Rng_;
-  HonggfuzzMutator_t HongFuzz_;
 };
 
 //

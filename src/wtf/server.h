@@ -420,7 +420,7 @@ public:
     // Instantiate the mutator.
     //
 
-    Mutator_ = Target.CreateMutator(Rng_);
+    Mutator_ = Target.CreateMutator(Rng_, Opts_.TestcaseBufferMaxSize);
 
     //
     // Prepare initial seeds.

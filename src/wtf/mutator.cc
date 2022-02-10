@@ -5,14 +5,17 @@ namespace fuzzer {
 ExternalFunctions *EF = new ExternalFunctions();
 }
 
-std::unique_ptr<Mutator_t> LibfuzzerMutator_t::Create(std::mt19937_64 &Rng) {
-  return std::make_unique<LibfuzzerMutator_t>(Rng);
+std::unique_ptr<Mutator_t>
+LibfuzzerMutator_t::Create(std::mt19937_64 &Rng, const size_t TestcaseMaxSize) {
+  return std::make_unique<LibfuzzerMutator_t>(Rng, TestcaseMaxSize);
 }
 
-LibfuzzerMutator_t::LibfuzzerMutator_t(std::mt19937_64 &Rng)
-    : Rand_(Rng()), Mut_(Rand_, fuzzer::FuzzingOptions()) {
-  ScratchBuffer__ = std::make_unique<uint8_t[]>(_1MB);
-  ScratchBuffer_ = {ScratchBuffer__.get(), _1MB};
+LibfuzzerMutator_t::LibfuzzerMutator_t(std::mt19937_64 &Rng,
+                                       const size_t TestcaseMaxSize)
+    : Rand_(Rng()), Mut_(Rand_, fuzzer::FuzzingOptions()),
+      TestcaseMaxSize_(TestcaseMaxSize) {
+  ScratchBuffer__ = std::make_unique<uint8_t[]>(TestcaseMaxSize_);
+  ScratchBuffer_ = {ScratchBuffer__.get(), TestcaseMaxSize_};
 }
 
 std::string LibfuzzerMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
@@ -27,18 +30,6 @@ std::string LibfuzzerMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
     std::abort();
   }
 
-#if 0
-  //
-  // If the testcase is too big, abort as this should not happen.
-  //
-
-  if (Testcase->BufferSize_ > Opts_.TestcaseBufferMaxSize) {
-    fmt::print("The testcase buffer len is bigger than the testcase buffer max "
-               "size.\n");
-    std::abort();
-  }
-#endif
-
   //
   // Copy the input in a buffer we're going to mutate.
   //
@@ -48,9 +39,7 @@ std::string LibfuzzerMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
       Mut_.Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
                   ScratchBuffer_.size_bytes());
 
-  std::string NewTestcase;
-  NewTestcase.resize(NewTestcaseSize);
-  memcpy(NewTestcase.data(), ScratchBuffer_.data(), NewTestcaseSize);
+  std::string NewTestcase((char *)ScratchBuffer_.data(), NewTestcaseSize);
   return NewTestcase;
 }
 
@@ -64,19 +53,21 @@ void LibfuzzerMutator_t::OnNewCoverage(const Testcase_t &Testcase) {
   Mut_.SetCrossOverWith(CrossOverWith_.get());
 }
 
-std::unique_ptr<Mutator_t> HonggfuzzMutator_t::Create(std::mt19937_64 &Rng) {
-  return std::make_unique<HonggfuzzMutator_t>(Rng);
+std::unique_ptr<Mutator_t>
+HonggfuzzMutator_t::Create(std::mt19937_64 &Rng, const size_t TestcaseMaxSize) {
+  return std::make_unique<HonggfuzzMutator_t>(Rng, TestcaseMaxSize);
 }
 
-HonggfuzzMutator_t::HonggfuzzMutator_t(std::mt19937_64 &Rng)
-    : Rng_(Rng), Run_(Rng_) {
+HonggfuzzMutator_t::HonggfuzzMutator_t(std::mt19937_64 &Rng,
+                                       const size_t TestcaseMaxSize)
+    : Rng_(Rng), Run_(Rng_), TestcaseMaxSize_(TestcaseMaxSize) {
   Run_.dynfile = &DynFile_;
   Run_.global = &Global_;
   Run_.mutationsPerRun = 5;
   Global_.mutate.mutationsPerRun = Run_.mutationsPerRun;
   Global_.timing.lastCovUpdate = time(nullptr);
-  ScratchBuffer__ = std::make_unique<uint8_t[]>(_1MB);
-  ScratchBuffer_ = {ScratchBuffer__.get(), _1MB};
+  ScratchBuffer__ = std::make_unique<uint8_t[]>(TestcaseMaxSize_);
+  ScratchBuffer_ = {ScratchBuffer__.get(), TestcaseMaxSize_};
 }
 
 std::string HonggfuzzMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
@@ -91,18 +82,6 @@ std::string HonggfuzzMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
     std::abort();
   }
 
-#if 0
-  //
-  // If the testcase is too big, abort as this should not happen.
-  //
-
-  if (Testcase->BufferSize_ > Opts_.TestcaseBufferMaxSize) {
-    fmt::print("The testcase buffer len is bigger than the testcase buffer max "
-               "size.\n");
-    std::abort();
-  }
-#endif
-
   //
   // Copy the input in a buffer we're going to mutate.
   //
@@ -112,9 +91,7 @@ std::string HonggfuzzMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
       Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
              ScratchBuffer_.size_bytes());
 
-  std::string NewTestcase;
-  NewTestcase.resize(NewTestcaseSize);
-  memcpy(NewTestcase.data(), ScratchBuffer_.data(), NewTestcaseSize);
+  std::string NewTestcase((char *)ScratchBuffer_.data(), NewTestcaseSize);
   return NewTestcase;
 }
 

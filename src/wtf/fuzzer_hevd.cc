@@ -26,7 +26,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   const size_t IoctlBufferSize = BufferSize - sizeof(uint32_t);
   const uint8_t *IoctlBuffer = Buffer + sizeof(uint32_t);
   if (IoctlBufferSize > 1024) {
-    return true;
+    return false;
   }
 
   //  DeviceIoControl(
@@ -138,6 +138,8 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
 // Register the target.
 //
 
-Target_t Hevd("hevd", Init, InsertTestcase);
+Target_t Hevd(
+    "hevd", Init, InsertTestcase, []() { return true; },
+    HonggfuzzMutator_t::Create);
 
 } // namespace Hevd

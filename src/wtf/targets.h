@@ -15,7 +15,8 @@ struct Target_t {
   using Init_t = bool (*)(const Options_t &, const CpuState_t &);
   using InsertTestcase_t = bool (*)(const uint8_t *, const size_t);
   using Restore_t = bool (*)();
-  using CreateMutator_t = std::unique_ptr<Mutator_t> (*)(std::mt19937_64 &);
+  using CreateMutator_t = std::unique_ptr<Mutator_t> (*)(std::mt19937_64 &,
+                                                         const size_t);
 
   explicit Target_t(
       const std::string &_Name, const Init_t _Init,
