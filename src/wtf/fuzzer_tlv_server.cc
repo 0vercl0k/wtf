@@ -193,7 +193,7 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
 
 bool Restore() { return true; }
 
-class CustomMutator_ : public Mutator_t {
+class CustomMutator_t : public Mutator_t {
   std::unique_ptr<uint8_t[]> ScratchBuffer__;
   span_u8 ScratchBuffer_;
   size_t TestcaseMaxSize_ = 0;
@@ -201,10 +201,10 @@ class CustomMutator_ : public Mutator_t {
 public:
   static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng,
                                            const size_t TestcaseMaxSize) {
-    return std::make_unique<CustomMutator_>(Rng, TestcaseMaxSize);
+    return std::make_unique<CustomMutator_t>(Rng, TestcaseMaxSize);
   }
 
-  explicit CustomMutator_(std::mt19937_64 &Rng, const size_t TestcaseMaxSize)
+  explicit CustomMutator_t(std::mt19937_64 &Rng, const size_t TestcaseMaxSize)
       : Rng_(Rng), TestcaseMaxSize_(TestcaseMaxSize) {
     ScratchBuffer__ = std::make_unique<uint8_t[]>(_1MB);
     ScratchBuffer_ = {ScratchBuffer__.get(), _1MB};
@@ -328,6 +328,6 @@ private:
 //
 
 Target_t TlvServer("tlv_server", Init, InsertTestcase, Restore,
-                   CustomMutator_::Create);
+                   CustomMutator_t::Create);
 
 } // namespace TlvServer
