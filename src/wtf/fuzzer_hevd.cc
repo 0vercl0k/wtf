@@ -95,6 +95,12 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   // nt!ExGenRandom+0xe0:
   // fffff805`3b8287c0 480fc7f2        rdrand  rdx
   const Gva_t ExGenRandom = Gva_t(g_Dbg.GetSymbol("nt!ExGenRandom") + 0xe4);
+  if (g_Backend->VirtRead4(ExGenRandom) != 0x480fc7f2) {
+    fmt::print("It seems that nt!ExGenRandom's code has changed, update the "
+               "offset!\n");
+    return false;
+  }
+
   if (!g_Backend->SetBreakpoint(ExGenRandom, [](Backend_t *Backend) {
         DebugPrint("Hit ExGenRandom!\n");
         Backend->Rdx(Backend->Rdrand());
