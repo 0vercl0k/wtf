@@ -20,7 +20,7 @@ Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable in
 
 ## Usage
 
-The best way to try the features out is to work the the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) example module. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) archive and extract it into the `targets/` directory. The archive contains the directory tree that is expected for every targets:
+The best way to try the features out is to work with the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) / [target-tlv_server.7z](https://github.com/0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
 
 - `inputs` is the folder where your input test-cases go into,
 - `outputs` is the folder where the current minset files are saved into,
