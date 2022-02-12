@@ -76,11 +76,11 @@ int main(int argc, const char *argv[]) {
                    "Testcase size")
       ->description("Maximum size of a generated testcase.")
       ->required();
-  
-    MasterCmd->add_option("--name", Opts.TargetName, "Target name")
+
+  MasterCmd->add_option("--name", Opts.TargetName, "Target name")
       ->description("Name of the target fuzzer.")
       ->required();
-  
+
   MasterCmd->add_option("--target", Opts.Master.TargetPath, "Target path")
       ->description("Target directory")
       ->required();
@@ -178,6 +178,7 @@ int main(int argc, const char *argv[]) {
 
   const std::unordered_map<std::string, BackendType_t> BackendTypeMap = {
       {"bochscpu", BackendType_t::Bochscpu},
+      {"bxcpu", BackendType_t::Bochscpu},
 #ifdef WINDOWS
       //
       // We disable whv on Linux for obvious reasons.

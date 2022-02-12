@@ -20,7 +20,7 @@ Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable in
 
 ## Usage
 
-The best way to try the features out is to work the the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) example module. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) archive and extract it into the `targets/` directory. The archive contains the directory tree that is expected for every targets:
+The best way to try the features out is to work with the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) / [target-tlv_server.7z](https://github.com/0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
 
 - `inputs` is the folder where your input test-cases go into,
 - `outputs` is the folder where the current minset files are saved into,
@@ -167,7 +167,7 @@ Also if you don't care about individual code-coverage, the master maintains a `c
 
 The usual workflow to harness a target is as follows:
 
-1. Get your target running into a Hyper-V VM running Windows with one virtual CPU and 4GB of RAM,
+1. Get your target running into a Hyper-V VM running Windows with one virtual CPU and 4GB of RAM.
 1. Put your target into the desired state using [KD](https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/). For example, to target [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver)'s IOCTL handler, I chose to stop the target in user-mode right before the client invokes [DeviceIoControl](https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol). This will vary depending on your targets but you probably want it to be close to the code you want to fuzz.
 
     ```
@@ -232,6 +232,8 @@ The usual workflow to harness a target is as follows:
 
 1. Create a [fuzzer module](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc), write the code that [inserts a test-case](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L20) into your target and define [the](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L81) [various](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L98) [conditions](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L127) to [detect crashes](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L109) or [the end of a test-case](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L69).
 
+1. You can also create your own mutator / generator by subclassing the [Mutator_t](src/wtf/mutator.h) interface. The [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) is a good example to understand how you would go about implementing your own.
+
 At this point you should start to iterate and verify that the fuzzer module works as expected. The execution backends are a blackbox so you should generate execution traces to make sure it goes through the right paths, does the right things. During this phase I mainly use the [bochscpu](https://github.com/yrp604/bochscpu) backend as it is fully deterministic, starts fast, generating execution traces is possible, code-coverage comes for free, etc. Overall, it's a nicer environment to develop and prototype in.
 
 Once you are satisfied with the module, you can start to look at making it work with the [winhv](https://github.com/0vercl0k/wtf/blob/main/src/wtf/whv_backend.h) / [kvm](https://github.com/0vercl0k/wtf/blob/main/src/wtf/kvm_backend.h) backends if you need it to run under those. One major difference between the *bochscpu* backend & the others, is that the others use software breakpoints to provide code-coverage information. As a result, you'll need to load the modules you want coverage for under [IDA](https://hex-rays.com/IDA-pro/) and use the [gen_coveragefile_ida.py](https://github.com/0vercl0k/wtf/blob/main/scripts/gen_coveragefile_ida.py) script to generate a simple JSON file that gets loaded by wtf. You are free to generate this JSON file yourself using whatever tool you would like: it basically is a list of basic-blocks virtual addresses.
@@ -246,12 +248,37 @@ Switched to Host mode
 32.kd> !bdump "c:\\dump"
 ```
 
+## How to deliver multi-packets to my target?
+
+Complex targets usually carry complex states as well and chances are that you might need to deliver more than one testcase in a session to trigger complex issues. [tlv_server.cc](src/tlv_server/tlv_server.cc) is an example of such a server where exercising the parsing function with only one testcase won't be enough to uncover the bugs.
+
+To handle this case, check out [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) that shows an example of how to solve this problem.
+
+## How to provide a custom mutator / generator?
+
+**wtf** comes with two popular generic mutators: [libfuzzer](src/wtf/mutator.h) & [honggfuzz](src/wtf/mutator.h). You might want to provide your own or to generate testcases on your own as well.
+
+To do that, you can subclass the [Mutator_t](src/wtf/mutator.h) interface, and register the function that instantiate your mutator when you define your fuzzing module:
+```c++
+class CustomMutator_t : public Mutator_t {
+public:
+  static std::unique_ptr<Mutator_t> Create(std::mt19937_64 &Rng,
+                                           const size_t TestcaseMaxSize) {
+    return std::make_unique<CustomMutator_t>(Rng, TestcaseMaxSize);
+  }
+  // ...
+};
+
+Target_t target("target", Init, InsertTestcase, Restore, CustomMutator_t::Create);
+```
+
+Check out the [`CustomMutator_t`](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) for a complete example.
+
 ## Execution backends
 
 In this section I briefly mention various differences between the execution backends.
 
 ### bochscpu
-
 - ✅ Full system code-coverage,
 - ✅ Demand-paging,
 - ✅ Timeout is the number of instructions which is very precise,

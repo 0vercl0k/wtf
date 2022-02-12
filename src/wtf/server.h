@@ -279,7 +279,7 @@ class Server_t {
   Corpus_t Corpus_;
 
   //
-  // Scratch buffer that we use to receive data and mutate testcases.
+  // Scratch buffer that we use to receive data.
   //
 
   std::unique_ptr<uint8_t[]> ScratchBufferGrip_;
@@ -294,7 +294,7 @@ class Server_t {
   // Mutator.
   //
 
-  std::unique_ptr<LibfuzzerMutator_t> Mutator_;
+  std::unique_ptr<Mutator_t> Mutator_;
 
   //
   // Master options.
@@ -416,13 +416,11 @@ public:
     WriteFds.reserve(FD_SETSIZE);
     Clients_.reserve(FD_SETSIZE);
 
-    if (Target.CustomMutate == nullptr) {
-      //
-      // Instantiate the mutator.
-      //
+    //
+    // Instantiate the mutator.
+    //
 
-      Mutator_ = std::make_unique<LibfuzzerMutator_t>(Rng_);
-    }
+    Mutator_ = Target.CreateMutator(Rng_, Opts_.TestcaseBufferMaxSize);
 
     //
     // Prepare initial seeds.
@@ -657,11 +655,10 @@ private:
   //
 
   std::string GetTestcase(const Target_t &Target) {
-    std::string TestcaseContent;
 
     //
     // If we have paths, it means we haven't finished to run through the corpus
-    // yet, so this takes priority mutation stage.
+    // yet, so this takes priority over mutation stage.
     //
 
     if (Paths_.size() > 0) {
@@ -729,6 +726,7 @@ private:
       //
 
       if (FoundFile) {
+        std::string TestcaseContent;
         TestcaseContent.resize(BufferSize);
         memcpy(TestcaseContent.data(), Buffer.get(), BufferSize);
         return TestcaseContent;
@@ -736,59 +734,11 @@ private:
     }
 
     //
-    // If we get here, it means that we are ready to mutate.
-    // First thing we do is to grab a seed.
+    // Ask the mutator to generate a testcase.
     //
 
-    const Testcase_t *Testcase = Corpus_.PickTestcase();
-    if (!Testcase) {
-      fmt::print("The corpus is empty, exiting\n");
-      std::abort();
-    }
-
-    //
-    // If the testcase is too big, abort as this should not happen.
-    //
-
-    if (Testcase->BufferSize_ > Opts_.TestcaseBufferMaxSize) {
-      fmt::print(
-          "The testcase buffer len is bigger than the testcase buffer max "
-          "size.\n");
-      std::abort();
-    }
-
-    //
-    // Copy the input in a buffer we're going to mutate.
-    //
-
-    memcpy(ScratchBuffer_.data(), Testcase->Buffer_.get(),
-           Testcase->BufferSize_);
-
-    //
-    // Mutate in the scratch buffer.
-    //
-
-    size_t TestcaseBufferSize = 0;
-
-    if (Target.CustomMutate == nullptr) {
-      TestcaseBufferSize =
-          Mutator_->Mutate(ScratchBuffer_.data(), Testcase->BufferSize_,
-                           Opts_.TestcaseBufferMaxSize);
-    } else {
-      TestcaseBufferSize =
-          Target.CustomMutate(ScratchBuffer_.data(), Testcase->BufferSize_,
-                              Opts_.TestcaseBufferMaxSize, Rng_);
-    }
-
-    //
-    // Copy the testcase in its own buffer before sending it to the
-    // consumer.
-    //
-
-    TestcaseContent.resize(TestcaseBufferSize);
-    memcpy(TestcaseContent.data(), ScratchBuffer_.data(), TestcaseBufferSize);
     Mutations_++;
-    return TestcaseContent;
+    return Mutator_->GetNewTestcase(Corpus_);
   }
 
   //
@@ -912,6 +862,7 @@ private:
 
       const bool NewCoverage = Coverage_.size() > SizeBefore;
       if (NewCoverage) {
+
         //
         // New coverage means that we added new content to the file, so let's
         // flush it.
@@ -927,19 +878,12 @@ private:
         Testcase_t Testcase((uint8_t *)ReceivedTestcase.data(),
                             ReceivedTestcase.size());
 
-        if (Target.CustomMutate == nullptr) {
+        //
+        // Before moving the buffer into the corpus, set up cross over with
+        // it.
+        //
 
-          //
-          // Before moving the buffer into the corpus, set up cross over with
-          // it.
-          //
-
-          Mutator_->SetCrossOverWith(Testcase);
-        } else {
-          if (Target.PostMutate != nullptr) {
-            Target.PostMutate(&Testcase);
-          }
-        }
+        Mutator_->OnNewCoverage(Testcase);
 
         //
         // Ready to move the buffer into the corpus now.
