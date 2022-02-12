@@ -83,10 +83,9 @@ bool SetupUsermodeCrashDetectionHooks() {
 
             const Gva_t ExceptionAddress =
                 Gva_t(ExceptionRecord.ExceptionAddress);
-            const uint64_t ExceptionInformation =
-                ExceptionRecord.ExceptionInformation[0];
             uint32_t ExceptionCode = ExceptionRecord.ExceptionCode;
-            if (ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+            if (ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
+                ExceptionRecord.NumberParameters > 1) {
 
               //
               // The first element of the array contains a read write flag that
@@ -97,6 +96,9 @@ bool SetupUsermodeCrashDetectionHooks() {
               // thread causes a user - mode data execution prevention(DEP)
               // violation.
               //
+
+              const uint64_t ExceptionInformation =
+                  ExceptionRecord.ExceptionInformation[0];
 
               switch (ExceptionInformation) {
               case 0: {

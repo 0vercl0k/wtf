@@ -40,7 +40,7 @@ Packets_t Deserialize(const uint8_t *Buffer, const size_t BufferSize) {
 }
 
 struct {
-  std::deque<Packet_t> Testcases;
+  std::deque<Packet_t> Packets;
   CpuState_t Context;
 
   void RestoreGprs(Backend_t *B) {
@@ -65,9 +65,10 @@ struct {
 } GlobalState;
 
 bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
+  GlobalState.Packets.clear();
   const auto &DeserializedPackets = Deserialize(Buffer, BufferSize);
   for (auto DeserializedPacket : DeserializedPackets.Packets) {
-    GlobalState.Testcases.emplace_back(std::move(DeserializedPacket));
+    GlobalState.Packets.emplace_back(std::move(DeserializedPacket));
   }
 
   return true;
@@ -80,7 +81,7 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
   const Gva_t ReturnAddress = Gva_t(g_Backend->VirtRead8(Rsp));
   if (!g_Backend->SetBreakpoint(
           "tlv_server!ProcessPacket", [](Backend_t *Backend) {
-            if (GlobalState.Testcases.size() == 0) {
+            if (GlobalState.Packets.size() == 0) {
 
               //
               // We are done with the testcase so return to the engine.
@@ -93,7 +94,7 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
             // Let's insert the testcase in memory now.
             //
 
-            const auto &Testcase = GlobalState.Testcases.front();
+            const auto &Testcase = GlobalState.Packets.front();
 
             //
             // Calculate the size of the testcase and update the CPU context.
@@ -103,7 +104,7 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
                                       sizeof(uint16_t) + Testcase.Body.size();
 
             if (PacketSize >= 0x1'000) {
-              GlobalState.Testcases.pop_front();
+              GlobalState.Packets.pop_front();
               Backend->Stop(Ok_t());
               fmt::print("This testcase is too big to fit, bailing\n");
               return;
@@ -161,7 +162,7 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
             // We're done with this testcase!
             //
 
-            GlobalState.Testcases.pop_front();
+            GlobalState.Packets.pop_front();
           })) {
     DebugPrint("Failed to SetBreakpoint ProcessPacket\n");
     return false;
