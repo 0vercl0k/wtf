@@ -102,6 +102,13 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
             const size_t PacketSize = sizeof(uint32_t) + sizeof(uint16_t) +
                                       sizeof(uint16_t) + Testcase.Body.size();
 
+            if (PacketSize >= 0x1000) {
+              GlobalState.Testcases.pop_front();
+              Backend->Stop(Ok_t());
+              fmt::print("This testcase is too big to fit, bailing\n");
+              return;
+            }
+
             Backend->Rdx(PacketSize);
 
             //
@@ -211,6 +218,11 @@ public:
   }
 
   std::string GetNewTestcase(const Corpus_t &Corpus) override {
+    const bool Generational = GetUint32(1, 5) == 5;
+    if (Generational) {
+      return Generate();
+    }
+
     const Testcase_t *Testcase = Corpus.PickTestcase();
     if (!Testcase) {
       fmt::print("The corpus is empty, exiting\n");
@@ -228,24 +240,53 @@ public:
   }
 
 private:
+  std::string Generate() {
+    Packets_t Root;
+    const auto N = GetUint32(1, 10);
+    for (size_t Idx = 0; Idx < N; Idx++) {
+      Packet_t Packet;
+      Packet.Id = Idx;
+      Packet.Command = GetUint32(0, 10);
+      Packet.Body.resize(GetUint32(0, 100));
+      Packet.BodySize = Packet.Body.size();
+      if (GetUint32(1, 3) == 1) {
+        Packet.BodySize ^= 1 << GetUint32(0, 15);
+      }
+
+      Root.Packets.emplace_back(Packet);
+    }
+
+    json::json Serialized;
+    to_json(Serialized, Root);
+    return Serialized.dump();
+  }
+
   std::string Mutate(uint8_t *Data, const size_t DataLen,
                      const size_t MaxSize) {
+    enum Transformation_t : uint32_t {
+      Start,
+      InsertPacket = Start,
+      CopyField,
+      DeletePacket,
+      End = DeletePacket
+    };
     auto Root = Deserialize(Data, DataLen);
     auto &Packets = Root.Packets;
     DebugPrint("Mutate: {} packets\n", Packets.size());
-    const uint32_t Transformation = GetUint32(0, 2);
+    const auto Transformation = Transformation_t(
+        GetUint32(Transformation_t::Start, Transformation_t::End));
     switch (Transformation) {
-    case 0: {
+    case Transformation_t::InsertPacket: {
       MutationInsertPacket(Packets);
       break;
     }
 
-    case 1: {
+    case Transformation_t::CopyField: {
       MutationCopyField(Packets);
       break;
     }
 
-    case 2: {
+    case Transformation_t::DeletePacket: {
       MutationDeletePacket(Packets);
       break;
     }
