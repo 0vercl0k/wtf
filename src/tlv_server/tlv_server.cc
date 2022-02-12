@@ -13,8 +13,8 @@
 enum class Command_t : uint32_t { Allocate, Edit, Delete };
 
 struct Header_t {
-  Command_t CommandId;
-  uint16_t ChunkId;
+  Command_t Command;
+  uint16_t Id;
   uint16_t BodySize;
 };
 
@@ -34,13 +34,13 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
     return;
   }
 
-  const auto CommandId = Header->CommandId;
+  const auto Command = Header->Command;
   const auto Body = (uint8_t *)(Header + 1);
 
-  switch (CommandId) {
+  switch (Command) {
   case Command_t::Allocate: {
     printf("Allocate command\n");
-    const auto &ChunkId = Header->ChunkId;
+    const auto &ChunkId = Header->Id;
     const auto &FreeChunkPtr =
         std::find_if(std::begin(ChunkList), std::end(ChunkList),
                      [](const auto &Entry) { return Entry == nullptr; });
@@ -56,7 +56,7 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
 
   case Command_t::Edit: {
     printf("Edit command\n");
-    const auto &ChunkId = Header->ChunkId;
+    const auto &ChunkId = Header->Id;
     const auto &MatchingChunkPtr = std::find_if(
         std::begin(ChunkList), std::end(ChunkList), [&](const auto &Entry) {
           return Entry != nullptr && Entry->Id == ChunkId;
@@ -74,7 +74,7 @@ void ProcessPacket(const uint8_t *Packet, const uint32_t PacketSize) {
 
   case Command_t::Delete: {
     printf("Delete command\n");
-    const auto &ChunkId = Header->ChunkId;
+    const auto &ChunkId = Header->Id;
     const auto &MatchingChunkPtr = std::find_if(
         std::begin(ChunkList), std::end(ChunkList), [&](const auto &Entry) {
           return Entry != nullptr && Entry->Id == ChunkId;

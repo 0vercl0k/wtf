@@ -11,7 +11,7 @@
 
 namespace TlvServer {
 
-constexpr bool LoggingOn = false;
+constexpr bool LoggingOn = true;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
@@ -102,7 +102,7 @@ bool Init(const Options_t &Opts, const CpuState_t &State) {
             const size_t PacketSize = sizeof(uint32_t) + sizeof(uint16_t) +
                                       sizeof(uint16_t) + Testcase.Body.size();
 
-            if (PacketSize >= 0x1000) {
+            if (PacketSize >= 0x1'000) {
               GlobalState.Testcases.pop_front();
               Backend->Stop(Ok_t());
               fmt::print("This testcase is too big to fit, bailing\n");
@@ -218,8 +218,7 @@ public:
   }
 
   std::string GetNewTestcase(const Corpus_t &Corpus) override {
-    const bool Generational = GetUint32(1, 5) == 5;
-    if (Generational) {
+    if (GetUint32(1, 5) == 5) {
       return Generate();
     }
 
