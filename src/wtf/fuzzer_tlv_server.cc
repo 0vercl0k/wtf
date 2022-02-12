@@ -11,7 +11,7 @@
 
 namespace TlvServer {
 
-constexpr bool LoggingOn = true;
+constexpr bool LoggingOn = false;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {

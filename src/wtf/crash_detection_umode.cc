@@ -7,7 +7,7 @@
 #include "utils.h"
 #include <fmt/format.h>
 
-constexpr bool UCrashDetectionLoggingOn = true;
+constexpr bool UCrashDetectionLoggingOn = false;
 
 template <typename... Args_t>
 void CrashDetectionPrint(const char *Format, const Args_t &...args) {
