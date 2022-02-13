@@ -15,7 +15,7 @@ template <typename... Args_t>
 void BochsDebugPrint(const char *Format, const Args_t &...args) {
   if constexpr (BochsLoggingOn) {
     fmt::print("bochs: ");
-    fmt::print(Format, args...);
+    fmt::print(fmt::runtime(Format), args...);
   }
 }
 
@@ -23,7 +23,7 @@ template <typename... Args_t>
 void BochsHooksDebugPrint(const char *Format, const Args_t &...args) {
   if constexpr (BochsHooksLoggingOn) {
     fmt::print("bochshooks: ");
-    fmt::print(Format, args...);
+    fmt::print(fmt::runtime(Format), args...);
   }
 }
 

@@ -13,7 +13,7 @@ template <typename... Args_t>
 void CrashDetectionPrint(const char *Format, const Args_t &...args) {
   if constexpr (UCrashDetectionLoggingOn) {
     fmt::print("ucrash: ");
-    fmt::print(Format, args...);
+    fmt::print(fmt::runtime(Format), args...);
   }
 }
 

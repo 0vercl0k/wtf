@@ -13,7 +13,7 @@ template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
   if constexpr (WhvLoggingOn) {
     fmt::print("whv: ");
-    fmt::print(Format, args...);
+    fmt::print(fmt::runtime(Format), args...);
   }
 }
 
