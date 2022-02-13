@@ -17,7 +17,7 @@ template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
   if constexpr (LoggingOn) {
     fmt::print("tlv_server: ");
-    fmt::print(Format, args...);
+    fmt::print(fmt::runtime(Format), args...);
   }
 }
 
