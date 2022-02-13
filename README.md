@@ -12,9 +12,9 @@
 
 It uncovered memory corruption vulnerabilities in a wide range of softwares: [IDA Pro](https://github.com/0vercl0k/fuzzing-ida75), a popular [AAA game](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/), the [Windows kernel](https://microsoft.fandom.com/wiki/Architecture_of_Windows_NT), [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver/issues/42) secure mode, etc.
 
-Compiled binaries are available from the [CI artifacts](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) for both Windows & Linux or from the [Releases](https://github.com/0vercl0k/wtf/releases) section.
+Compiled binaries are available from either the [CI artifacts](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) or from the [Releases](https://github.com/0vercl0k/wtf/releases) section for both Windows & Linux.
 
-If you would like to read more about its history or how to use it on a real target, check out [Building a new snapshot fuzzer & fuzzing IDA](https://doar-e.github.io/blog/2021/07/15/building-a-new-snapshot-fuzzer-fuzzing-ida/) and [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/).
+If you would like to read more about its history or how to use it on a real target, check out both [Building a new snapshot fuzzer & fuzzing IDA](https://doar-e.github.io/blog/2021/07/15/building-a-new-snapshot-fuzzer-fuzzing-ida/) and [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/).
 
 Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project and [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode.
 
@@ -272,7 +272,7 @@ public:
 Target_t target("target", Init, InsertTestcase, Restore, CustomMutator_t::Create);
 ```
 
-Check out the [CustomMutator_t](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) for a complete example.
+Check out the [CustomMutator_t](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) module for a complete example.
 
 ## Execution backends
 
@@ -304,7 +304,7 @@ In this section I briefly mention various differences between the execution back
 
 ## Build
 
-The [CI](https://github.com/0vercl0k/wtf/workflows/wtf.yml) builds **wtf** on Ubuntu 20.04 using [clang++-14](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
+The [CI](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) builds **wtf** on Ubuntu 20.04 using [clang++-14](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
 
 To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
 
