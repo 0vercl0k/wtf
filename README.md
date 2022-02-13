@@ -4,7 +4,7 @@
 
 ## Overview
 
-**what the fuzz** or **wtf** is a distributed, code-coverage guided, customizable, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows. Execution of the target can be done inside an emulator with [bochscpu](https://github.com/yrp604/bochscpu) (slowest, most precise), inside a Windows VM with the [Windows Hypervisor Platform APIs](https://docs.microsoft.com/en-us/virtualization/api/hypervisor-platform/hypervisor-platform) or inside a Linux VM with [KVM APIs](https://www.kernel.org/doc/html/latest/virt/kvm/api.html) (fastest).
+**what the fuzz** or **wtf** is a distributed, code-coverage guided, customizable, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows. Execution of the target can be done inside an emulator with [bochscpu](https://github.com/yrp604/bochscpu) (slowest, most precise), inside a Windows VM with the [Windows Hypervisor Platform APIs](https://docs.microsoft.com/en-us/virtualization/api/hypervisor-platform/hypervisor-platform) or inside a Linux VM with the [KVM APIs](https://www.kernel.org/doc/html/latest/virt/kvm/api.html) (fastest).
 
 <p align='center'>
 <img src='pics/wtf.gif'>
@@ -12,15 +12,15 @@
 
 It uncovered memory corruption vulnerabilities in a wide range of softwares: [IDA Pro](https://github.com/0vercl0k/fuzzing-ida75), a popular [AAA game](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/), the [Windows kernel](https://microsoft.fandom.com/wiki/Architecture_of_Windows_NT), [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver/issues/42) secure mode, etc.
 
-Compiled binaries are available from the [CI artifacts](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) for both Windows & Linux or from the [Release](https://github.com/0vercl0k/wtf/releases) section.
+Compiled binaries are available from either the [CI artifacts](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) or from the [Releases](https://github.com/0vercl0k/wtf/releases) section for both Windows & Linux.
 
-If you would like to read more about its history or how to use it on a real target, check out [Building a new snapshot fuzzer & fuzzing IDA](https://doar-e.github.io/blog/2021/07/15/building-a-new-snapshot-fuzzer-fuzzing-ida/) and [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/).
+If you would like to read more about its history or how to use it on a real target, check out both [Building a new snapshot fuzzer & fuzzing IDA](https://doar-e.github.io/blog/2021/07/15/building-a-new-snapshot-fuzzer-fuzzing-ida/) and [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/).
 
 Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project and [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode.
 
 ## Usage
 
-The best way to try the features out is to work with the [fuzzer_hevd](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) / [target-tlv_server.7z](https://github.com/0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
+The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) / [target-tlv_server.7z](https://github.com/0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
 
 - `inputs` is the folder where your input test-cases go into,
 - `outputs` is the folder where the current minset files are saved into,
@@ -230,13 +230,13 @@ The usual workflow to harness a target is as follows:
     @$bdump_active_kernel("c:\\work\\codes\\wtf\\targets\\hevd\\state")
     ```
 
-1. Create a [fuzzer module](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc), write the code that [inserts a test-case](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L20) into your target and define [the](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L81) [various](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L98) [conditions](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L127) to [detect crashes](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L109) or [the end of a test-case](https://github.com/0vercl0k/wtf/blob/main/src/wtf/fuzzer_hevd.cc#L69).
+1. Create a [fuzzer module](src/wtf/fuzzer_hevd.cc), write the code that [inserts a test-case](src/wtf/fuzzer_hevd.cc#L20) into your target and define [the](src/wtf/fuzzer_hevd.cc#L81) [various](src/wtf/fuzzer_hevd.cc#L104) [conditions](src/wtf/fuzzer_hevd.cc#L115) to [detect crashes](src/wtf/fuzzer_hevd.cc#L115) or [the end of a test-case](src/wtf/fuzzer_hevd.cc#L69).
 
 1. You can also create your own mutator / generator by subclassing the [Mutator_t](src/wtf/mutator.h) interface. The [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) is a good example to understand how you would go about implementing your own.
 
 At this point you should start to iterate and verify that the fuzzer module works as expected. The execution backends are a blackbox so you should generate execution traces to make sure it goes through the right paths, does the right things. During this phase I mainly use the [bochscpu](https://github.com/yrp604/bochscpu) backend as it is fully deterministic, starts fast, generating execution traces is possible, code-coverage comes for free, etc. Overall, it's a nicer environment to develop and prototype in.
 
-Once you are satisfied with the module, you can start to look at making it work with the [winhv](https://github.com/0vercl0k/wtf/blob/main/src/wtf/whv_backend.h) / [kvm](https://github.com/0vercl0k/wtf/blob/main/src/wtf/kvm_backend.h) backends if you need it to run under those. One major difference between the *bochscpu* backend & the others, is that the others use software breakpoints to provide code-coverage information. As a result, you'll need to load the modules you want coverage for under [IDA](https://hex-rays.com/IDA-pro/) and use the [gen_coveragefile_ida.py](https://github.com/0vercl0k/wtf/blob/main/scripts/gen_coveragefile_ida.py) script to generate a simple JSON file that gets loaded by wtf. You are free to generate this JSON file yourself using whatever tool you would like: it basically is a list of basic-blocks virtual addresses.
+Once you are satisfied with the module, you can start to look at making it work with the [winhv](src/wtf/whv_backend.h) / [kvm](src/wtf/kvm_backend.h) backends if you need it to run under those. One major difference between the *bochscpu* backend & the others, is that the others use software breakpoints to provide code-coverage information. As a result, you'll need to load the modules you want coverage for under [IDA](https://hex-rays.com/IDA-pro/) and use the [gen_coveragefile_ida.py](scripts/gen_coveragefile_ida.py) script to generate a simple JSON file that gets loaded by wtf. You are free to generate this JSON file yourself using whatever tool you would like: it basically is a list of basic-blocks virtual addresses.
 
 You can also target [WoW64](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details) applications by using the `!wow64exts.sw` Windbg command to switch to the 64-bit context right before creating the snapshot (thanks [@cube0x8](https://twitter.com/cube0x8) for sharing this trick!):
 
@@ -272,7 +272,7 @@ public:
 Target_t target("target", Init, InsertTestcase, Restore, CustomMutator_t::Create);
 ```
 
-Check out the [`CustomMutator_t`](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) for a complete example.
+Check out the [CustomMutator_t](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) module for a complete example.
 
 ## Execution backends
 
@@ -304,9 +304,9 @@ In this section I briefly mention various differences between the execution back
 
 ## Build
 
-The [CI](https://github.com/0vercl0k/wtf/blob/main/.github/workflows/wtf.yml) builds *wtf* on Ubuntu 20.04 using [clang++-13](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
+The [CI](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) builds **wtf** on Ubuntu 20.04 using [clang++-14](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
 
-To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](https://github.com/0vercl0k/wtf/blob/main/src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](https://github.com/0vercl0k/wtf/blob/main/src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
+To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
 
 ```
 (base) wtf\src\build>build-release.bat
