@@ -11,7 +11,7 @@ constexpr bool UCrashDetectionLoggingOn = false;
 
 template <typename... Args_t>
 void CrashDetectionPrint(const char *Format, const Args_t &...args) {
-  if constexpr (UCrashDetectionLoggingOn) {
+  if (UCrashDetectionLoggingOn) {
     fmt::print("ucrash: ");
     fmt::print(Format, args...);
   }

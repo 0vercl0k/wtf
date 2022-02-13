@@ -11,7 +11,7 @@ constexpr bool WhvLoggingOn = false;
 
 template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
-  if constexpr (WhvLoggingOn) {
+  if (WhvLoggingOn) {
     fmt::print("whv: ");
     fmt::print(Format, args...);
   }

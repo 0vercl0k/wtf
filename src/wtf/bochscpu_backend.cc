@@ -13,7 +13,7 @@ constexpr bool BochsHooksLoggingOn = false;
 
 template <typename... Args_t>
 void BochsDebugPrint(const char *Format, const Args_t &...args) {
-  if constexpr (BochsLoggingOn) {
+  if (BochsLoggingOn) {
     fmt::print("bochs: ");
     fmt::print(Format, args...);
   }
@@ -21,7 +21,7 @@ void BochsDebugPrint(const char *Format, const Args_t &...args) {
 
 template <typename... Args_t>
 void BochsHooksDebugPrint(const char *Format, const Args_t &...args) {
-  if constexpr (BochsHooksLoggingOn) {
+  if (BochsHooksLoggingOn) {
     fmt::print("bochshooks: ");
     fmt::print(Format, args...);
   }
