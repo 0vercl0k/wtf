@@ -1,6 +1,6 @@
 # what the fuzz
 
-![Builds](workflows/Builds/badge.svg)
+![Builds](0vercl0k/wtf/workflows/Builds/badge.svg)
 
 ## Overview
 
@@ -12,7 +12,7 @@
 
 It uncovered memory corruption vulnerabilities in a wide range of softwares: [IDA Pro](https://github.com/0vercl0k/fuzzing-ida75), a popular [AAA game](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/), the [Windows kernel](https://microsoft.fandom.com/wiki/Architecture_of_Windows_NT), [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver/issues/42) secure mode, etc.
 
-Compiled binaries are available from the [CI artifacts](actions/workflows/wtf.yml) for both Windows & Linux or from the [Release](releases) section.
+Compiled binaries are available from the [CI artifacts](0vercl0k/wtf/actions/workflows/wtf.yml) for both Windows & Linux or from the [Release](0vercl0k/wtf/releases) section.
 
 If you would like to read more about its history or how to use it on a real target, check out [Building a new snapshot fuzzer & fuzzing IDA](https://doar-e.github.io/blog/2021/07/15/building-a-new-snapshot-fuzzer-fuzzing-ida/) and [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/).
 
@@ -20,7 +20,7 @@ Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable in
 
 ## Usage
 
-The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](releases) / [target-tlv_server.7z](releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
+The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](0vercl0k/wtf/releases) / [target-tlv_server.7z](0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
 
 - `inputs` is the folder where your input test-cases go into,
 - `outputs` is the folder where the current minset files are saved into,
@@ -230,7 +230,7 @@ The usual workflow to harness a target is as follows:
     @$bdump_active_kernel("c:\\work\\codes\\wtf\\targets\\hevd\\state")
     ```
 
-1. Create a [fuzzer module](src/wtf/fuzzer_hevd.cc), write the code that [inserts a test-case](src/wtf/fuzzer_hevd.cc#L20) into your target and define [the](src/wtf/fuzzer_hevd.cc#L81) [various](src/wtf/fuzzer_hevd.cc#L98) [conditions](src/wtf/fuzzer_hevd.cc#L127) to [detect crashes](src/wtf/fuzzer_hevd.cc#L109) or [the end of a test-case](src/wtf/fuzzer_hevd.cc#L69).
+1. Create a [fuzzer module](src/wtf/fuzzer_hevd.cc), write the code that [inserts a test-case](src/wtf/fuzzer_hevd.cc#L20) into your target and define [the](src/wtf/fuzzer_hevd.cc#L81) [various](src/wtf/fuzzer_hevd.cc#L104) [conditions](src/wtf/fuzzer_hevd.cc#L115) to [detect crashes](src/wtf/fuzzer_hevd.cc#L115) or [the end of a test-case](src/wtf/fuzzer_hevd.cc#L69).
 
 1. You can also create your own mutator / generator by subclassing the [Mutator_t](src/wtf/mutator.h) interface. The [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) is a good example to understand how you would go about implementing your own.
 
@@ -272,7 +272,7 @@ public:
 Target_t target("target", Init, InsertTestcase, Restore, CustomMutator_t::Create);
 ```
 
-Check out the [`CustomMutator_t`](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) for a complete example.
+Check out the [CustomMutator_t](src/wtf/fuzzer_tlv_server.cc) class in the [fuzzer_tlv_server.cc](src/wtf/fuzzer_tlv_server.cc) for a complete example.
 
 ## Execution backends
 
@@ -304,7 +304,7 @@ In this section I briefly mention various differences between the execution back
 
 ## Build
 
-The [CI](.github/workflows/wtf.yml) builds *wtf* on Ubuntu 20.04 using [clang++-13](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
+The [CI](0vercl0k/wtf/workflows/wtf.yml) builds **wtf** on Ubuntu 20.04 using [clang++-14](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
 
 To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
 
