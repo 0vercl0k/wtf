@@ -24,7 +24,7 @@ constexpr bool KvmLoggingOn = false;
 
 template <typename... Args_t>
 void KvmDebugPrint(const char *Format, const Args_t &...args) {
-  if (KvmLoggingOn) {
+  if constexpr (KvmLoggingOn) {
     fmt::print("kvm: ");
     fmt::print(Format, args...);
   }

@@ -11,7 +11,7 @@ constexpr bool LoggingOn = false;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
-  if (LoggingOn) {
+  if constexpr (LoggingOn) {
     fmt::print("Hevd: ");
     fmt::print(Format, args...);
   }
