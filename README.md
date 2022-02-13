@@ -1,6 +1,6 @@
 # what the fuzz
 
-![Builds](0vercl0k/wtf/workflows/Builds/badge.svg)
+![Builds](/0vercl0k/wtf/workflows/Builds/badge.svg)
 
 ## Overview
 
@@ -304,7 +304,7 @@ In this section I briefly mention various differences between the execution back
 
 ## Build
 
-The [CI](0vercl0k/wtf/workflows/wtf.yml) builds **wtf** on Ubuntu 20.04 using [clang++-14](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
+The [CI](/0vercl0k/wtf/workflows/wtf.yml) builds **wtf** on Ubuntu 20.04 using [clang++-14](https://clang.llvm.org/) / [g++-11](https://gcc.gnu.org/gcc-11/) and on Windows using Microsoft's [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/).
 
 To build it yourself you need to start a *Visual Studio Developper Command Prompt* and either run [build-release.bat](src/build/build-release.bat) which uses the [Ninja](https://ninja-build.org/) generator or [build-release-msvc.bat](src/build/build-release-msvc.bat) to generate a Visual Studio solution file:
 
