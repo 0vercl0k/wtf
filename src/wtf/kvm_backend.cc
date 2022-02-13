@@ -1210,7 +1210,7 @@ bool KvmBackend_t::PopulateMemory(const Options_t &Opts) {
 
   const uint64_t Gpa = First.memory_size + Page::Size;
   if (Ram_.Size() <= Gpa) {
-    perror("The RAM size is smaller than what is expected");
+    perror("The RAM size is smaller than expected");
     return false;
   }
 
