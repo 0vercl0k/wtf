@@ -12,7 +12,7 @@
 
 It uncovered memory corruption vulnerabilities in a wide range of softwares: [IDA Pro](https://github.com/0vercl0k/fuzzing-ida75), a popular [AAA game](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/), the [Windows kernel](https://microsoft.fandom.com/wiki/Architecture_of_Windows_NT), [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver/issues/42) secure mode, etc.
 
-Compiled binaries are available from the [CI artifacts](0vercl0k/wtf/actions/workflows/wtf.yml) for both Windows & Linux or from the [Release](0vercl0k/wtf/releases) section.
+Compiled binaries are available from the [CI artifacts](https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml) for both Windows & Linux or from the [Releases](https://github.com/0vercl0k/wtf/releases) section.
 
 If you would like to read more about its history or how to use it on a real target, check out [Building a new snapshot fuzzer & fuzzing IDA](https://doar-e.github.io/blog/2021/07/15/building-a-new-snapshot-fuzzer-fuzzing-ida/) and [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/).
 
@@ -20,7 +20,7 @@ Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable in
 
 ## Usage
 
-The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](0vercl0k/wtf/releases) / [target-tlv_server.7z](0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
+The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/fuzzer_hevd.cc) / [fuzzer_tlv_server](src/wtf/fuzzer_tlv_server.cc) modules. You can grab the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) / [target-tlv_server.7z](https://github.com/0vercl0k/wtf/releases) archives and extract them into the `targets/` directory. The archives contain the directory trees that are expected for every targets:
 
 - `inputs` is the folder where your input test-cases go into,
 - `outputs` is the folder where the current minset files are saved into,
