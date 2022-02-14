@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   Windows:
-    runs-on: windows-latest 
+    runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
