@@ -97,10 +97,10 @@ public:
     }
 
     if (Json.contains(Name)) {
-      return true;
+      Json[Name] = fmt::format("{:#x}", Address);
+    } else {
+      Json.emplace(Name, fmt::format("{:#x}", Address));
     }
-
-    Json.emplace(Name, fmt::format("{:#x}", Address));
 
     std::ofstream SymbolFileOut(SymbolFilePath_);
     SymbolFileOut << Json;
