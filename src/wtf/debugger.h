@@ -267,13 +267,12 @@ public:
     const HRESULT Status =
         Symbols_->GetModuleByModuleName(Name, 0, nullptr, &Base);
     if (FAILED(Status)) {
-      __debugbreak();
-      Base = 0;
+      return 0;
     }
 
     if (!AddSymbol(Name, Base)) {
       __debugbreak();
-      Base = 0;
+      return 0;
     }
 
     return Base;
@@ -336,7 +335,8 @@ public:
       Offset = SymbolAddress - Base;
     }
 
-    SymbolCache_.emplace(SymbolAddress, fmt::format("{}+{:#x}", Buffer, Offset));
+    SymbolCache_.emplace(SymbolAddress,
+                         fmt::format("{}+{:#x}", Buffer, Offset));
     return SymbolCache_.at(SymbolAddress);
   }
 };
