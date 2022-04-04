@@ -145,7 +145,7 @@ bool Backend_t::SimulateReturnFromFunction(const uint64_t Return) {
   return true;
 }
 
-bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t stdcallArgsCount=0) {
+bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t stdcallArgsCount) {
   //
   // Set return value.
   //
