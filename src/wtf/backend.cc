@@ -145,6 +145,25 @@ bool Backend_t::SimulateReturnFromFunction(const uint64_t Return) {
   return true;
 }
 
+bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t stdcallArgsCount=0) {
+  //
+  // Set return value.
+  //
+
+  Rax(Return);
+
+  const uint64_t Stack = Rsp();
+  const uint32_t SavedReturnAddress = VirtRead4(Gva_t(Stack));
+
+  //
+  // Eat up the saved return address.
+  //
+
+  Rsp(Stack + (4 + (4 * stdcallArgsCount)));
+  Rip(SavedReturnAddress);
+  return true;
+}
+
 uint64_t Backend_t::GetArg(const uint64_t Idx) {
   switch (Idx) {
   case 0:
