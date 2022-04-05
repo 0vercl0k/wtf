@@ -145,7 +145,7 @@ bool Backend_t::SimulateReturnFromFunction(const uint64_t Return) {
   return true;
 }
 
-bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t stdcallArgsCount) {
+bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t StdcallArgsCount) {
   //
   // Set return value.
   //
@@ -159,7 +159,7 @@ bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uin
   // Eat up the saved return address.
   //
 
-  Rsp(Stack + (4 + (4 * stdcallArgsCount)));
+  Rsp(Stack + (4 + (4 * StdcallArgsCount)));
   Rip(SavedReturnAddress);
   return true;
 }
