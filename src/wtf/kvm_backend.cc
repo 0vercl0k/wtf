@@ -873,7 +873,21 @@ bool KvmBackend_t::LoadSregs(const CpuState_t &CpuState) {
   Run_->s.regs.sregs.efer = CpuState.Efer.Flags;
   Run_->s.regs.sregs.apic_base = CpuState.ApicBase;
 
-  SEG(cs, Cs);
+  Run_->s.regs.sregs.cs = {
+    .base = 0,
+    .limit = 0xffffffff,
+    .selector = CpuState.Cs.Selector,
+    .type = uint8_t(CpuState.Cs.SegmentType),
+    .present = uint8_t(CpuState.Cs.Present),
+    .dpl = uint8_t(CpuState.Cs.DescriptorPrivilegeLevel),
+    .db = 0,
+    .s = uint8_t(CpuState.Cs.NonSystemSegment),
+    .l = 1,
+    .g = 1,
+    .avl = 0,
+  };
+
+  //SEG(cs, Cs);
   SEG(ss, Ss);
   SEG(es, Es);
   SEG(ds, Ds);

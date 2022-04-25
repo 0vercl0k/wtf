@@ -203,7 +203,7 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
   // Validate that the Reserved field of each segment contains bits 16-19 of the
   // Limit
   //
-
+  /*
   Seg_t *Segments[] = {&CpuState.Es, &CpuState.Fs, &CpuState.Cs,
                        &CpuState.Gs, &CpuState.Ss, &CpuState.Ds};
 
@@ -214,7 +214,7 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
       return false;
     }
   }
-
+  */
   return true;
 }
 
