@@ -39,11 +39,13 @@ class vmmap:
 	get_vm_next     = lambda mmap_struct: parse_variable(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_next''')
 	get_vm_start    = lambda mmap_struct: parse_variable(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_start''')
 	get_vm_end      = lambda mmap_struct: parse_variable(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_end''')
-	get_permission  = lambda mmap_struct: parse_variable(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_page_prot->pgprot''')
+	#get_permission  = lambda mmap_struct: parse_variable(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_page_prot->pgprot''')
+	get_permission  = lambda mmap_struct: parse_variable(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_flags''')
 	get_dentry_name = lambda mmap_struct: str(gdb.parse_and_eval(f'''(*(struct vm_area_struct*)({mmap_struct}))->vm_file->f_path->dentry->d_name->name''')).split()[1]
 
 	def set_permission(mmap_struct, flag):
 		old_permission = vmmap.get_permission(mmap_struct)
 		new_permission = old_permission | flag
-		gdb.execute(f'''set (*(struct vm_area_struct*)({mmap_struct}))->vm_page_prot->pgprot={new_permission}''', to_string=True)
+		gdb.execute(f'''set (*(struct vm_area_struct*)({mmap_struct}))->vm_flags={new_permission}''', to_string=True)
+		#gdb.execute(f'''set (*(struct vm_area_struct*)({mmap_struct}))->vm_page_prot->pgprot={new_permission}''', to_string=True)
 		

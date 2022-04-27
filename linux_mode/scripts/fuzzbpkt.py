@@ -170,6 +170,9 @@ class FuzzBpkt(gdb.Breakpoint):
 	def get_vmmap(self):
 	
 		RWX = 0b111
+
+		def is_page_guard(perm):
+			return perm & 0b111 == 0
 	
 		def walk(mmap_struct):
 		
@@ -178,6 +181,8 @@ class FuzzBpkt(gdb.Breakpoint):
 			curr_mmap_struct = mmap_struct
 		
 			while curr_mmap_struct:
+
+				old_permission = kernel.vmmap.get_permission(curr_mmap_struct)
 			
 				kernel.vmmap.set_permission(curr_mmap_struct, RWX)
 				
@@ -189,12 +194,14 @@ class FuzzBpkt(gdb.Breakpoint):
 				except:
 					filename = ""
 
-				print('mmap_struct: 0x{:x}, mmap: 0x{:x} - 0x{:x} {}'.format(curr_mmap_struct, vm_start, vm_end, filename))
+				print('mmap_struct: 0x{:x}, mmap: 0x{:x} - 0x{:x}, prot: 0x{:x} {}'.format(curr_mmap_struct, vm_start, vm_end, old_permission, filename))
 				
 				vm_private_data = kernel.vmmap.get_vm_private_data(curr_mmap_struct)
 				
-				if vm_private_data != '<vvar_mapping>':
+				if vm_private_data != '<vvar_mapping>' and not is_page_guard(old_permission):
 					vmmap += [[curr_mmap_struct, vm_start, vm_end]]
+				else:
+					print("^skipped")
 				
 				curr_mmap_struct = kernel.vmmap.get_vm_next(curr_mmap_struct)
 				

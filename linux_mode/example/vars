@@ -8,19 +8,13 @@ function check_var
 export WTF=`pwd`/../..
 export PYTHONPATH=${PYTHONPATH}:${WTF}/linux_mode/scripts
 
-KERNEL=vmlinux-5.13.12
+KERNEL=vmlinux-5.17.4-arch1
+ARCHLINUX=archlinux-root-123.qcow2
 
 # all vars must to be specified
 # QEMU_SYSTEM_X86_64=/home/marat/null/qemu/build/qemu-system-x86_64
-# VM_IP=192.168.122.15
 # WTF_BUILD_PATH=/home/marat/Documents/work/wtf/wtf-test/src/build
-
-VM_HOME=/home
-
-WTF_BUILD_PATH=/home/marat/Documents/work/wtf/wtf-test/src/build
-WTF=${WTF_BUILD_PATH}/wtf
+# WTF=${WTF_BUILD_PATH}/wtf
 
 check_var QEMU_SYSTEM_X86_64
-check_var VM_IP
-check_var VM_HOME
 check_var WTF

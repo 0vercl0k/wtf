@@ -201,3 +201,5 @@ class DumpCPUStateCommand(gdb.Command):
 DumpCPUStateCommand()
 
 QemuBpkt("cpu_exec")
+
+gdb.execute("run")
