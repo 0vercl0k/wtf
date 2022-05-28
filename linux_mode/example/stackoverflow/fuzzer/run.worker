@@ -1,0 +1,10 @@
+#!/bin/bash
+
+source ../../vars
+
+${WTF} \
+	fuzz \
+	--backend=kvm \
+	--name=stackoverflow \
+	--max_len 1024 \
+	--limit 10 
