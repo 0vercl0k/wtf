@@ -1,7 +1,9 @@
 # imports
-import gdb, json, os, sys, utils
+import gdb, json, os, sys
 
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+
+import utils
 
 cpu_state = 0
 

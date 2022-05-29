@@ -7,7 +7,7 @@ if [[ -z $1 ]]; then echo "specify target folder name"; exit; fi;
 ../raw2dmp/raw2dmp raw
 
 # sets the target folder for fuzzing
-TARGET_FOLDER=${WTF}/taregts/$1
+TARGET_FOLDER=${WTF}/targets/$1
 
 # creates the target folder
 mkdir ${TARGET_FOLDER}

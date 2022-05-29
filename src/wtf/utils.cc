@@ -205,7 +205,7 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
   //
   
 
-  #ifdef ELF_COMPILATION
+  #if ELF_COMPILATION != 1
 
     Seg_t *Segments[] = {&CpuState.Es, &CpuState.Fs, &CpuState.Cs,
                         &CpuState.Gs, &CpuState.Ss, &CpuState.Ds};

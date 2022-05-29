@@ -1,8 +1,9 @@
 # imports
-import gdb, os, kernel, utils, pwn
+import gdb, os, kernel, utils
 
 # set environmental variables
 os.environ['PWNLIB_NOTERM'] = '1'
+import pwn
 
 # set architecture
 pwn.context.arch = 'amd64'
