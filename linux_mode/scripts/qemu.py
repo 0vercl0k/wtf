@@ -1,10 +1,7 @@
-import gdb
-import json
-import os
-import sys
+# imports
+import gdb, json, os, sys, utils
 
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
-import utils
 
 cpu_state = 0
 
@@ -19,16 +16,19 @@ class QemuBpkt(gdb.Breakpoint):
 		global cpu_state
 		cpu_state = gdb.parse_and_eval('cpu')
 		
-		
+# creates the cpu command used to dump the cpu state
 class DumpCPUStateCommand(gdb.Command):
 
+	# function init
 	def __init__(self):
 		super(DumpCPUStateCommand, self).__init__("cpu", 
 			gdb.COMMAND_USER, 
 			gdb.COMPLETE_FILENAME)
 		
+	# dump state to the file passed to the function
 	def dump(self, f):
 		
+		# grabs a register
 		def get_reg(x): 
 			global cpu_state
 			return f'''(   (CPUX86State*)  ( (CPUState*)({cpu_state}) )->env_ptr   )->''' + x
@@ -180,9 +180,13 @@ class DumpCPUStateCommand(gdb.Command):
 		data["mxcsr_mask"] = "0x0"
 		data["fpst"]       = ["0x-Infinity"] * 8
 		 
+		# writes the data dictionary to the file
 		json.dump(data, f)
+
+		# updates entry_syscall in symbol-store.json
 		utils.write_to_store({"entry_syscall": data["lstar"]})
 		
+	# function that gets called when the cpu command has been called
 	def invoke(self, args, from_tty):
 	
 		global cpu_state
@@ -193,6 +197,7 @@ class DumpCPUStateCommand(gdb.Command):
 		
 		print(f'''cpu_state: {cpu_state}''')
 		
+		# dump the cpu state to regs.json
 		with open('regs.json', 'w') as f:
 			self.dump(f)
 

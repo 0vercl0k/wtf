@@ -1,9 +1,0 @@
-#!/bin/bash
-
-source ../../vars
-
-${WTF} \
-	master \
-	--max_len 1024 \
-	--runs=100000 \
-	--target . 

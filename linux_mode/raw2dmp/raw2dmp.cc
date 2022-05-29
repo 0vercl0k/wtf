@@ -1,4 +1,4 @@
-#include "kdmp-parser-structs.h"
+#include "../../src/libs/kdmp-parser/src/lib/kdmp-parser-structs.h"
 #include <filesystem>
 #include <iostream>
 #include <fstream>
