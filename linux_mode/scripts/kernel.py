@@ -10,9 +10,9 @@ def parse_and_eval(cmd):
 
 	# otherwise we have to do this :/
 	gdb.execute("set logging redirect on")
-	gdb.execute("set logging enabled on")
+	gdb.execute("set logging on") # older versions of gdb do not support set logging enabled on so we need to use this. 
 	gdb.execute("print %s" % cmd)
-	gdb.execute("set logging enabled off")
+	gdb.execute("set logging off")
 	return gdb.history(0)
 
 # reads the qword at an address

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ../vars
+
 # check to see if the user specified a target folder to fuzz
 if [[ -z $1 ]]; then echo "specify target folder name"; exit; fi;
 
