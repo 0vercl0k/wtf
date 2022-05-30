@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# get the path to the repository
+export CUR_PATH=<CHANGE ME>
+
+# path to wtf
+export WTF=${CUR_PATH}/../
+
+# add our python scripts to the python path
+export PYTHONPATH=${PYTHONPATH}:${CUR_PATH}/scripts
+
+# Path to our kernel image and qcow for qemu
+KERNEL=${CUR_PATH}/vmlinux-5.17.4-arch1
+ARCHLINUX=${CUR_PATH}/archlinux-root.qcow2
+
+# path to our qemu debug build
+QEMU_SYSTEM_X86_64=${CUR_PATH}/qemu/build/qemu-system-x86_64
+
+# path to the wtf build directory
+WTF_BUILD_PATH=${WTF}/src/build
