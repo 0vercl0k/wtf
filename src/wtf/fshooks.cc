@@ -368,7 +368,7 @@ bool SetupFilesystemHooks() {
     return false;
   }
 
-  if (!g_Backend->SetBreakpoint("ntdll!NtOpenFile", [](Backend_t *Backend) {
+  if (!g_Backend->SetBreakpoint("nt!NtOpenFile", [](Backend_t *Backend) {
         //__kernel_entry NTSTATUS NtOpenFile(
         //  OUT PHANDLE           FileHandle,
         //  IN ACCESS_MASK        DesiredAccess,
@@ -392,7 +392,7 @@ bool SetupFilesystemHooks() {
         }
 
         const std::u16string Filename(HostObjectAttributes.ObjectName());
-        FsDebugPrint("ntdll!NtOpenFile(FileHandle={:#x}, DesiredAccess={:#x}, "
+        FsDebugPrint("nt!NtOpenFile(FileHandle={:#x}, DesiredAccess={:#x}, "
                      "ObjectAttributes={:#x} ({}), IoStatusBlock={:#x}, "
                      "ShareAccess={:#x} ({}), OpenOptions={:#x} ({}))\n",
                      GuestFileHandle, DesiredAccess, GuestObjectAttributes,
@@ -450,7 +450,7 @@ bool SetupFilesystemHooks() {
   }
 
   if (!g_Backend->SetBreakpoint(
-          "ntdll!NtQueryVolumeInformationFile", [](Backend_t *Backend) {
+          "nt!NtQueryVolumeInformationFile", [](Backend_t *Backend) {
             //__kernel_entry NTSYSCALLAPI NTSTATUS
             // NtQueryVolumeInformationFile(
             //  HANDLE               FileHandle,
@@ -548,7 +548,7 @@ bool SetupFilesystemHooks() {
   }
 
   if (!g_Backend->SetBreakpoint(
-          "ntdll!NtQueryInformationFile", [](Backend_t *Backend) {
+          "nt!NtQueryInformationFile", [](Backend_t *Backend) {
             //__kernel_entry NTSYSCALLAPI NTSTATUS NtQueryInformationFile(
             //  HANDLE                 FileHandle,
             //  PIO_STATUS_BLOCK       IoStatusBlock,
@@ -637,7 +637,7 @@ bool SetupFilesystemHooks() {
   }
 
   if (!g_Backend->SetBreakpoint(
-          "ntdll!NtSetInformationFile", [](Backend_t *Backend) {
+          "nt!NtSetInformationFile", [](Backend_t *Backend) {
             //__kernel_entry NTSYSCALLAPI NTSTATUS NtSetInformationFile(
             //  HANDLE                 FileHandle,
             //  PIO_STATUS_BLOCK       IoStatusBlock,
@@ -724,7 +724,7 @@ bool SetupFilesystemHooks() {
     return false;
   }
 
-  if (!g_Backend->SetBreakpoint("ntdll!NtWriteFile", [](Backend_t *Backend) {
+  if (!g_Backend->SetBreakpoint("nt!NtWriteFile", [](Backend_t *Backend) {
         //__kernel_entry NTSYSCALLAPI NTSTATUS NtWriteFile(
         //  HANDLE           FileHandle,
         //  HANDLE           Event,
@@ -747,7 +747,7 @@ bool SetupFilesystemHooks() {
         const uint64_t Key = Backend->GetArg(8);
 
         FsDebugPrint(
-            "ntdll!NtWriteFile(FileHandle={}, Event={:#x}, ApcRoutine={:#x}, "
+            "nt!NtWriteFile(FileHandle={}, Event={:#x}, ApcRoutine={:#x}, "
             "ApcContext={:#x}, "
             "IoStatusBlock={:#x}, Buffer={:#x}, Length={:#x}, "
             "ByteOffset={:#x}, "
@@ -813,7 +813,7 @@ bool SetupFilesystemHooks() {
     return false;
   }
 
-  if (!g_Backend->SetBreakpoint("ntdll!NtReadFile", [](Backend_t *Backend) {
+  if (!g_Backend->SetBreakpoint("nt!NtReadFile", [](Backend_t *Backend) {
         // NTSTATUS NtReadFile(
         //  _In_     HANDLE           FileHandle,
         //  _In_opt_ HANDLE           Event,
@@ -836,7 +836,7 @@ bool SetupFilesystemHooks() {
         const uint64_t Key = Backend->GetArg(8);
 
         FsDebugPrint(
-            "ntdll!NtReadFile(FileHandle={}, Event={:#x}, ApcRoutine={:#x}, "
+            "nt!NtReadFile(FileHandle={}, Event={:#x}, ApcRoutine={:#x}, "
             "ApcContext={:#x}, IoStatusBlock={:#x}, Buffer={:#x}, "
             "Length={:#x}, ByteOffset={:#x}, Key={:#x})\n",
             fmt::ptr(FileHandle), Event, ApcRoutine, ApcContext,
