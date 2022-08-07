@@ -38,7 +38,7 @@ struct Page {
 //
 
 class Ram_t {
-  static constexpr uint64_t LargestRamSize = 0x01'08'00'00'00;
+  static constexpr uint64_t LargestTestedRamSize = 0x01'08'00'00'00;
 
   //
   // This is the kernel dump we forward requests to when we don't have our own
@@ -111,9 +111,10 @@ public:
             ->first;
 
     RamSize_ = BiggestGpa + Page::Size;
-    if (RamSize_ > Ram_t::LargestRamSize) {
-      fmt::print("The dump size ({}) is too large.\n", RamSize_);
-      return false;
+    if (RamSize_ > Ram_t::LargestTestedRamSize) {
+      fmt::print("/!\\ The file size ({}) is larger than what the author "
+                 "tested, running at your own risk :)!\n",
+                 RamSize_);
     }
 
 #ifdef WINDOWS
