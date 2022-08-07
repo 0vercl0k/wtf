@@ -28,7 +28,7 @@ jobs:
 
     - name: Initialize CodeQL
       if: matrix.generator == 'msvc'
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         languages: cpp
 
@@ -46,7 +46,7 @@ jobs:
 
     - name: Perform CodeQL Analysis
       if: matrix.generator == 'msvc'
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2
 
     - name: Copy dbghelp/symsrv
       if: matrix.generator == 'ninja'
@@ -82,7 +82,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         languages: cpp
 
@@ -105,15 +105,15 @@ jobs:
     - name: Build with clang
       if: matrix.compiler == 'clang'
       env:
-        CC: clang-14
-        CXX: clang++-14
+        CC: clang-15
+        CXX: clang++-15
       run: |
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
