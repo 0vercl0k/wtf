@@ -94,8 +94,8 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   // kd> ub fffff805`3b8287c4 l1
   // nt!ExGenRandom+0xe0:
   // fffff805`3b8287c0 480fc7f2        rdrand  rdx
-  const Gva_t ExGenRandom = Gva_t(g_Dbg.GetSymbol("nt!ExGenRandom") + 0xe4);
-  if (g_Backend->VirtRead4(ExGenRandom) != 0x480fc7f2) {
+  const Gva_t ExGenRandom = Gva_t(g_Dbg.GetSymbol("nt!ExGenRandom") + 0xe0 + 4);
+  if (g_Backend->VirtRead4(ExGenRandom - Gva_t(4)) != 0xf2c70f48) {
     fmt::print("It seems that nt!ExGenRandom's code has changed, update the "
                "offset!\n");
     return false;
@@ -113,13 +113,15 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   //
 
   if (!g_Backend->SetBreakpoint("nt!KeBugCheck2", [](Backend_t *Backend) {
-        const uint64_t B0 = g_Backend->GetArg(1);
-        const uint64_t B1 = g_Backend->GetArg(2);
-        const uint64_t B2 = g_Backend->GetArg(3);
-        const uint64_t B3 = g_Backend->GetArg(4);
-        const uint64_t B4 = g_Backend->GetArg(5);
-        const std::string Filename = fmt::format(
-            "crash-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}", B0, B1, B2, B3, B4);
+        const uint64_t BCode = Backend->GetArg(0);
+        const uint64_t B0 = Backend->GetArg(1);
+        const uint64_t B1 = Backend->GetArg(2);
+        const uint64_t B2 = Backend->GetArg(3);
+        const uint64_t B3 = Backend->GetArg(4);
+        const uint64_t B4 = Backend->GetArg(5);
+        const std::string Filename =
+            fmt::format("crash-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}", BCode, B0,
+                        B1, B2, B3, B4);
         DebugPrint("KeBugCheck2: {}\n", Filename);
         Backend->Stop(Crash_t(Filename));
       })) {
