@@ -1,7 +1,16 @@
 # Axel '0vercl0k' Souchet - May 2 2020
-# Configure / clone the bochs repository.
+# Build / configure bxcpu-ffi
+pushd .
+
+mkdir bxbuild-lin
+cd bxbuild-lin
+
+git clone https://github.com/yrp604/bochscpu-build.git
+git clone https://github.com/yrp604/bochscpu
+git clone https://github.com/yrp604/bochscpu-ffi
+
 cd bochscpu-build
-export BOCHS_REV=14331 && sh prep.sh && cd bochs && sh .conf.cpu && make || true
+bash prep.sh && cd bochs && sh .conf.cpu && make || true
 
 # Remove old files in bochscpu.
 rm -rf ../../bochscpu/bochs
@@ -26,5 +35,5 @@ cargo clean
 cargo build
 cargo build --release
 
-# Get back to libs.
-cd ..
+# Get back to where we were.
+popd
