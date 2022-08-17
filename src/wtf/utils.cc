@@ -324,6 +324,18 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
     }
   }
 
+  //
+  // Warn the user if there has been no coverage breakpoint found. This usually
+  // means that the user didn't add .cov file in the coverage folder/
+  //
+
+  if (CovBreakpoints.size() == 0) {
+    fmt::print("/!\\ No code-coverage breakpoint was found. This probably "
+               "means that you do not have any .cov files in {}, or that the "
+               "files are not formatted properly.",
+               CovFilesDir);
+  }
+
   return CovBreakpoints;
 }
 
