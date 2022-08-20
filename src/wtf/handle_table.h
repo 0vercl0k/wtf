@@ -53,7 +53,7 @@ public:
   // downwards.
   //
 
-  static const uint64_t LastGuestHandle = 0x7ffffffffffffffeULL;
+  static const uint64_t LastGuestHandle = 0x7ffffffeULL;
 
   //
   // ctor.
