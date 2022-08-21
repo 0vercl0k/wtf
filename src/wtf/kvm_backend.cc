@@ -2311,7 +2311,7 @@ bool KvmBackend_t::SetCoverageBps() {
   if (CoveragePath_.empty() || !fs::exists(CoveragePath_)) {
     fmt::print("/!\\ You either haven't specified a directory where to find "
                "the code-coverage breakpoints or it doesn't exist on the "
-               "filesystem ({}).",
+               "filesystem ('{}').\n",
                CoveragePath_.string());
     return true;
   }
