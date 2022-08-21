@@ -12,7 +12,7 @@
 
 using DecisionHandler_t = bool (*)(const std::u16string &Path);
 
-class FsHandleTable_t : public Restorable {
+class FsHandleTable_t : public Restorable_t {
   std::unordered_map<std::u16string, GuestFile_t *> TrackedGuestFiles_;
   std::unordered_map<std::u16string, GuestFile_t *> SavedTrackedGuestFiles_;
   std::unordered_map<HANDLE, GuestFile_t *> GuestFiles_;

@@ -192,7 +192,7 @@ class WhvBackend_t : public Backend_t {
   uint64_t TestcaseBufferSize_ = 0;
 
   //
-  // This is the path where we find mesos files.
+  // This is the path where we find coverage files.
   //
 
   fs::path CoveragePath_;

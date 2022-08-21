@@ -141,6 +141,17 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   }
 
   //
+  // Turn on kernel IRQCHIP.
+  //
+
+  Hr = SetPartitionProperty(WHvPartitionPropertyCodeLocalApicEmulationMode,
+                            WHvX64LocalApicEmulationModeXApic);
+  if (FAILED(Hr)) {
+    fmt::print("Failed SetPartitionProperty/LocalApicEmulationMode\n");
+    return false;
+  }
+
+  //
   // Configure the exit bitmap with the event we want to VM-exit on.
   //
 
@@ -259,6 +270,12 @@ WhvBackend_t::SetPartitionProperty(
 
   case WHvPartitionPropertyCodeExceptionExitBitmap: {
     Property.ExceptionExitBitmap = PropertyValue;
+    break;
+  }
+
+  case WHvPartitionPropertyCodeLocalApicEmulationMode: {
+    Property.LocalApicEmulationMode =
+        WHV_X64_LOCAL_APIC_EMULATION_MODE(PropertyValue);
     break;
   }
 
@@ -488,6 +505,10 @@ bool WhvBackend_t::SetCoverageBps() {
   //
 
   if (CoveragePath_.empty() || !fs::exists(CoveragePath_)) {
+    fmt::print("/!\\ You either haven't specified a directory where to find "
+               "the code-coverage breakpoints or it doesn't exist on the "
+               "filesystem ({}).",
+               CoveragePath_.string());
     return true;
   }
 

@@ -17,7 +17,7 @@
 #define HandleTableDebugPrint(Format, ...) /* nuthin */
 #endif
 
-class HandleTable_t : public Restorable {
+class HandleTable_t : public Restorable_t {
   uint64_t LatestGuestHandle_;
   uint64_t SavedLatestGuestHandle_;
 
