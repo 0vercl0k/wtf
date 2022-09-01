@@ -1,12 +1,12 @@
-#Output a module coverage file for wtf to %USERPROFILE%/ghidra_scripts
+#Output a module coverage file for wtf
 #@author huwwp
 #@category fuzzing
 
 from ghidra.program.model.block import BasicBlockModel
 import json
-import os
 
 program = getCurrentProgram()
+output_path = program.getExecutablePath().rsplit("/",1)[0]
 program_name = program.getName().rsplit(".",1)[0]
 base_address = program.getImageBase().getOffset()
 block_iterator = BasicBlockModel(program).getCodeBlocks(monitor)
@@ -23,7 +23,6 @@ json_object = {
 	'addresses': address_list
 }
 
-file = open(os.environ['USERPROFILE'] + "/ghidra_scripts/" + program_name + ".cov", "w")
+file = open(output_path + "/" + program_name + ".cov", "w")
 json.dump(json_object, file)
 file.close()
-"""
