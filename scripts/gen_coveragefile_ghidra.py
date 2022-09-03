@@ -19,8 +19,8 @@ while block:
     block = block_iterator.next()
 
 json_object = {
-	'name': program_name,
-	'addresses': address_list
+    'name': program_name,
+    'addresses': address_list
 }
 
 file = open(output_path + "/" + program_name + ".cov", "w")
