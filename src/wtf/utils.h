@@ -223,7 +223,8 @@ public:
   }
 };
 
-const uint64_t _1MB = Page::Size * Page::Size;
+const uint64_t _1KB = 1024;
+const uint64_t _1MB = _1KB * _1KB;
 
 //
 // Decodes an encoded pointer like ntdll does it.
