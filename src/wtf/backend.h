@@ -87,6 +87,52 @@ union MMPTE_HARDWARE {
   }
 };
 
+
+union MMPTE_SOFTWARE {
+  struct {
+    uint64_t Present : 1;
+    uint64_t PageFileReserved : 1;
+    uint64_t PageFileAllocated : 1;
+    uint64_t ColdPage : 1;
+    uint64_t SwizzleBit : 1;
+    uint64_t Protection : 5;
+    uint64_t Prototype : 1;
+    uint64_t Transition : 1;
+    uint64_t PageFileLow : 4;
+    uint64_t UsedPageTableEntries : 10;
+    uint64_t ShadowStack : 1;
+    uint64_t Unused : 5;
+    uint64_t PageFileHigh : 32;
+  };
+  uint64_t AsUINT64;
+  MMPTE_SOFTWARE(const uint64_t Value) : AsUINT64(Value) {}
+};
+
+union MMPTE_PROTOTYPE {
+  struct {
+    uint64_t Present : 1;
+    uint64_t DemandFillProto : 1;
+    uint64_t HiberVerifyConverted : 1;
+    uint64_t ReadOnly : 1;
+    uint64_t SwizzleBit : 1;
+    uint64_t Protection : 5;
+    uint64_t Prototype : 1;
+    uint64_t Combined : 1;
+    uint64_t Unused : 4;
+    uint64_t ProtoAddress : 48;
+  };
+  uint64_t AsUINT64;
+  MMPTE_PROTOTYPE(const uint64_t Value) : AsUINT64(Value) {}
+};
+
+union MMPTE {
+    MMPTE_HARDWARE hard;
+    MMPTE_SOFTWARE soft;
+    MMPTE_PROTOTYPE proto;
+    uint64_t AsUINT64;
+    MMPTE(const uint64_t Value) : AsUINT64(Value) {}
+};
+
 //
 // Structure to parse a virtual address.
 //
@@ -247,6 +293,13 @@ public:
 
   virtual bool VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
                              const MemoryValidate_t Validate) const = 0;
+
+  //
+  // GVA->GPA translation with page fault insertion if needed.
+  //
+
+  virtual bool VirtTranslateWithPF(const Gva_t Gva, Gpa_t &Gpa,
+                                   const MemoryValidate_t Validate) = 0;
 
   //
   // GPA->HVA translation.

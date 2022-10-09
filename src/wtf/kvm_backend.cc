@@ -1882,7 +1882,7 @@ bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
 bool KvmBackend_t::SetBreakpoint(const Gva_t Gva,
                                  const BreakpointHandler_t Handler) {
   Gpa_t Gpa;
-  if (!VirtTranslate(Gva, Gpa, MemoryValidate_t::ValidateRead)) {
+  if (!VirtTranslateWithPF(Gva, Gpa, MemoryValidate_t::ValidateRead)) {
     return false;
   }
 
@@ -1985,8 +1985,8 @@ bool KvmBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
     return true;
   }
 
-  const Gpa_t PteGpa = Gpa_t(PtBase + GuestAddress.PtIndex * 8);
-  const MMPTE_HARDWARE Pte = PhysRead8(PteGpa);
+  Gpa_t PteGpa = Gpa_t(PtBase + GuestAddress.PtIndex * 8);
+  MMPTE_HARDWARE Pte = PhysRead8(PteGpa);
   if (!Pte.Present) {
     return false;
   }
@@ -1994,6 +1994,266 @@ bool KvmBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
   const uint64_t PageBase = Pte.PageFrameNumber * 0x1000;
   Gpa = Gpa_t(PageBase + GuestAddress.Offset);
   return true;
+}
+
+union _LARGE_INTEGER vad_starting(const struct _MMVAD_SHORT vad)
+{
+  union _LARGE_INTEGER ret;
+  ret.u.LowPart  = vad.StartingVpn;
+  ret.u.HighPart = vad.StartingVpnHigh;
+  return ret;
+}
+
+union _LARGE_INTEGER vad_ending(const struct _MMVAD_SHORT vad)
+{
+  union _LARGE_INTEGER ret;
+  ret.u.LowPart  = vad.EndingVpn;
+  ret.u.HighPart = vad.EndingVpnHigh;
+  return ret;
+}
+
+bool KvmBackend_t::read_vad(vad_t& vad, uint64_t current_vad) {
+  struct _MMVAD_SHORT temp_vad;
+
+  Gpa_t Gpa_current_vad;
+  if (!KvmBackend_t::VirtTranslate(Gva_t(current_vad), Gpa_current_vad, MemoryValidate_t::ValidateRead)) {
+    fmt::print("read_vad: cannot translate Gpa_current_vad\n");
+    return false;
+  }
+  if (!KvmBackend_t::PhysRead(Gpa_current_vad, (uint8_t *)&temp_vad, sizeof(temp_vad))) {
+    fmt::print("read_vad: Cannot read temp_vad");
+    return false;
+  }
+
+  vad.Left        = temp_vad.VadNode.Left;
+  vad.Right       = temp_vad.VadNode.Right;
+  vad.StartingVpn = vad_starting(temp_vad).QuadPart;
+  vad.EndingVpn   = vad_ending(temp_vad).QuadPart;
+
+  return true;
+}
+
+uint64_t KvmBackend_t::get_mmvad(uint64_t vad_ptr, const uint64_t addr) {
+  struct vad_t vad;
+  
+  while (vad_ptr) {
+    if (!read_vad(vad, vad_ptr)) {
+      return 0;
+    }
+
+    if (vad.StartingVpn <= addr && addr <= vad.EndingVpn) {
+      return vad_ptr;
+    }
+
+    vad_ptr = addr <= vad.StartingVpn ? vad.Left : vad.Right;
+  }
+
+  return 0;
+}
+
+struct span_t  KvmBackend_t::get_vad_span(uint64_t current_vad) {
+  struct vad_t vad;
+  
+  if (!read_vad(vad, current_vad)) {
+    return {};
+  }
+
+  return span_t{vad.StartingVpn << 12, ((vad.EndingVpn - vad.StartingVpn) + 1) << 12};
+}
+
+Gpa_t KvmBackend_t::PhysicalPage(uint64_t pfn, uint64_t offset) {
+   const uint64_t PageBase = pfn * 0x1000;
+   return Gpa_t(PageBase + offset);
+}
+
+void KvmBackend_t::UnSwizzlePte(MMPTE &Pte) {
+   if (!Pte.soft.SwizzleBit) {
+      Pte.AsUINT64 &= ~0x2e; // nt!KiImplementedPhysicalBits value (TODO get by symbol)
+    }
+}
+
+bool KvmBackend_t::PrototypePteToPhysical(MMPTE Pte, const VIRTUAL_ADDRESS GuestAddress, Gpa_t &Gpa) { 
+  
+  // printf("  --> Pte Value: %lx\n", Pte.AsUINT64);
+  if (Pte.hard.Present) {
+    Gpa = PhysicalPage(Pte.hard.PageFrameNumber, GuestAddress.Offset);
+    return true;
+  }
+
+  UnSwizzlePte(Pte);
+
+  if (Pte.soft.Prototype) {
+    fmt::print("PrototypePteToPhysical: Cannot get pte --> prototype\n");
+    return false;
+  }
+
+  if (Pte.soft.Transition) {
+    Gpa = PhysicalPage(Pte.hard.PageFrameNumber, GuestAddress.Offset);
+    return true;
+  }
+
+  if (Pte.soft.PageFileHigh) {
+    fmt::print("PrototypePteToPhysical: Cannot get pte --> TODO PageFileHigh\n");
+    return false;
+  }
+
+  fmt::print("PrototypePteToPhysical: Cannot get pte\n");
+  return false;
+}
+
+bool KvmBackend_t::VadPteToPhysical(const VIRTUAL_ADDRESS GuestAddress, Gpa_t &Gpa) {
+  
+  if (GuestAddress.AsUINT64 & 0xFFF0000000000000)
+  {
+    fmt::print("VadPteToPhysical: Kernel Addr\n");
+    return false;
+  }
+
+  // Read VAD Root
+  // * Get EPROCESS
+  //   * Get GS BASE
+  uint64_t _KPCR = GetMsr(MSR_IA32_KERNEL_GS_BASE);
+  //printf("_KPCR: %lx\n", _KPCR);
+
+  //   * Get KTHREAD
+  uint64_t CurrentThread = VirtRead8(Gva_t(_KPCR + 0x188));
+  if (!CurrentThread) {
+    fmt::print("VadPteToPhysical: Cannot get CurrentThread\n");
+    return false;
+  }
+
+  //   * Get KPROCESS (=EPROCESS)
+  uint64_t CurrentProcess = VirtRead8(Gva_t(CurrentThread + 0x220));
+  if (!CurrentProcess) {
+    fmt::print("VadPteToPhysical: Cannot get CurrentProcess\n");
+    return false;
+  }
+
+  uint64_t vadRoot = VirtRead8(Gva_t(CurrentProcess + 0x7d8));
+  if (!vadRoot) {
+    fmt::print("VadPteToPhysical: Cannot get vadRoot\n");
+    return false;
+  }
+
+  // printf("Found vad root: %lx\n", vadRoot);
+
+  // Get VAD
+  uint64_t vad = get_mmvad(vadRoot, GuestAddress.AsUINT64 >> 12);
+
+  // printf("  Found vad: %lx\n", vad);
+
+  // Get VAD SPAN
+  struct span_t area_span = get_vad_span(vad);
+
+  uint64_t first_proto_pte = VirtRead8(Gva_t(vad + 0x050));
+  if (!first_proto_pte) {
+    fmt::print("VadPteToPhysical: Cannot get first_proto_pte\n");
+    return false;
+  }
+
+  // printf("  Found first_proto_pte: %lx\n", first_proto_pte);
+
+  uint64_t pte_ptr = first_proto_pte + ((GuestAddress.AsUINT64 - area_span.addr) / 4096) * sizeof (MMPTE_HARDWARE);
+
+  MMPTE Pte = VirtRead8(Gva_t(pte_ptr));
+
+  // printf("  VAD: Found PTE Ptr: %lx\n", pte_ptr);
+
+  return PrototypePteToPhysical(Pte, GuestAddress, Gpa);
+}
+
+bool KvmBackend_t::PteToPhysical(MMPTE Pte, const VIRTUAL_ADDRESS GuestAddress, Gpa_t &Gpa) {
+
+  if (Pte.hard.Present) {
+    Gpa = PhysicalPage(Pte.hard.PageFrameNumber, GuestAddress.Offset);
+    return true;
+  }
+
+  UnSwizzlePte(Pte);
+
+  if (Pte.soft.Prototype) {
+    const uint64_t vad_mask = 0xFFFFFFFF00000000;
+    if ((Pte.proto.ProtoAddress & vad_mask) == vad_mask) {
+      fmt::print("PteToPhysical: Cannot get pte --> VAD prototype\n");
+      return false;
+    }
+
+    MMPTE ProtoPte = VirtRead8(Gva_t(Pte.proto.ProtoAddress));
+
+    return PrototypePteToPhysical(ProtoPte, GuestAddress, Gpa);
+  }
+  
+  if (Pte.soft.Transition) {
+    Gpa = PhysicalPage(Pte.hard.PageFrameNumber, GuestAddress.Offset);
+    return true;
+  }
+
+  if (!Pte.AsUINT64) {
+    // printf("  VAD for %lx\n", GuestAddress.AsUINT64);
+    return VadPteToPhysical(GuestAddress, Gpa);
+  }
+
+  fmt::print("PteToPhysical: Cannot get pte\n");
+  return false;
+}
+
+// Page fault insertion not working: Windows SOFT MMU translation for the moment
+
+bool KvmBackend_t::VirtTranslateWithPF(const Gva_t Gva, Gpa_t &Gpa,
+                                 const MemoryValidate_t Validate) {
+
+  const VIRTUAL_ADDRESS GuestAddress = Gva.U64();
+  const MMPTE_HARDWARE Pml4 = Run_->s.regs.sregs.cr3;
+  const uint64_t Pml4Base = Pml4.PageFrameNumber * Page::Size;
+  const Gpa_t Pml4eGpa = Gpa_t(Pml4Base + GuestAddress.Pml4Index * 8);
+  const MMPTE_HARDWARE Pml4e = PhysRead8(Pml4eGpa);
+  if (!Pml4e.Present) {
+    return false;
+  }
+
+  const uint64_t PdptBase = Pml4e.PageFrameNumber * Page::Size;
+  const Gpa_t PdpteGpa = Gpa_t(PdptBase + GuestAddress.PdPtIndex * 8);
+  const MMPTE_HARDWARE Pdpte = PhysRead8(PdpteGpa);
+  if (!Pdpte.Present) {
+    return false;
+  }
+
+  //
+  // huge pages:
+  // 7 (PS) - Page size; must be 1 (otherwise, this entry references a page
+  // directory; see Table 4-1
+  //
+
+  const uint64_t PdBase = Pdpte.PageFrameNumber * Page::Size;
+  if (Pdpte.LargePage) {
+    Gpa = Gpa_t(PdBase + (Gva.U64() & 0x3fff'ffff));
+    return true;
+  }
+
+  const Gpa_t PdeGpa = Gpa_t(PdBase + GuestAddress.PdIndex * 8);
+  const MMPTE_HARDWARE Pde = PhysRead8(PdeGpa);
+  if (!Pde.Present) {
+    return false;
+  }
+
+  //
+  // large pages:
+  // 7 (PS) - Page size; must be 1 (otherwise, this entry references a page
+  // table; see Table 4-18
+  //
+
+  const uint64_t PtBase = Pde.PageFrameNumber * Page::Size;
+  if (Pde.LargePage) {
+    Gpa = Gpa_t(PtBase + (Gva.U64() & 0x1f'ffff));
+    return true;
+  }
+
+  Gpa_t PteGpa = Gpa_t(PtBase + GuestAddress.PtIndex * 8);
+  MMPTE Pte = PhysRead8(PteGpa);
+
+  bool ret = PteToPhysical(Pte, GuestAddress, Gpa);
+
+  return ret;
 }
 
 uint8_t *KvmBackend_t::PhysTranslate(const Gpa_t Gpa) const {
@@ -2037,6 +2297,22 @@ bool KvmBackend_t::PageFaultsMemoryIfNeeded(const Gva_t Gva,
                                    .error_code = ErrorWrite | ErrorUser};
 
   Run_->kvm_dirty_regs |= KVM_SYNC_X86_SREGS | KVM_SYNC_X86_EVENTS;
+
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  // Immediatly execute pagefault
+  Gpa_t Gpa;
+  if (!VirtTranslate(Gva_t(Run_->s.regs.regs.rip), Gpa,
+                     MemoryValidate_t::ValidateRead)) {
+    fmt::print("Failed to translate RIP, pf not executed!\n");
+    return true;
+  }
+  Ram_.AddBreakpoint(Gpa);
+
+  const int Ret = ioctl(Vp_, KVM_RUN, nullptr);
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  fmt::print("Return after breakpoint\n");
+
+
   return true;
 }
 

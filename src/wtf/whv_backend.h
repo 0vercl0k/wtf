@@ -295,6 +295,9 @@ public:
   bool VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
                      const MemoryValidate_t Validate) const override;
 
+ bool VirtTranslateWithPF(const Gva_t Gva, Gpa_t &Gpa,
+                          const MemoryValidate_t Validate) override;
+
   uint8_t *PhysTranslate(const Gpa_t Gpa) const override;
 
   bool PageFaultsMemoryIfNeeded(const Gva_t Gva, const uint64_t Size) override;

@@ -747,6 +747,11 @@ bool WhvBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
   return TranslationResult.ResultCode == WHvTranslateGvaResultSuccess;
 }
 
+bool WhvBackend_t::VirtTranslateWithPF(const Gva_t Gva, Gpa_t &Gpa,
+                                       const MemoryValidate_t Validate) {
+    return WhvBackend_t::VirtTranslate(Gva, Gpa, Validate);
+}
+
 bool WhvBackend_t::PhysRead(const Gpa_t Gpa, uint8_t *Buffer,
                             const uint64_t BufferSize) const {
   const uint8_t *Src = PhysTranslate(Gpa);

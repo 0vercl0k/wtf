@@ -792,6 +792,11 @@ bool BochscpuBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
   return Gpa != Gpa_t(0xffffffffffffffff);
 }
 
+bool BochscpuBackend_t::VirtTranslateWithPF(const Gva_t Gva, Gpa_t &Gpa,
+                                            const MemoryValidate_t Validate) {
+    return BochscpuBackend_t::VirtTranslate(Gva, Gpa, Validate);
+}
+
 uint8_t *BochscpuBackend_t::PhysTranslate(const Gpa_t Gpa) const {
   return bochscpu_mem_phy_translate(Gpa.U64());
 }

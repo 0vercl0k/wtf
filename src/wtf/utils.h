@@ -246,7 +246,7 @@ const uint64_t _1MB = _1KB * _1KB;
 //
 
 [[nodiscard]] std::optional<tsl::robin_map<Gva_t, Gpa_t>>
-ParseCovFiles(const Backend_t &Backend, const fs::path &CovBreakpointFile);
+ParseCovFiles(Backend_t &Backend, const fs::path &CovBreakpointFile);
 
 //
 // Save a file on disk.

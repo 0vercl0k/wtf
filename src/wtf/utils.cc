@@ -273,7 +273,7 @@ std::string u16stringToString(const std::u16string &S) {
 }
 
 std::optional<tsl::robin_map<Gva_t, Gpa_t>>
-ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
+ParseCovFiles(Backend_t &Backend, const fs::path &CovFilesDir) {
   tsl::robin_map<Gva_t, Gpa_t> CovBreakpoints;
 
   //
@@ -312,7 +312,7 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
       //
 
       Gpa_t Gpa;
-      const bool Translate = Backend.VirtTranslate(
+      const bool Translate = Backend.VirtTranslateWithPF(
           Gva, Gpa, MemoryValidate_t::ValidateReadExecute);
 
       if (!Translate) {

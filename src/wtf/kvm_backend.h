@@ -106,6 +106,48 @@ struct KvmMemoryRegion_t {
   }
 };
 
+struct vad_t {
+  uintptr_t Left;
+  uintptr_t Right;
+  uint64_t  StartingVpn;
+  uint64_t  EndingVpn;
+};
+
+struct _RTL_BALANCED_NODE {
+  uintptr_t  Left;
+  uintptr_t  Right;
+  uintptr_t  ParentValue;
+};
+
+struct _MMVAD_SHORT // Win10
+{
+  _RTL_BALANCED_NODE VadNode;
+  uint32_t           StartingVpn;
+  uint32_t           EndingVpn;
+  uint8_t            StartingVpnHigh;
+  uint8_t            EndingVpnHigh;
+  uint8_t            CommitChargeHigh;
+  uint8_t            SpareNT64VadUChar;
+  uint32_t           ReferenceCount;
+  uintptr_t          PushLock;
+  uint32_t           VadFlags;
+  uint32_t           _;
+  // truncated
+};
+
+union _LARGE_INTEGER {
+  struct {
+    uint32_t LowPart;
+    uint32_t HighPart;
+  } u;
+  uint64_t QuadPart;
+};
+
+struct span_t {
+  uint64_t addr;
+  size_t   size;
+};
+
 class KvmBackend_t : public Backend_t {
 private:
   //
@@ -289,6 +331,22 @@ private:
 
   Gpa_t LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
 
+  uint64_t get_mmvad(uint64_t vad_ptr, const uint64_t addr);
+
+  bool read_vad(vad_t& vad, uint64_t current_vad);
+
+  struct span_t get_vad_span(uint64_t current_vad);
+
+  Gpa_t PhysicalPage(uint64_t pfn, uint64_t offset);
+
+  void UnSwizzlePte(MMPTE &Pte);
+
+  bool PrototypePteToPhysical(MMPTE Pte, const VIRTUAL_ADDRESS GuestAddress, Gpa_t &Gpa);
+
+  bool PteToPhysical(MMPTE Pte, const VIRTUAL_ADDRESS GuestAddress, Gpa_t &Gpa);
+
+  bool VadPteToPhysical(const VIRTUAL_ADDRESS GuestAddress, Gpa_t &Gpa);
+
 public:
   //
   // Ctor / Dtor.
@@ -383,6 +441,13 @@ public:
 
   bool VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
                      const MemoryValidate_t Validate) const override;
+
+  //
+  // GVA->GPA translation with page fault insertion if needed.
+  //
+
+  bool VirtTranslateWithPF(const Gva_t Gva, Gpa_t &Gpa,
+                           const MemoryValidate_t Validate) override;
 
   //
   // GPA->HVA translation.
