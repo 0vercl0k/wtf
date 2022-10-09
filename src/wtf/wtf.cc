@@ -293,6 +293,10 @@ int main(int argc, const char *argv[]) {
       ->description("Execution backend.")
       ->required();
 
+  FuzzCmd->add_flag(
+      "--edges", Opts.Fuzz.Edges,
+      "Use edges instead of RIP for signal (applies only to Bochscpu)");
+
   FuzzCmd->add_option("--name", Opts.TargetName, "Target name")
       ->description("Name of the target fuzzer.")
       ->required();

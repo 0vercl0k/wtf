@@ -274,6 +274,8 @@ public:
 
   void BeforeExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
 
+  void BeforeExecutionHookNoCover(/*void *Context, */ uint32_t Id, void *Ins);
+
   void LinAccessHook(/*void *Context, */ uint32_t Id, uint64_t VirtualAddress,
                      uint64_t PhysicalAddress, uintptr_t Len, uint32_t MemType,
                      uint32_t MemAccess);
@@ -290,6 +292,9 @@ public:
                   const uint8_t *Opcode, uintptr_t Len, bool Is32, bool Is64);
 
   void OpcodeHlt(/*void *Context, */ uint32_t Cpu);
+
+  void RecordEdge(/*void *Context, */ uint32_t Cpu, uint64_t Rip,
+                  uint64_t NextRip);
 
 private:
   //

@@ -1189,6 +1189,13 @@ enum class BackendType_t { Bochscpu, Whv, Kvm };
 
 struct FuzzOptions_t {
   //
+  // Use edges instead of RIP for signal
+  // only available with Bochscpu, has no effect with other backends
+  //
+
+  bool Edges = false;
+
+  //
   // Path to the target folder.
   //
 

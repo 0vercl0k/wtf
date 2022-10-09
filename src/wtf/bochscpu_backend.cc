@@ -131,6 +131,16 @@ void StaticBeforeExecutionHook(void *Context, uint32_t Id, void *Ins) {
       Id, Ins);
 }
 
+void StaticBeforeExecutionHookNoCover(void *Context, uint32_t Id, void *Ins) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  return reinterpret_cast<BochscpuBackend_t *>(Context)
+      ->BeforeExecutionHookNoCover(Id, Ins);
+}
+
 void StaticLinAccessHook(void *Context, uint32_t Id, uint64_t VirtualAddress,
                          uint64_t PhysicalAddress, uintptr_t Len,
                          uint32_t MemType, uint32_t MemAccess) {
@@ -195,6 +205,31 @@ void StaticHltHook(void *Context, uint32_t Cpu) {
   reinterpret_cast<BochscpuBackend_t *>(Context)->OpcodeHlt(Cpu);
 }
 
+void StaticUcNearBranch(void *Context, uint32_t Cpu, uint32_t What,
+                        uint64_t Rip, uint64_t NextRip) {
+
+  if ((What == 11) || (What == 13)) {
+    // Only on BX_INSTR_IS_JMP_INDIRECT or BX_INSTR_IS_CALL_INDIRECT
+
+    //
+    // Invoking the member function now.
+    //
+
+    reinterpret_cast<BochscpuBackend_t *>(Context)->RecordEdge(Cpu, Rip,
+                                                               NextRip);
+  }
+}
+
+void StaticCNearBranch(void *Context, uint32_t Cpu, uint64_t Rip,
+                       uint64_t NextRip) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->RecordEdge(Cpu, Rip, NextRip);
+}
+
 BochscpuBackend_t::BochscpuBackend_t() {
 
   //
@@ -230,7 +265,6 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
 
   Hooks_.ctx = this;
   Hooks_.after_execution = StaticAfterExecutionHook;
-  Hooks_.before_execution = StaticBeforeExecutionHook;
   Hooks_.lin_access = StaticLinAccessHook;
   Hooks_.interrupt = StaticInterruptHook;
   Hooks_.exception = StaticExceptionHook;
@@ -238,6 +272,16 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
   Hooks_.tlb_cntrl = StaticTlbControlHook;
   Hooks_.hlt = StaticHltHook;
   // Hooks_.opcode = StaticOpcodeHook;
+
+  // Edge hooks
+  if (Opts.Fuzz.Edges) {
+    Hooks_.before_execution = StaticBeforeExecutionHookNoCover;
+    Hooks_.cnear_branch_taken = StaticCNearBranch;
+    Hooks_.cnear_branch_not_taken = StaticCNearBranch;
+    Hooks_.ucnear_branch = StaticUcNearBranch;
+  } else {
+    Hooks_.before_execution = StaticBeforeExecutionHook;
+  }
 
   //
   // Initialize the hook chain with only one set of hooks.
@@ -475,6 +519,20 @@ __declspec(safebuffers)
   }
 }
 
+void BochscpuBackend_t::BeforeExecutionHookNoCover(
+    /*void *Context, */ uint32_t, void *) {
+
+  //
+  // Grab the rip register off the cpu.
+  //
+
+  const Gva_t Rip = Gva_t(bochscpu_cpu_rip(Cpu_));
+
+  if (Breakpoints_.contains(Rip)) {
+    Breakpoints_.at(Rip)(this);
+  }
+}
+
 void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
                                       uint64_t VirtualAddress,
                                       uint64_t PhysicalAddress, uintptr_t Len,
@@ -622,6 +680,29 @@ void BochscpuBackend_t::OpcodeHlt(/*void *Context, */ uint32_t) {
   fmt::print("Stopping the cpu.\n");
   TestcaseResult_ = Crash_t();
   bochscpu_cpu_stop(Cpu_);
+}
+
+void BochscpuBackend_t::RecordEdge(/*void *Context, */ uint32_t Cpu,
+                                   uint64_t Rip, uint64_t NextRip) {
+
+  uint64_t edge = Rip;
+
+  // splitmix64 Rip
+  // might be overkill, a single shift is probably sufficient to avoid
+  // collisions
+  edge ^= edge >> 30;
+  edge *= 0xbf58476d1ce4e5b9U;
+  edge ^= edge >> 27;
+  edge *= 0x94d049bb133111ebU;
+  edge ^= edge >> 31;
+
+  // XOR with next Rip
+  edge ^= NextRip;
+
+  const auto &Res = AggregatedCodeCoverage_.emplace(edge);
+  if (Res.second) {
+    LastNewCoverage_.emplace(edge);
+  }
 }
 
 bool BochscpuBackend_t::Restore(const CpuState_t &CpuState) {
