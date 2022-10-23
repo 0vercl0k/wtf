@@ -18,6 +18,8 @@ struct BochscpuRunStats_t {
   uint64_t NumberMemoryAccesses = 0;
   uint64_t AggregatedCodeCoverage = 0;
   uint64_t DirtyGpas = 0;
+  uint64_t NumberEdges = 0;
+  uint64_t NumberUniqueEdges = 0;
 
   void Print() const {
     fmt::print("--------------------------------------------------\n");
@@ -31,11 +33,15 @@ struct BochscpuRunStats_t {
     const uint64_t MemoryAccessMb = NumberMemoryAccesses / _1MB;
     fmt::print("      Memory accesses: {} bytes ({} MB)\n",
                NumberMemoryAccesses, MemoryAccessMb);
+    fmt::print("       Edges executed: {} ({} unique)\n", NumberEdges,
+               NumberUniqueEdges);
   }
 
   void Reset() {
     NumberInstructionsExecuted = 0;
     NumberMemoryAccesses = 0;
+    NumberEdges = 0;
+    NumberUniqueEdges = 0;
   }
 };
 
@@ -273,8 +279,6 @@ public:
   void AfterExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
 
   void BeforeExecutionHook(/*void *Context, */ uint32_t Id, void *Ins);
-
-  void BeforeExecutionHookNoCover(/*void *Context, */ uint32_t Id, void *Ins);
 
   void LinAccessHook(/*void *Context, */ uint32_t Id, uint64_t VirtualAddress,
                      uint64_t PhysicalAddress, uintptr_t Len, uint32_t MemType,

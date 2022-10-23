@@ -1188,12 +1188,6 @@ enum class TraceType_t {
 enum class BackendType_t { Bochscpu, Whv, Kvm };
 
 struct FuzzOptions_t {
-  //
-  // Use edges instead of RIP for signal
-  // only available with Bochscpu, has no effect with other backends
-  //
-
-  bool Edges = false;
 
   //
   // Path to the target folder.
@@ -1364,6 +1358,12 @@ struct Options_t {
   //
 
   fs::path CoveragePath;
+
+  //
+  // Use edge coverage (only with bxcpu).
+  //
+
+  bool Edges = false;
 
   //
   // Options for the subcommand 'run'.

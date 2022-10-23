@@ -138,6 +138,16 @@ int main(int argc, const char *argv[]) {
           throw new CLI::ParseError("state", EXIT_FAILURE);
         }
 
+        //
+        // Ensure that if the 'edge' mode is turned on, the bxcpu is used.
+        //
+
+        if (Opts.Edges && Opts.Backend != BackendType_t::Bochscpu) {
+          fmt::print(
+              "Edge coverage is only available with the bxcpu backend.\n");
+          throw new CLI::ParseError("edge", EXIT_FAILURE);
+        }
+
 #ifdef LINUX
         if (!std::filesystem::exists(Opts.SymbolFilePath)) {
           fmt::print(
@@ -228,6 +238,10 @@ int main(int argc, const char *argv[]) {
       ->check(CLI::ExistingDirectory)
       ->description("Directory where all the coverage files are stored in.");
 
+  RunCmd->add_flag("--edges", Opts.Edges, "Edge coverage")
+      ->default_val(false)
+      ->description("Turn on edge coverage (bxcpu only).");
+
   RunCmd->add_option("--runs", Opts.Run.Runs, "Runs")
       ->description("Number of mutations done.")
       ->default_val(1);
@@ -272,6 +286,16 @@ int main(int argc, const char *argv[]) {
           throw new CLI::ParseError("target", EXIT_FAILURE);
         }
 
+        //
+        // Ensure that if the 'edge' mode is turned on, the bxcpu is used.
+        //
+
+        if (Opts.Edges && Opts.Backend != BackendType_t::Bochscpu) {
+          fmt::print(
+              "Edge coverage is only available with the bxcpu backend.\n");
+          throw new CLI::ParseError("edge", EXIT_FAILURE);
+        }
+
         if (Opts.Fuzz.Seed == 0) {
           std::random_device R;
           Opts.Fuzz.Seed = (uint64_t(R()) << 32) | R();
@@ -293,9 +317,9 @@ int main(int argc, const char *argv[]) {
       ->description("Execution backend.")
       ->required();
 
-  FuzzCmd->add_flag(
-      "--edges", Opts.Fuzz.Edges,
-      "Use edges instead of RIP for signal (applies only to Bochscpu)");
+  FuzzCmd->add_flag("--edges", Opts.Edges, "Edge coverage")
+      ->default_val(false)
+      ->description("Turn on edge coverage (bxcpu only).");
 
   FuzzCmd->add_option("--name", Opts.TargetName, "Target name")
       ->description("Name of the target fuzzer.")
