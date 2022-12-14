@@ -336,7 +336,7 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
                CovFilesDir.string());
   }
 
-  return std::move(CovBreakpoints);
+  return CovBreakpoints;
 }
 
 std::optional<bool> SaveFile(const fs::path &Path, const uint8_t *Buffer,
