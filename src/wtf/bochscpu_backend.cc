@@ -197,11 +197,8 @@ void StaticHltHook(void *Context, uint32_t Cpu) {
 
 void StaticUcNearBranchHook(void *Context, uint32_t Cpu, uint32_t What,
                             uint64_t Rip, uint64_t NextRip) {
-
-  constexpr uint32_t BX_INSTR_IS_JMP_INDIRECT = 11;
-  constexpr uint32_t BX_INSTR_IS_CALL_INDIRECT = 13;
-  if ((What == BX_INSTR_IS_JMP_INDIRECT) ||
-      (What == BX_INSTR_IS_CALL_INDIRECT)) {
+  if ((What == BOCHSCPU_INSTR_IS_JMP_INDIRECT) ||
+      (What == BOCHSCPU_INSTR_IS_CALL_INDIRECT)) {
 
     //
     // Invoking the member function now.
