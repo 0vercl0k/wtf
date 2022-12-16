@@ -68,8 +68,7 @@ SecondsSince(const chrono::system_clock::time_point &Since);
 // Utility that is used to print seconds for human.
 //
 
-[[nodiscard]] SecondsHuman_t
-SecondsToHuman(const chrono::microseconds &Seconds);
+[[nodiscard]] SecondsHuman_t SecondsToHuman(const chrono::seconds &Seconds);
 
 //
 // Utility that is used to print bytes for human.
@@ -82,8 +81,3 @@ SecondsToHuman(const chrono::microseconds &Seconds);
 //
 
 [[nodiscard]] NumberHuman_t NumberToHuman(const uint64_t N_);
-
-#if 0
-[[nodiscard]] PercentageHuman_t Percentage(const uint64_t HowMany,
-                                           const uint64_t HowManyTotal);
-#endif

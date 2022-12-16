@@ -1,39 +1,34 @@
 // Axel '0vercl0k' Souchet - November 27 2022
 #include "human.h"
 
-[[nodiscard]] chrono::microseconds
-MicroSecondsSince(const chrono::system_clock::time_point &Since) {
+[[nodiscard]] chrono::seconds
+SecondsSince(const chrono::system_clock::time_point &Since) {
   const auto &Now = chrono::system_clock::now();
-  return chrono::duration_cast<chrono::microseconds>(Now - Since);
+  return chrono::duration_cast<chrono::seconds>(Now - Since);
 }
 
 //
 // Utility that is used to print microseconds for human.
 //
 
-[[nodiscard]] SecondsHuman_t
-SecondsToHuman(const chrono::microseconds &Micros) {
-  const char *Unit = "us";
-  double MicrosNumber = double(Micros.count());
-  const double S = 1'000'000;
-  const double M = S * 60;
+[[nodiscard]] SecondsHuman_t SecondsToHuman(const chrono::seconds &Seconds) {
+  const char *Unit = "s";
+  double SecondNumber = double(Seconds.count());
+  const double M = 60;
   const double H = M * 60;
   const double D = H * 24;
-  if (MicrosNumber >= D) {
+  if (SecondNumber >= D) {
     Unit = "d";
-    MicrosNumber /= D;
-  } else if (MicrosNumber >= H) {
+    SecondNumber /= D;
+  } else if (SecondNumber >= H) {
     Unit = "hr";
-    MicrosNumber /= H;
-  } else if (MicrosNumber >= M) {
+    SecondNumber /= H;
+  } else if (SecondNumber >= M) {
     Unit = "min";
-    MicrosNumber /= M;
-  } else if (MicrosNumber >= S) {
-    Unit = "s";
-    MicrosNumber /= S;
+    SecondNumber /= M;
   }
 
-  return {MicrosNumber, Unit};
+  return {SecondNumber, Unit};
 }
 
 //
@@ -74,9 +69,4 @@ SecondsToHuman(const chrono::microseconds &Micros) {
   }
 
   return {N, Unit};
-}
-
-PercentageHuman_t Percentage(const uint64_t HowMany,
-                             const uint64_t HowManyTotal) {
-  return {uint32_t((HowMany * 100) / HowManyTotal)};
 }
