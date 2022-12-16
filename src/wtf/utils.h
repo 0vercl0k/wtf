@@ -256,33 +256,6 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovBreakpointFile);
 SaveFile(const fs::path &Path, const uint8_t *Buffer, const size_t BufferSize);
 
 //
-// Utility that calculates the number of seconds sine a time point.
-//
-
-[[nodiscard]] chrono::seconds
-SecondsSince(const chrono::system_clock::time_point &Since);
-
-//
-// Utility that is used to print seconds for human.
-//
-
-[[nodiscard]] std::pair<double, const char *>
-SecondsToHuman(const chrono::seconds &Seconds);
-
-//
-// Utility that is used to print bytes for human.
-//
-
-[[nodiscard]] std::pair<double, const char *>
-BytesToHuman(const uint64_t Bytes_);
-
-//
-// Utility that is used to print numbers for human.
-//
-
-[[nodiscard]] std::pair<double, const char *> NumberToHuman(const double N);
-
-//
 // Utility to convert an exception code to a string.
 //
 
