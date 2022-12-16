@@ -4,6 +4,7 @@
 #include "bochscpu.hpp"
 #include "debugger.h"
 #include "globals.h"
+#include "human.h"
 #include "kdmp-parser.h"
 #include "platform.h"
 #include "tsl/robin_map.h"
@@ -23,14 +24,12 @@ struct BochscpuRunStats_t {
     fmt::print("--------------------------------------------------\n");
     fmt::print("Run stats:\n");
     fmt::print("Instructions executed: {} ({} unique)\n",
-               NumberInstructionsExecuted, AggregatedCodeCoverage);
+               NumberToHuman(NumberInstructionsExecuted),
+               NumberToHuman(AggregatedCodeCoverage));
     const uint64_t DirtyMemoryBytes = DirtyGpas * Page::Size;
-    const uint64_t DirtyMemoryMb = DirtyGpas / Page::Size;
-    fmt::print("          Dirty pages: {} bytes ({} MB)\n", DirtyMemoryBytes,
-               DirtyMemoryMb);
-    const uint64_t MemoryAccessMb = NumberMemoryAccesses / _1MB;
-    fmt::print("      Memory accesses: {} bytes ({} MB)\n",
-               NumberMemoryAccesses, MemoryAccessMb);
+    fmt::print("          Dirty pages: {}\n", BytesToHuman(DirtyMemoryBytes));
+    fmt::print("      Memory accesses: {}\n",
+               BytesToHuman(NumberMemoryAccesses));
   }
 
   void Reset() {
