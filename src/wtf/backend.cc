@@ -3,6 +3,8 @@
 #include "debugger.h"
 #include "nt.h"
 #include "utils.h"
+#include <fmt/format.h>
+#include <string_view>
 
 Backend_t *g_Backend = nullptr;
 
