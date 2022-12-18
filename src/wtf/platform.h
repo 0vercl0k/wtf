@@ -18,8 +18,6 @@ using ssize_t = SSIZE_T;
 #define __builtin_bswap16 _byteswap_ushort
 #define __builtin_bswap32 _byteswap_ulong
 #define __builtin_bswap64 _byteswap_uint64
-#define aligned_alloc(a, b) _aligned_malloc(a, b)
-#define aligned_free(x) _aligned_free(x)
 #if defined ARCH_X86
 #define WINDOWS_X86
 #elif defined ARCH_X64

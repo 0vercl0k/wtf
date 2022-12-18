@@ -70,8 +70,15 @@ void StaticGpaMissingHandler(const uint64_t Gpa) {
   // (0000022ed2ae7000 + 00000738).
   //
 
-  uint8_t *Page = (uint8_t *)aligned_alloc(Page::Size, Page::Size);
+#if defined WINDOWS
+  uint8_t *Page = (uint8_t *)VirtualAlloc(
+      nullptr, Page::Size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
   if (Page == nullptr) {
+#elif defined LINUX
+  uint8_t *Page =
+      mmap(nullptr, Page::Size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
+  if (Page == (void *)-1) {
+#endif
     fmt::print("Failed to allocate memory in GpaMissingHandler.\n");
     __debugbreak();
   }
