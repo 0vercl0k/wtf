@@ -18,7 +18,7 @@ nmake
 
 REM Remove old files in bochscpu.
 rmdir /s /q ..\..\..\bochscpu\bochs
-rmdir /s /q ..\..\..\bochscpu\libs
+rmdir /s /q ..\..\..\bochscpu\lib
 
 REM Create the libs directory where we stuff all the libs.
 mkdir ..\..\..\bochscpu\lib

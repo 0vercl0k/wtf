@@ -6,6 +6,28 @@
 #include <ostream>
 #include <new>
 
+static const uint32_t BX_INSTR_IS_JMP = 10;
+
+static const uint32_t BOCHSCPU_INSTR_IS_JMP_INDIRECT = 11;
+
+static const uint32_t BOCHSCPU_INSTR_IS_CALL = 12;
+
+static const uint32_t BOCHSCPU_INSTR_IS_CALL_INDIRECT = 13;
+
+static const uint32_t BOCHSCPU_INSTR_IS_RET = 14;
+
+static const uint32_t BOCHSCPU_INSTR_IS_IRET = 15;
+
+static const uint32_t BOCHSCPU_INSTR_IS_INT = 16;
+
+static const uint32_t BOCHSCPU_INSTR_IS_SYSCALL = 17;
+
+static const uint32_t BOCHSCPU_INSTR_IS_SYSRET = 18;
+
+static const uint32_t BOCHSCPU_INSTR_IS_SYSENTER = 19;
+
+static const uint32_t BOCHSCPU_INSTR_IS_SYSEXIT = 20;
+
 static const uint32_t BOCHSCPU_HOOK_MEM_READ = 0;
 
 static const uint32_t BOCHSCPU_HOOK_MEM_WRITE = 1;
@@ -202,6 +224,8 @@ void bochscpu_cpu_stop(bochscpu_cpu_t p);
 void bochscpu_cpu_state(bochscpu_cpu_t p, bochscpu_cpu_state_t *s);
 
 void bochscpu_cpu_set_state(bochscpu_cpu_t p, const bochscpu_cpu_state_t *s);
+
+void bochscpu_cpu_set_state_no_flush(bochscpu_cpu_t p, const bochscpu_cpu_state_t *s);
 
 void bochscpu_cpu_set_exception(bochscpu_cpu_t p, uint32_t vector, uint16_t error);
 

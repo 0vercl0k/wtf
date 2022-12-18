@@ -195,6 +195,30 @@ void StaticHltHook(void *Context, uint32_t Cpu) {
   reinterpret_cast<BochscpuBackend_t *>(Context)->OpcodeHlt(Cpu);
 }
 
+void StaticUcNearBranchHook(void *Context, uint32_t Cpu, uint32_t What,
+                            uint64_t Rip, uint64_t NextRip) {
+  if ((What == BOCHSCPU_INSTR_IS_JMP_INDIRECT) ||
+      (What == BOCHSCPU_INSTR_IS_CALL_INDIRECT)) {
+
+    //
+    // Invoking the member function now.
+    //
+
+    reinterpret_cast<BochscpuBackend_t *>(Context)->RecordEdge(Cpu, Rip,
+                                                               NextRip);
+  }
+}
+
+void StaticCNearBranchHook(void *Context, uint32_t Cpu, uint64_t Rip,
+                           uint64_t NextRip) {
+
+  //
+  // Invoking the member function now.
+  //
+
+  reinterpret_cast<BochscpuBackend_t *>(Context)->RecordEdge(Cpu, Rip, NextRip);
+}
+
 BochscpuBackend_t::BochscpuBackend_t() {
 
   //
@@ -238,6 +262,17 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
   Hooks_.tlb_cntrl = StaticTlbControlHook;
   Hooks_.hlt = StaticHltHook;
   // Hooks_.opcode = StaticOpcodeHook;
+
+  //
+  // If edge coverage is enabled, configure hooks to be able to record
+  // edges from branches.
+  //
+
+  if (Opts.Edges) {
+    Hooks_.cnear_branch_taken = StaticCNearBranchHook;
+    Hooks_.cnear_branch_not_taken = StaticCNearBranchHook;
+    Hooks_.ucnear_branch = StaticUcNearBranchHook;
+  }
 
   //
   // Initialize the hook chain with only one set of hooks.
@@ -622,6 +657,37 @@ void BochscpuBackend_t::OpcodeHlt(/*void *Context, */ uint32_t) {
   fmt::print("Stopping the cpu.\n");
   TestcaseResult_ = Crash_t();
   bochscpu_cpu_stop(Cpu_);
+}
+
+void BochscpuBackend_t::RecordEdge(/*void *Context, */ uint32_t Cpu,
+                                   uint64_t Rip, uint64_t NextRip) {
+
+  uint64_t Edge = Rip;
+
+  //
+  // splitmix64 Rip, might be overkill, a single shift is probably sufficient to
+  // avoid collisions?
+  //
+
+  Edge ^= Edge >> 30;
+  Edge *= 0xbf58476d1ce4e5b9U;
+  Edge ^= Edge >> 27;
+  Edge *= 0x94d049bb133111ebU;
+  Edge ^= Edge >> 31;
+
+  //
+  // XOR with NextRip.
+  //
+
+  Edge ^= NextRip;
+
+  const auto &[_, NewCoverage] = AggregatedCodeCoverage_.emplace(Edge);
+  if (NewCoverage) {
+    LastNewCoverage_.emplace(Edge);
+    RunStats_.NumberUniqueEdges++;
+  }
+
+  RunStats_.NumberEdges++;
 }
 
 bool BochscpuBackend_t::Restore(const CpuState_t &CpuState) {

@@ -19,6 +19,8 @@ struct BochscpuRunStats_t {
   uint64_t NumberMemoryAccesses = 0;
   uint64_t AggregatedCodeCoverage = 0;
   uint64_t DirtyGpas = 0;
+  uint64_t NumberEdges = 0;
+  uint64_t NumberUniqueEdges = 0;
 
   void Print() const {
     fmt::print("--------------------------------------------------\n");
@@ -30,11 +32,15 @@ struct BochscpuRunStats_t {
     fmt::print("          Dirty pages: {}\n", BytesToHuman(DirtyMemoryBytes));
     fmt::print("      Memory accesses: {}\n",
                BytesToHuman(NumberMemoryAccesses));
+    fmt::print("       Edges executed: {} ({} unique)\n",
+               NumberToHuman(NumberEdges), NumberToHuman(NumberUniqueEdges));
   }
 
   void Reset() {
     NumberInstructionsExecuted = 0;
     NumberMemoryAccesses = 0;
+    NumberEdges = 0;
+    NumberUniqueEdges = 0;
   }
 };
 
@@ -289,6 +295,9 @@ public:
                   const uint8_t *Opcode, uintptr_t Len, bool Is32, bool Is64);
 
   void OpcodeHlt(/*void *Context, */ uint32_t Cpu);
+
+  void RecordEdge(/*void *Context, */ uint32_t Cpu, uint64_t Rip,
+                  uint64_t NextRip);
 
 private:
   //

@@ -215,6 +215,18 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
     }
   }
 
+  //
+  // If mxcsr_mask is equal to 0 it means something is wrong (old version of
+  // bdump, etc.) and will cause #GPs. In that case, let's use a default value
+  // that's been taken from the Linux kernel (src:
+  // https://github.com/yrp604/bdump/commit/5a86bdc45acaf65a32aa9149ea47b717d899c85e)
+  //
+
+  if (CpuState.MxcsrMask == 0) {
+    fmt::print("Setting mxcsr_mask to 0xffbf.\n");
+    CpuState.MxcsrMask = 0xff'bf;
+  }
+
   return true;
 }
 
