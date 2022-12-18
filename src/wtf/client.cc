@@ -1,5 +1,6 @@
 // Axel '0vercl0k' Souchet - November 19 2020
 #include "client.h"
+#include "human.h"
 
 namespace chrono = std::chrono;
 
@@ -34,26 +35,25 @@ public:
     // Compute the amount of time since the last time we got new coverage.
     //
 
-    const auto &[LastCov, LastCovUnit] = SecondsToHuman(SecondsSince(LastCov_));
+    const auto &LastCov = SecondsToHuman(SecondsSince(LastCov_));
 
     //
     // Compute the amount of time since the server started.
     //
 
-    const auto &[Uptime, UptimeUnit] = SecondsToHuman(SecondsSince(Start_));
+    const auto &Uptime = SecondsToHuman(SecondsSince(Start_));
 
     //
     // Compute the amount of testcases executed per second.
     //
 
-    const auto &[ExecsPerSecond, ExecsPerSecondUnit] = NumberToHuman(
+    const auto &ExecsPerSecond = NumberToHuman(
         double(TestcasesNumber_) / double(SecondsSince(Start_).count()));
 
-    fmt::print("#{} cov: {} exec/s: {:.1f}{} lastcov: {:.1f}{} crash: {} "
-               "timeout: {} cr3: {} uptime: {:.1f}{}\n",
-               TestcasesNumber_, Coverage_, ExecsPerSecond, ExecsPerSecondUnit,
-               LastCov, LastCovUnit, Crashes_, Timeouts_, Cr3s_, Uptime,
-               UptimeUnit);
+    fmt::print("#{} cov: {} exec/s: {} lastcov: {} crash: {} "
+               "timeout: {} cr3: {} uptime: {}\n",
+               TestcasesNumber_, Coverage_, ExecsPerSecond, LastCov, Crashes_,
+               Timeouts_, Cr3s_, Uptime);
 
     LastPrint_ = chrono::system_clock::now();
   }
