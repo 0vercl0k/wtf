@@ -74,7 +74,7 @@ public:
 
   ~Ram_t() {
     for (const auto &[_, Page] : Cache_) {
-      aligned_free(Page);
+      free(Page);
     }
 
     if (Ram_ != nullptr) {
@@ -172,7 +172,7 @@ public:
     //
 
     else {
-      Page = (uint8_t *)aligned_alloc(Page::Size, Page::Size);
+      Page = (uint8_t *)malloc(Page::Size);
       if (Page == nullptr) {
         fmt::print("Failed to call aligned_alloc.\n");
         return nullptr;
@@ -302,7 +302,7 @@ public:
 
 private:
   //
-  // Get an HVA fora GPA by looking at our cache.
+  // Get an HVA for a GPA by looking at our cache.
   //
 
   [[nodiscard]] uint8_t *GetHvaFromCache(const Gpa_t Gpa) {
