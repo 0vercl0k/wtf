@@ -75,8 +75,8 @@ void StaticGpaMissingHandler(const uint64_t Gpa) {
       nullptr, Page::Size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
   if (Page == nullptr) {
 #elif defined LINUX
-  uint8_t *Page =
-      mmap(nullptr, Page::Size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
+  uint8_t *Page = (uint8_t *)mmap(nullptr, Page::Size, PROT_READ | PROT_WRITE,
+                                  MAP_ANONYMOUS, -1, 0);
   if (Page == (void *)-1) {
 #endif
     fmt::print("Failed to allocate memory in GpaMissingHandler.\n");
