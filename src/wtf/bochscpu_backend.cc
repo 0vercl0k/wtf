@@ -681,8 +681,8 @@ void BochscpuBackend_t::RecordEdge(/*void *Context, */ uint32_t Cpu,
 
   Edge ^= NextRip;
 
-  const auto &Res = AggregatedCodeCoverage_.emplace(Edge);
-  if (Res.second) {
+  const auto &[_, NewCoverage] = AggregatedCodeCoverage_.emplace(Edge);
+  if (NewCoverage) {
     LastNewCoverage_.emplace(Edge);
     RunStats_.NumberUniqueEdges++;
   }
