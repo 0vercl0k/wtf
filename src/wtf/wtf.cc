@@ -139,7 +139,8 @@ int main(int argc, const char *argv[]) {
         }
 
         //
-        // Ensure that if the 'edge' mode is turned on, the bxcpu is used.
+        // Ensure that if the 'edge' mode is turned on, bxcpu is used as the
+        // backend.
         //
 
         if (Opts.Edges && Opts.Backend != BackendType_t::Bochscpu) {
@@ -287,7 +288,8 @@ int main(int argc, const char *argv[]) {
         }
 
         //
-        // Ensure that if the 'edge' mode is turned on, the bxcpu is used.
+        // Ensure that if the 'edge' mode is turned on, bxcpu is used as the
+        // backend.
         //
 
         if (Opts.Edges && Opts.Backend != BackendType_t::Bochscpu) {

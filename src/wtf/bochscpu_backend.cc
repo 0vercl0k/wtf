@@ -676,7 +676,7 @@ void BochscpuBackend_t::RecordEdge(/*void *Context, */ uint32_t Cpu,
   Edge ^= Edge >> 31;
 
   //
-  // XOR with next Rip
+  // XOR with NextRip.
   //
 
   Edge ^= NextRip;
