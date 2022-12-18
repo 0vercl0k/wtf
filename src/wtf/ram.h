@@ -174,7 +174,7 @@ public:
     else {
       Page = (uint8_t *)malloc(Page::Size);
       if (Page == nullptr) {
-        fmt::print("Failed to call aligned_alloc.\n");
+        fmt::print("Failed to allocate memory.\n");
         return nullptr;
       }
 
