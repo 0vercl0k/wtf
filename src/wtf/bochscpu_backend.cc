@@ -70,8 +70,45 @@ void StaticGpaMissingHandler(const uint64_t Gpa) {
   // (0000022ed2ae7000 + 00000738).
   //
 
-  uint8_t *Page = (uint8_t *)aligned_alloc(Page::Size, Page::Size);
+#if defined WINDOWS
+
+  //
+  // VirtualAlloc is able to give us back page-aligned allocation, but every
+  // time we allocate 1 page, the allocator actually reserve a 64KB region of VA
+  // and we'll use the first page of that. This basically fragment the
+  // address-space, so what we do is we actually reserve a 64KB region, and
+  // we'll commit pages as we need them.
+  //
+
+  static size_t Left = 0;
+  static uint8_t *Current = nullptr;
+  if (Left == 0) {
+
+    //
+    // It's time to reserve a 64KB region.
+    //
+
+    const uint64_t _64KB = 1024 * 64;
+    Left = _64KB;
+    Current =
+        (uint8_t *)VirtualAlloc(nullptr, Left, MEM_RESERVE, PAGE_READWRITE);
+  }
+
+  //
+  // Commit a page off the reserved region.
+  //
+
+  uint8_t *Page =
+      (uint8_t *)VirtualAlloc(Current, Page::Size, MEM_COMMIT, PAGE_READWRITE);
+
+  Left -= Page::Size;
+  Current += Page::Size;
   if (Page == nullptr) {
+#elif defined LINUX
+  uint8_t *Page = (uint8_t *)mmap(nullptr, Page::Size, PROT_READ | PROT_WRITE,
+                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  if (Page == (void *)-1) {
+#endif
     fmt::print("Failed to allocate memory in GpaMissingHandler.\n");
     __debugbreak();
   }
