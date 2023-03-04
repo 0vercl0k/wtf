@@ -31,7 +31,8 @@
 *.out
 *.app
 
-src/wtf/fuzzer_*
+.vs
 src/build/
 src/build_msvc/
+src/out
 targets/
