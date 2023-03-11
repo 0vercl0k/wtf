@@ -8,12 +8,10 @@ namespace Ioctl {
 constexpr bool DebugLoggingOn = false;
 constexpr bool MutateIoctl = true;
 
-#define Print(Fmt, ...) fmt::print("ioctl: " Fmt, __VA_ARGS__)
-
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
   if constexpr (DebugLoggingOn) {
-    fmt::print("ioctl: ");
+    fmt::print("Ioctl: ");
     fmt::print(fmt::runtime(Format), args...);
   }
 }
@@ -31,7 +29,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   static bool FirstTime = true;
   if (!FirstTime) {
     if (!g_LastBuffer || g_LastBufferSize == 0) {
-      Print("The testcase hasn't been reset; something is wrong\n");
+      fmt::print("The testcase hasn't been reset; something is wrong\n");
       std::abort();
     }
   } else {
@@ -44,7 +42,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 
   if constexpr (MutateIoctl) {
     if (BufferSize < sizeof(uint32_t)) {
-      Print("The testcase buffer is too small: {} bytes\n", BufferSize);
+      fmt::print("The testcase buffer is too small: {} bytes\n", BufferSize);
       return false;
     }
   }
@@ -89,7 +87,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
                         g_LastBuffer = nullptr;
                         g_LastBufferSize = 0;
                       })) {
-                Print("Failed to set breakpoint on return\n");
+                fmt::print("Failed to set breakpoint on return\n");
                 std::abort();
               }
 
@@ -102,7 +100,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
             //
 
             if (!g_LastBuffer || g_LastBufferSize == 0) {
-              Print("Hit NtDeviceIoControlFile w/o a testcase..?\n");
+              fmt::print("Hit NtDeviceIoControlFile w/o a testcase..?\n");
               std::abort();
             }
 
@@ -153,7 +151,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
 
             if (!Backend->VirtWriteStructDirty(InputBufferSizePtr,
                                                &MutatedInputBufferSize)) {
-              Print("Failed to fix up the InputBufferSize\n");
+              fmt::print("Failed to fix up the InputBufferSize\n");
               std::abort();
             }
 
@@ -167,7 +165,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
             if (!Backend->VirtWriteDirty(Backend->GetArgGva(8),
                                          MutatedInputBufferPtr,
                                          MutatedInputBufferSize)) {
-              Print("Failed to insert the testcase\n");
+              fmt::print("Failed to insert the testcase\n");
               std::abort();
             }
 
@@ -181,12 +179,12 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
               Backend->GetArgGva(5, IoControlCodePtr);
               if (!Backend->VirtWriteStructDirty(IoControlCodePtr,
                                                  &MutatedIoControlCode)) {
-                Print("Failed to VirtWriteStructDirty (Ioctl) failed\n");
+                fmt::print("Failed to VirtWriteStructDirty (Ioctl) failed\n");
                 std::abort();
               }
             }
           })) {
-    Print("Failed to SetBreakpoint NtDeviceIoControlFile\n");
+    fmt::print("Failed to SetBreakpoint NtDeviceIoControlFile\n");
     return false;
   }
 
@@ -200,7 +198,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
         DebugPrint("DbgPrintEx: {}", Format);
         Backend->SimulateReturnFromFunction(0);
       })) {
-    Print("Failed to SetBreakpoint DbgPrintEx\n");
+    fmt::print("Failed to SetBreakpoint DbgPrintEx\n");
     return false;
   }
 
@@ -212,8 +210,8 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   // fffff805`3b8287c0 480fc7f2        rdrand  rdx
   const Gva_t ExGenRandom = Gva_t(g_Dbg.GetSymbol("nt!ExGenRandom") + 0xe0 + 4);
   if (g_Backend->VirtRead4(ExGenRandom - Gva_t(4)) != 0xf2c70f48) {
-    Print("It seems that nt!ExGenRandom's code has changed, update the "
-          "offset!\n");
+    fmt::print("It seems that nt!ExGenRandom's code has changed, update the "
+               "offset!\n");
     return false;
   }
 
@@ -221,7 +219,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
         DebugPrint("Hit ExGenRandom!\n");
         Backend->Rdx(Backend->Rdrand());
       })) {
-    Print("Failed to SetBreakpoint ExGenRandom\n");
+    fmt::print("Failed to SetBreakpoint ExGenRandom\n");
     return false;
   }
 
@@ -242,7 +240,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
         DebugPrint("KeBugCheck2: {}\n", Filename);
         Backend->Stop(Crash_t(Filename));
       })) {
-    Print("Failed to SetBreakpoint KeBugCheck2\n");
+    fmt::print("Failed to SetBreakpoint KeBugCheck2\n");
     return false;
   }
 
@@ -254,7 +252,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
         DebugPrint("nt!SwapContext\n");
         Backend->Stop(Cr3Change_t());
       })) {
-    Print("Failed to SetBreakpoint SwapContext\n");
+    fmt::print("Failed to SetBreakpoint SwapContext\n");
     return false;
   }
 
