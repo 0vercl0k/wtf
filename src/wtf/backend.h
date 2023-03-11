@@ -481,14 +481,17 @@ public:
   //
 
   bool SimulateReturnFromFunction(const uint64_t Return);
-  bool SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t StdcallArgsCount = 0);
+  bool SimulateReturnFrom32bitFunction(const uint32_t Return,
+                                       const uint32_t StdcallArgsCount = 0);
 
   //
   // Utility function that grabs function arguments according to the Windows x64
   // calling convention.
   //
 
+  uint64_t GetArg(const uint64_t Idx, Gva_t &Address);
   uint64_t GetArg(const uint64_t Idx);
+  Gva_t GetArgGva(const uint64_t Idx, Gva_t &Address);
   Gva_t GetArgGva(const uint64_t Idx);
 
   //

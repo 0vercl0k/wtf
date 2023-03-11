@@ -145,7 +145,8 @@ bool Backend_t::SimulateReturnFromFunction(const uint64_t Return) {
   return true;
 }
 
-bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t StdcallArgsCount) {
+bool Backend_t::SimulateReturnFrom32bitFunction(
+    const uint32_t Return, const uint32_t StdcallArgsCount) {
   //
   // Set return value.
   //
@@ -164,7 +165,7 @@ bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uin
   return true;
 }
 
-uint64_t Backend_t::GetArg(const uint64_t Idx) {
+uint64_t Backend_t::GetArg(const uint64_t Idx, Gva_t &Address) {
   switch (Idx) {
   case 0:
     return Rcx();
@@ -175,13 +176,25 @@ uint64_t Backend_t::GetArg(const uint64_t Idx) {
   case 3:
     return R9();
   default: {
-    const Gva_t ArgPtr = Gva_t(Rsp() + (8 + (Idx * 8)));
-    return VirtRead8(ArgPtr);
+    Address = Gva_t(Rsp() + (8 + (Idx * 8)));
+    return VirtRead8(Address);
   }
   }
 }
 
-Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg(Idx)); }
+uint64_t Backend_t::GetArg(const uint64_t Idx) {
+  Gva_t Dummy;
+  return GetArg(Idx, Dummy);
+}
+
+Gva_t Backend_t::GetArgGva(const uint64_t Idx, Gva_t &Address) {
+  return Gva_t(GetArg(Idx, Address));
+}
+
+Gva_t Backend_t::GetArgGva(const uint64_t Idx) {
+  Gva_t Dummy;
+  return Gva_t(GetArg(Idx, Dummy));
+}
 
 bool Backend_t::SaveCrash(const Gva_t ExceptionAddress,
                           const uint32_t ExceptionCode) {
