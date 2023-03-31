@@ -3,10 +3,16 @@
 #include "targets.h"
 #include <fmt/format.h>
 
+//
+// This fuzzing module expects a snapshot made at nt!NtDeviceIoControlFile.
+// It is recommended to grab a snapshot with the biggest InputBufferLength
+// possible.
+//
+
 namespace Ioctl {
 
-constexpr bool DebugLoggingOn = false;
-constexpr bool MutateIoctl = true;
+constexpr bool DebugLoggingOn = true;
+constexpr bool MutateIoctl = false;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
@@ -16,25 +22,7 @@ void DebugPrint(const char *Format, const Args_t &...args) {
   }
 }
 
-std::unique_ptr<uint8_t[]> g_LastBuffer;
-size_t g_LastBufferSize = 0;
-
 bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
-
-  //
-  // If we have a testcase still alive, it means we haven't hit the return
-  // breakpoint which is suspicious.
-  //
-
-  static bool FirstTime = true;
-  if (!FirstTime) {
-    if (!g_LastBuffer || g_LastBufferSize == 0) {
-      fmt::print("The testcase hasn't been reset; something is wrong\n");
-      std::abort();
-    }
-  } else {
-    FirstTime = false;
-  }
 
   //
   // If we are mutating the IoControlCode, we expect at least 4 bytes.
@@ -48,12 +36,104 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   }
 
   //
-  // Copy the testcase; we'll inject it later if we hit NtDeviceIoControlFile.
+  // If we're mutating the IoControlCode, then the first 4 bytes are
+  // that.
   //
 
-  g_LastBufferSize = BufferSize;
-  g_LastBuffer = std::make_unique<uint8_t[]>(BufferSize);
-  std::memcpy(g_LastBuffer.get(), Buffer, BufferSize);
+  constexpr uint32_t IoctlSizeIfPresent = MutateIoctl ? sizeof(uint32_t) : 0;
+
+  //
+  // We can only insert testcases that are smaller or equal to the
+  // current size; otherwise we'll corrupt memory. To work around
+  // this, we truncate it if it's larger.
+  // We also modify the InputBuffer pointer to push it as close as possible from
+  // the end of the buffer.
+  //
+
+  //
+  // __kernel_entry NTSTATUS
+  // NtDeviceIoControlFile(
+  //  [in]  HANDLE           FileHandle,
+  //  [in]  HANDLE           Event,
+  //  [in]  PIO_APC_ROUTINE  ApcRoutine,
+  //  [in]  PVOID            ApcContext,
+  //  [out] PIO_STATUS_BLOCK IoStatusBlock,
+  //  [in]  ULONG            IoControlCode,
+  //  [in]  PVOID            InputBuffer,
+  //  [in]  ULONG            InputBufferLength,
+  //  [out] PVOID            OutputBuffer,
+  //  [in]  ULONG            OutputBufferLength
+  // );
+  //
+
+  const uint32_t TotalInputBufferSize = BufferSize - IoctlSizeIfPresent;
+  const auto MutatedIoControlCodePtr = (uint32_t *)Buffer;
+  const uint8_t *MutatedInputBufferPtr = Buffer + IoctlSizeIfPresent;
+
+  //
+  // Calculate the maximum size we can inject into the target. Either we can
+  // inject it all, or we need to truncate it.
+  //
+
+  Gva_t InputBufferSizePtr;
+  const auto InputBufferSize =
+      uint32_t(g_Backend->GetArg(7, InputBufferSizePtr));
+  const uint32_t MutatedInputBufferSize =
+      std::min(TotalInputBufferSize, InputBufferSize);
+
+  //
+  // Calculate the new InputBuffer address by pushing the mutated buffer as
+  // close as possible from its end.
+  //
+
+  Gva_t InputBufferPtr;
+  const auto NewInputBuffer = Gva_t(g_Backend->GetArg(6, InputBufferPtr) +
+                                    InputBufferSize - MutatedInputBufferSize);
+
+  //
+  // Fix up InputBufferLength.
+  //
+
+  if (!g_Backend->VirtWriteStructDirty(InputBufferSizePtr,
+                                       &MutatedInputBufferSize)) {
+    fmt::print("Failed to fix up the InputBufferSize\n");
+    std::abort();
+  }
+
+  //
+  // Fix up InputBuffer.
+  //
+
+  if (!g_Backend->VirtWriteStructDirty(InputBufferPtr, &NewInputBuffer)) {
+    fmt::print("Failed to fix up the InputBuffer\n");
+    std::abort();
+  }
+
+  //
+  // Insert the testcase at the new InputBuffer.
+  //
+
+  if (!g_Backend->VirtWriteDirty(NewInputBuffer, MutatedInputBufferPtr,
+                                 MutatedInputBufferSize)) {
+    fmt::print("Failed to insert the testcase\n");
+    std::abort();
+  }
+
+  //
+  // Are we mutating IoControlCode as well?
+  //
+
+  if constexpr (MutateIoctl) {
+    const auto MutatedIoControlCode = *MutatedIoControlCodePtr;
+    Gva_t IoControlCodePtr;
+    g_Backend->GetArgGva(5, IoControlCodePtr);
+    if (!g_Backend->VirtWriteStructDirty(IoControlCodePtr,
+                                         &MutatedIoControlCode)) {
+      fmt::print("Failed to VirtWriteStructDirty (Ioctl) failed\n");
+      std::abort();
+    }
+  }
+
   return true;
 }
 
@@ -84,102 +164,8 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
 
                         DebugPrint("Hit return breakpoint!\n");
                         Backend->Stop(Ok_t());
-                        g_LastBuffer = nullptr;
-                        g_LastBufferSize = 0;
                       })) {
                 fmt::print("Failed to set breakpoint on return\n");
-                std::abort();
-              }
-
-              SetExitBreakpoint = true;
-            }
-
-            //
-            // If we don't have a testcase, then things are in a broken state,
-            // so abort.
-            //
-
-            if (!g_LastBuffer || g_LastBufferSize == 0) {
-              fmt::print("Hit NtDeviceIoControlFile w/o a testcase..?\n");
-              std::abort();
-            }
-
-            //
-            // If we're mutating the IoControlCode, then the first 4 bytes are
-            // that.
-            //
-
-            constexpr uint32_t IoctlSizeIfPresent =
-                MutateIoctl ? sizeof(uint32_t) : 0;
-
-            //
-            // We can only insert testcases that are smaller or equal to the
-            // current size; otherwise we'll corrupt memory. To work around
-            // this, we truncate it if it's larger.
-            //
-
-            //
-            // __kernel_entry NTSTATUS
-            // NtDeviceIoControlFile(
-            //  [in]  HANDLE           FileHandle,
-            //  [in]  HANDLE           Event,
-            //  [in]  PIO_APC_ROUTINE  ApcRoutine,
-            //  [in]  PVOID            ApcContext,
-            //  [out] PIO_STATUS_BLOCK IoStatusBlock,
-            //  [in]  ULONG            IoControlCode,
-            //  [in]  PVOID            InputBuffer,
-            //  [in]  ULONG            InputBufferLength,
-            //  [out] PVOID            OutputBuffer,
-            //  [in]  ULONG            OutputBufferLength
-            // );
-            //
-
-            const uint32_t TotalInputBufferSize =
-                g_LastBufferSize - IoctlSizeIfPresent;
-            const auto MutatedIoControlCodePtr = (uint32_t *)g_LastBuffer.get();
-            const uint8_t *MutatedInputBufferPtr =
-                g_LastBuffer.get() + IoctlSizeIfPresent;
-            Gva_t InputBufferSizePtr;
-            const auto InputBufferSize =
-                uint32_t(Backend->GetArg(7, InputBufferSizePtr));
-            const uint32_t MutatedInputBufferSize =
-                std::min(TotalInputBufferSize, InputBufferSize);
-
-            //
-            // Fix up InputBufferLength.
-            //
-
-            if (!Backend->VirtWriteStructDirty(InputBufferSizePtr,
-                                               &MutatedInputBufferSize)) {
-              fmt::print("Failed to fix up the InputBufferSize\n");
-              std::abort();
-            }
-
-            //
-            // Insert the testcase in the InputBuffer.
-            // XXX: Ideally, we'd push up the testcase to the
-            // boundary of the buffer to have a better chance to
-            // catch OOBs and update the InputBuffer pointer.
-            //
-
-            if (!Backend->VirtWriteDirty(Backend->GetArgGva(8),
-                                         MutatedInputBufferPtr,
-                                         MutatedInputBufferSize)) {
-              fmt::print("Failed to insert the testcase\n");
-              std::abort();
-            }
-
-            //
-            // Are we mutating IoControlCode as well?
-            //
-
-            if constexpr (MutateIoctl) {
-              const auto MutatedIoControlCode = *MutatedIoControlCodePtr;
-              Gva_t IoControlCodePtr;
-              Backend->GetArgGva(5, IoControlCodePtr);
-              if (!Backend->VirtWriteStructDirty(IoControlCodePtr,
-                                                 &MutatedIoControlCode)) {
-                fmt::print("Failed to VirtWriteStructDirty (Ioctl) failed\n");
                 std::abort();
               }
             }
