@@ -59,3 +59,5 @@ script:
 
 after_success:
   - if [[ "$TYPE" == "coverage" ]]; then lcov -c -b ../../include/ -d . -o coverage.info --no-external && bash <(curl -s https://codecov.io/bash) -f coverage.info; fi
+
+# Added comment - 
