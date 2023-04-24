@@ -112,7 +112,7 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
 
   HRESULT Hr = WHvCreatePartition(&Partition_);
   if (FAILED(Hr)) {
-    fmt::print("Failed WHvCreatePartition\n");
+    fmt::print("Failed WHvCreatePartition (Windows Hypervisor Platform enabled?)\n");
     return false;
   }
 
