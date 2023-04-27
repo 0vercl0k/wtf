@@ -482,7 +482,7 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
 
     //
     // Prepares a sigmask to block SIGALARM from every threads (it'll get
-    // inherited). At initialization phase, no other threads have been spwaned
+    // inherited). At initialization phase, no other threads have been spawned
     // so we can be sure this mask will get inherited during the creation of the
     // threads.
     //
@@ -1454,6 +1454,7 @@ std::optional<TestcaseResult_t> KvmBackend_t::Run(const uint8_t *Buffer,
   Stop_ = false;
   TestcaseRes_ = Ok_t();
   Coverage_.clear();
+  Run_->immediate_exit = 0;
 
   while (!Stop_) {
 
