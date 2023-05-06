@@ -163,8 +163,8 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   // To try to work around this issue, we will artificially force an empty FPU
   // stack by setting @fptw to 0xff'ff as well as setting every slots to zero.
   // But we'll do this only if state.fptw is equal to 0 and that every slots are
-  // set to '0xInfinity' / '0x-Infinity'. Otherwise, we'll assume that the dump did capture a
-  // sane state.
+  // set to '0xInfinity' / '0x-Infinity'. Otherwise, we'll assume that the dump
+  // did capture a sane state.
   //
 
   bool AllSlotsZero = true;
@@ -185,7 +185,7 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
     // Two bits per register, 11 for empty.
     //
 
-    fmt::print("Setting @fptw to zero.\n");
+    fmt::print("Setting @fptw to 0xff'ff.\n");
     CpuState.Fptw = 0b11'11'11'11'11'11'11'11;
   }
 
