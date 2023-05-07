@@ -153,13 +153,40 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   GLOBALSEGMENT(idtr, Idtr)
 #undef GLOBALSEGMENT
 
+  //
+  // It would appear that Windbg doesn't dump properly the @fptw register. In my
+  // tests, it is always zero which means that the FPU stack is full when
+  // usually the stack is usually empty (all bits are set).
+  // In that case, if the target uses an FPU instruction that pushes data onto
+  // the stack, it'll trigger an exception.
+  //
+  // To try to work around this issue, we will artificially force an empty FPU
+  // stack by setting @fptw to 0xff'ff as well as setting every slots to zero.
+  // But we'll do this only if state.fptw is equal to 0 and that every slots are
+  // set to '0xInfinity' / '0x-Infinity'. Otherwise, we'll assume that the dump
+  // did capture a sane state.
+  //
+
+  bool AllSlotsZero = true;
   for (uint64_t Idx = 0; Idx < 8; Idx++) {
     const std::string &Value = Json["fpst"][Idx].get<std::string>();
-    if (Value == "0x-Infinity") {
+    const bool Infinity = Value.find("Infinity") != Value.npos;
+    AllSlotsZero = AllSlotsZero && Infinity;
+    if (Infinity) {
       CpuState.Fpst[Idx] = 0;
     } else {
       CpuState.Fpst[Idx] = std::strtoull(Value.c_str(), nullptr, 0);
     }
+  }
+
+  if (CpuState.Fptw == 0 && AllSlotsZero) {
+
+    //
+    // Two bits per register, 11 for empty.
+    //
+
+    fmt::print("Setting @fptw to 0xff'ff.\n");
+    CpuState.Fptw = 0b11'11'11'11'11'11'11'11;
   }
 
   return true;
