@@ -30,8 +30,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 
   if constexpr (MutateIoctl) {
     if (BufferSize < sizeof(uint32_t)) {
-      fmt::print("The testcase buffer is too small: {} bytes\n", BufferSize);
-      return false;
+      return true;
     }
   }
 
@@ -154,6 +153,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
 
             static bool SetExitBreakpoint = false;
             if (!SetExitBreakpoint) {
+              SetExitBreakpoint = true;
               const auto ReturnAddress =
                   Backend->VirtReadGva(Gva_t(Backend->Rsp()));
               if (!Backend->SetBreakpoint(
