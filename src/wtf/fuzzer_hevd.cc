@@ -49,8 +49,8 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   }
 
   g_Backend->R9(IoctlBufferSize);
-  const Gva_t Rsp = Gva_t(g_Backend->Rsp());
-  const Gva_t OutBufferSizePtr = Rsp + Gva_t(5 * sizeof(uint64_t));
+  Gva_t OutBufferSizePtr;
+  g_Backend->GetArgGva(5, OutBufferSizePtr);
   if (!g_Backend->VirtWriteStructDirty(OutBufferSizePtr, &IoctlBufferSize)) {
     DebugPrint("VirtWriteStructDirty failed\n");
     return false;
