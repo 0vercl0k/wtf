@@ -74,20 +74,19 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   // inject it all, or we need to truncate it.
   //
 
-  Gva_t InputBufferSizePtr;
-  const auto InputBufferSize =
-      uint32_t(g_Backend->GetArg(7, InputBufferSizePtr));
+  const auto &[InputBufferSize, InputBufferSizePtr] =
+      g_Backend->GetArgAndAddress(7);
   const uint32_t MutatedInputBufferSize =
-      std::min(TotalInputBufferSize, InputBufferSize);
+      std::min(TotalInputBufferSize, uint32_t(InputBufferSize));
 
   //
   // Calculate the new InputBuffer address by pushing the mutated buffer as
   // close as possible from its end.
   //
 
-  Gva_t InputBufferPtr;
-  const auto NewInputBuffer = Gva_t(g_Backend->GetArg(6, InputBufferPtr) +
-                                    InputBufferSize - MutatedInputBufferSize);
+  const auto &[InputBuffer, InputBufferPtr] = g_Backend->GetArgAndAddress(6);
+  const auto NewInputBuffer =
+      Gva_t(InputBuffer + InputBufferSize - MutatedInputBufferSize);
 
   //
   // Fix up InputBufferLength.
@@ -124,8 +123,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 
   if constexpr (MutateIoctl) {
     const auto MutatedIoControlCode = *MutatedIoControlCodePtr;
-    Gva_t IoControlCodePtr;
-    g_Backend->GetArgGva(5, IoControlCodePtr);
+    const auto &IoControlCodePtr = g_Backend->GetArgAddress(5);
     if (!g_Backend->VirtWriteStructDirty(IoControlCodePtr,
                                          &MutatedIoControlCode)) {
       fmt::print("Failed to VirtWriteStructDirty (Ioctl) failed\n");
