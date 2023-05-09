@@ -51,8 +51,8 @@ int main(int argc, const char *argv[]) {
             !std::filesystem::exists(Opts.Master.OutputsPath) ||
             !std::filesystem::exists(Opts.Master.CrashesPath)) {
           throw CLI::ParseError(
-              fmt::format("Expected to find an inputs directory, an outputs "
-                          "directory and a crashes directory in '{}'.",
+              fmt::format("Expected to find inputs/outputs/crashes directories "
+                          "in '{}'.",
                           Opts.Master.TargetPath.string()),
               EXIT_FAILURE);
         }
@@ -133,11 +133,10 @@ int main(int argc, const char *argv[]) {
 
         if (!std::filesystem::exists(Opts.DumpPath) ||
             !std::filesystem::exists(Opts.CpuStatePath)) {
-          throw CLI::ParseError(
-              fmt::format("Expected to find a state/mem.dmp file, a "
-                          "state/regs.json file in '{}'.",
-                          Opts.StatePath.string()),
-              EXIT_FAILURE);
+          throw CLI::ParseError(fmt::format("Expected to find state/mem.dmp, "
+                                            "state/regs.json files in '{}'.",
+                                            Opts.StatePath.string()),
+                                EXIT_FAILURE);
         }
 
         //
@@ -155,7 +154,7 @@ int main(int argc, const char *argv[]) {
         if (!std::filesystem::exists(Opts.SymbolFilePath)) {
           throw CLI::ParseError(
               fmt::format("Expected to find a state/symbol-store.json file in "
-                          "'{}'; you need to generate it from Windows.",
+                          "'{}'. You need to generate it from Windows.",
                           Opts.Fuzz.TargetPath.string()),
               EXIT_FAILURE);
         }
