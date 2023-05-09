@@ -322,17 +322,17 @@ public:
   // Read a uint64_t.
   //
 
-  uint64_t VirtRead8(const Gva_t Gva) const;
-  Gva_t VirtReadGva(const Gva_t Gva) const;
-  Gpa_t VirtReadGpa(const Gva_t Gva) const;
+  [[nodiscard]] uint64_t VirtRead8(const Gva_t Gva) const;
+  [[nodiscard]] Gva_t VirtReadGva(const Gva_t Gva) const;
+  [[nodiscard]] Gpa_t VirtReadGpa(const Gva_t Gva) const;
 
   //
   // Read a basic string.
   //
 
   template <typename _Ty>
-  std::basic_string<_Ty> VirtReadBasicString(const Gva_t StringGva,
-                                             const uint64_t MaxLength) const {
+  [[nodiscard]] std::basic_string<_Ty>
+  VirtReadBasicString(const Gva_t StringGva, const uint64_t MaxLength) const {
     using BasicString_t = std::basic_string<_Ty>;
     using ValueType_t = typename BasicString_t::value_type;
 
@@ -432,15 +432,15 @@ public:
   // Read a basic_string<char>.
   //
 
-  std::string VirtReadString(const Gva_t Gva,
-                             const uint64_t MaxLength = 256) const;
+  [[nodiscard]] std::string
+  VirtReadString(const Gva_t Gva, const uint64_t MaxLength = 256) const;
 
   //
   // Read a basic_string<char16_t> (used to read wchar_t* in Windows guests).
   //
 
-  std::u16string VirtReadWideString(const Gva_t Gva,
-                                    const uint64_t MaxLength = 256) const;
+  [[nodiscard]] std::u16string
+  VirtReadWideString(const Gva_t Gva, const uint64_t MaxLength = 256) const;
 
   //
   // Write in virtual memory. Optionally track dirtiness on the memory range.
@@ -481,85 +481,98 @@ public:
   //
 
   bool SimulateReturnFromFunction(const uint64_t Return);
-  bool SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t StdcallArgsCount = 0);
+  bool SimulateReturnFrom32bitFunction(const uint32_t Return,
+                                       const uint32_t StdcallArgsCount = 0);
 
   //
   // Utility function that grabs function arguments according to the Windows x64
   // calling convention.
   //
 
-  uint64_t GetArg(const uint64_t Idx);
-  Gva_t GetArgGva(const uint64_t Idx);
+  [[nodiscard]] uint64_t GetArg(const uint64_t Idx);
+  [[nodiscard]] Gva_t GetArgGva(const uint64_t Idx);
+
+  //
+  // Utility function to get the address of a function argument. Oftentimes, you
+  // need to overwrite an argument that isn't stored in registers which means
+  // you need to calculate yourself where it is stored on the stack. This
+  // function gives you its address.
+  //
+
+  [[nodiscard]] Gva_t GetArgAddress(const uint64_t Idx);
+  [[nodiscard]] std::pair<uint64_t, Gva_t> GetArgAndAddress(const uint64_t Idx);
+  [[nodiscard]] std::pair<Gva_t, Gva_t> GetArgAndAddressGva(const uint64_t Idx);
+
 
   //
   // Shortcuts to grab / set some registers.
   //
 
-  uint64_t Rsp();
+  [[nodiscard]] uint64_t Rsp();
   void Rsp(const uint64_t Value);
   void Rsp(const Gva_t Value);
 
-  uint64_t Rbp();
+  [[nodiscard]] uint64_t Rbp();
   void Rbp(const uint64_t Value);
   void Rbp(const Gva_t Value);
 
-  uint64_t Rip();
+  [[nodiscard]] uint64_t Rip();
   void Rip(const uint64_t Value);
   void Rip(const Gva_t Value);
 
-  uint64_t Rax();
+  [[nodiscard]] uint64_t Rax();
   void Rax(const uint64_t Value);
   void Rax(const Gva_t Value);
 
-  uint64_t Rbx();
+  [[nodiscard]] uint64_t Rbx();
   void Rbx(const uint64_t Value);
   void Rbx(const Gva_t Value);
 
-  uint64_t Rcx();
+  [[nodiscard]] uint64_t Rcx();
   void Rcx(const uint64_t Value);
   void Rcx(const Gva_t Value);
 
-  uint64_t Rdx();
+  [[nodiscard]] uint64_t Rdx();
   void Rdx(const uint64_t Value);
   void Rdx(const Gva_t Value);
 
-  uint64_t Rsi();
+  [[nodiscard]] uint64_t Rsi();
   void Rsi(const uint64_t Value);
   void Rsi(const Gva_t Value);
 
-  uint64_t Rdi();
+  [[nodiscard]] uint64_t Rdi();
   void Rdi(const uint64_t Value);
   void Rdi(const Gva_t Value);
 
-  uint64_t R8();
+  [[nodiscard]] uint64_t R8();
   void R8(const uint64_t Value);
   void R8(const Gva_t Value);
 
-  uint64_t R9();
+  [[nodiscard]] uint64_t R9();
   void R9(const uint64_t Value);
   void R9(const Gva_t Value);
 
-  uint64_t R10();
+  [[nodiscard]] uint64_t R10();
   void R10(const uint64_t Value);
   void R10(const Gva_t Value);
 
-  uint64_t R11();
+  [[nodiscard]] uint64_t R11();
   void R11(const uint64_t Value);
   void R11(const Gva_t Value);
 
-  uint64_t R12();
+  [[nodiscard]] uint64_t R12();
   void R12(const uint64_t Value);
   void R12(const Gva_t Value);
 
-  uint64_t R13();
+  [[nodiscard]] uint64_t R13();
   void R13(const uint64_t Value);
   void R13(const Gva_t Value);
 
-  uint64_t R14();
+  [[nodiscard]] uint64_t R14();
   void R14(const uint64_t Value);
   void R14(const Gva_t Value);
 
-  uint64_t R15();
+  [[nodiscard]] uint64_t R15();
   void R15(const uint64_t Value);
   void R15(const Gva_t Value);
 

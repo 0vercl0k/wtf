@@ -145,7 +145,8 @@ bool Backend_t::SimulateReturnFromFunction(const uint64_t Return) {
   return true;
 }
 
-bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uint32_t StdcallArgsCount) {
+bool Backend_t::SimulateReturnFrom32bitFunction(
+    const uint32_t Return, const uint32_t StdcallArgsCount) {
   //
   // Set return value.
   //
@@ -164,6 +165,16 @@ bool Backend_t::SimulateReturnFrom32bitFunction(const uint32_t Return, const uin
   return true;
 }
 
+Gva_t Backend_t::GetArgAddress(const uint64_t Idx) {
+  if (Idx <= 3) {
+    fmt::print("The first four arguments are stored in registers (@rcx, @rdx, "
+               "@r8, @r9) which means you cannot get their addresses.\n");
+    std::abort();
+  }
+
+  return Gva_t(Rsp() + (8 + (Idx * 8)));
+}
+
 uint64_t Backend_t::GetArg(const uint64_t Idx) {
   switch (Idx) {
   case 0:
@@ -175,13 +186,20 @@ uint64_t Backend_t::GetArg(const uint64_t Idx) {
   case 3:
     return R9();
   default: {
-    const Gva_t ArgPtr = Gva_t(Rsp() + (8 + (Idx * 8)));
-    return VirtRead8(ArgPtr);
+    return VirtRead8(GetArgAddress(Idx));
   }
   }
 }
 
 Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg(Idx)); }
+
+std::pair<uint64_t, Gva_t> Backend_t::GetArgAndAddress(const uint64_t Idx) {
+  return {GetArg(Idx), GetArgAddress(Idx)};
+}
+
+std::pair<Gva_t, Gva_t> Backend_t::GetArgAndAddressGva(const uint64_t Idx) {
+  return {GetArgGva(Idx), GetArgAddress(Idx)};
+}
 
 bool Backend_t::SaveCrash(const Gva_t ExceptionAddress,
                           const uint32_t ExceptionCode) {
