@@ -11,8 +11,8 @@
 
 namespace Ioctl {
 
-constexpr bool DebugLoggingOn = true;
-constexpr bool MutateIoctl = false;
+constexpr bool DebugLoggingOn = false;
+constexpr bool MutateIoctl = true;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
