@@ -50,10 +50,11 @@ int main(int argc, const char *argv[]) {
         if (!std::filesystem::exists(Opts.Master.InputsPath) ||
             !std::filesystem::exists(Opts.Master.OutputsPath) ||
             !std::filesystem::exists(Opts.Master.CrashesPath)) {
-          fmt::print("Expected to find an inputs directory, an outputs "
-                     "directory and a crashes directory in {}.\n",
-                     Opts.Master.TargetPath.string());
-          throw new CLI::ParseError("target", EXIT_FAILURE);
+          throw CLI::ParseError(
+              fmt::format("Expected to find inputs/outputs/crashes directories "
+                          "in '{}'.",
+                          Opts.Master.TargetPath.string()),
+              EXIT_FAILURE);
         }
 
         if (Opts.Master.Seed == 0) {
@@ -132,10 +133,10 @@ int main(int argc, const char *argv[]) {
 
         if (!std::filesystem::exists(Opts.DumpPath) ||
             !std::filesystem::exists(Opts.CpuStatePath)) {
-          fmt::print("Expected to find a state/mem.dmp file, a state/regs.json "
-                     "file in {}.\n",
-                     Opts.StatePath.string());
-          throw new CLI::ParseError("state", EXIT_FAILURE);
+          throw CLI::ParseError(fmt::format("Expected to find state/mem.dmp, "
+                                            "state/regs.json files in '{}'.",
+                                            Opts.StatePath.string()),
+                                EXIT_FAILURE);
         }
 
         //
@@ -144,26 +145,25 @@ int main(int argc, const char *argv[]) {
         //
 
         if (Opts.Edges && Opts.Backend != BackendType_t::Bochscpu) {
-          fmt::print(
-              "Edge coverage is only available with the bxcpu backend.\n");
-          throw new CLI::ParseError("edge", EXIT_FAILURE);
+          throw CLI::ParseError(
+              "Edge coverage is only available with the bxcpu backend.",
+              EXIT_FAILURE);
         }
 
 #ifdef LINUX
         if (!std::filesystem::exists(Opts.SymbolFilePath)) {
-          fmt::print(
-              "Expected to find a state/symbol-store.json file in {}; you "
-              "need to generate it from Windows.\n",
-              Opts.Fuzz.TargetPath.string());
-          throw new CLI::ParseError("target symbol store", EXIT_FAILURE);
+          throw CLI::ParseError(
+              fmt::format("Expected to find a state/symbol-store.json file in "
+                          "'{}'. You need to generate it from Windows.",
+                          Opts.Fuzz.TargetPath.string()),
+              EXIT_FAILURE);
         }
 
         if (Opts.Run.TraceType == TraceType_t::Rip &&
             Opts.Backend != BackendType_t::Bochscpu) {
-          fmt::print(
-              "Only the bochscpu backend can be used to generate rip traces "
-              "on Linux.\n");
-          throw new CLI::ParseError("backend", EXIT_FAILURE);
+          throw CLI::ParseError("Only the bochscpu backend can be used to "
+                                "generate rip traces on Linux.",
+                                EXIT_FAILURE);
         }
 #endif
       });
@@ -280,11 +280,12 @@ int main(int argc, const char *argv[]) {
 
         if (!std::filesystem::exists(Opts.DumpPath) ||
             !std::filesystem::exists(Opts.CpuStatePath)) {
-          fmt::print("Expected to find a state/mem.dmp file, a state/regs.json "
-                     "file, an inputs directory, an outputs directory, a "
-                     "crashes directory in {}.\n",
-                     Opts.Fuzz.TargetPath.string());
-          throw new CLI::ParseError("target", EXIT_FAILURE);
+          throw CLI::ParseError(
+              fmt::format("Expected to find a state/mem.dmp file, a "
+                          "state/regs.json file, an inputs directory, an "
+                          "outputs directory, a crashes directory in '{}'.",
+                          Opts.Fuzz.TargetPath.string()),
+              EXIT_FAILURE);
         }
 
         //
@@ -293,9 +294,9 @@ int main(int argc, const char *argv[]) {
         //
 
         if (Opts.Edges && Opts.Backend != BackendType_t::Bochscpu) {
-          fmt::print(
-              "Edge coverage is only available with the bxcpu backend.\n");
-          throw new CLI::ParseError("edge", EXIT_FAILURE);
+          throw CLI::ParseError(
+              "Edge coverage is only available with the bxcpu backend.",
+              EXIT_FAILURE);
         }
 
         if (Opts.Fuzz.Seed == 0) {
@@ -305,11 +306,11 @@ int main(int argc, const char *argv[]) {
 
 #ifdef LINUX
         if (!std::filesystem::exists(Opts.SymbolFilePath)) {
-          fmt::print(
-              "Expected to find a state/symbol-store.json file in {}; you "
-              "need to generate it from Windows.\n",
-              Opts.Fuzz.TargetPath.string());
-          throw new CLI::ParseError("target symbol store", EXIT_FAILURE);
+          throw CLI::ParseError(
+              fmt::format("Expected to find a state/symbol-store.json file in "
+                          "'{}'; you need to generate it from Windows.",
+                          Opts.Fuzz.TargetPath.string()),
+              EXIT_FAILURE);
         }
 #endif
       });
