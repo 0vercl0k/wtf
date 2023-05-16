@@ -292,7 +292,7 @@ int main(int argc, const char *argv[]) {
               fmt::format(
                   "Expected to find mem.dmp/regs.json files in '{}/state', "
                   "inputs/outputs/crashes directories in '{}'.",
-                  Opts.Fuzz.TargetPath.string()),
+                  Opts.Fuzz.TargetPath.string(), Opts.Fuzz.TargetPath.string()),
               EXIT_FAILURE);
         }
 
