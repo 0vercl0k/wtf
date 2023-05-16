@@ -102,6 +102,16 @@ int main(int argc, const char *argv[]) {
   CLI::App *RunCmd =
       Wtf.add_subcommand("run", "Run and trace options")->callback([&Opts] {
         //
+        // If the state path is empty and a 'state' folder is available, let's
+        // use it.
+        //
+
+        if (Opts.StatePath.empty() && fs::is_directory("state")) {
+          fmt::print("Found a 'state' folder in the cwd, so using it.\n");
+          Opts.StatePath = "state";
+        }
+
+        //
         // Populate other paths based on the based state path.
         //
 
@@ -216,8 +226,7 @@ int main(int argc, const char *argv[]) {
 
   RunCmd->add_option("--state", Opts.StatePath, "State directory")
       ->check(CLI::ExistingDirectory)
-      ->description("State directory which contains memory and cpu state.")
-      ->required();
+      ->description("State directory which contains memory and cpu state.");
 
   RunCmd
       ->add_option("--guest-files", Opts.GuestFilesPath,
@@ -280,10 +289,10 @@ int main(int argc, const char *argv[]) {
         if (!std::filesystem::exists(Opts.DumpPath) ||
             !std::filesystem::exists(Opts.CpuStatePath)) {
           throw CLI::ParseError(
-              fmt::format("Expected to find a state/mem.dmp file, a "
-                          "state/regs.json file, an inputs directory, an "
-                          "outputs directory, a crashes directory in '{}'.",
-                          Opts.Fuzz.TargetPath.string()),
+              fmt::format(
+                  "Expected to find mem.dmp/regs.json files in '{}/state', "
+                  "inputs/outputs/crashes directories in '{}'.",
+                  Opts.Fuzz.TargetPath.string()),
               EXIT_FAILURE);
         }
 
