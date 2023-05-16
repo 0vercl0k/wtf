@@ -11,6 +11,8 @@
 #include <fmt/format.h>
 #include <random>
 
+namespace fs = std::filesystem;
+
 int main(int argc, const char *argv[]) {
   //
   // Set up the arguments.
@@ -47,9 +49,9 @@ int main(int argc, const char *argv[]) {
           Opts.Master.CrashesPath = Opts.Master.TargetPath / "crashes";
         }
 
-        if (!std::filesystem::exists(Opts.Master.InputsPath) ||
-            !std::filesystem::exists(Opts.Master.OutputsPath) ||
-            !std::filesystem::exists(Opts.Master.CrashesPath)) {
+        if (!fs::exists(Opts.Master.InputsPath) ||
+            !fs::exists(Opts.Master.OutputsPath) ||
+            !fs::exists(Opts.Master.CrashesPath)) {
           throw CLI::ParseError(
               fmt::format("Expected to find inputs/outputs/crashes directories "
                           "in '{}'.",
@@ -141,8 +143,7 @@ int main(int argc, const char *argv[]) {
         // Ensure that they exist just as a quick check.
         //
 
-        if (!std::filesystem::exists(Opts.DumpPath) ||
-            !std::filesystem::exists(Opts.CpuStatePath)) {
+        if (!fs::exists(Opts.DumpPath) || !fs::exists(Opts.CpuStatePath)) {
           throw CLI::ParseError(fmt::format("Expected to find state/mem.dmp, "
                                             "state/regs.json files in '{}'.",
                                             Opts.StatePath.string()),
@@ -161,7 +162,7 @@ int main(int argc, const char *argv[]) {
         }
 
 #ifdef LINUX
-        if (!std::filesystem::exists(Opts.SymbolFilePath)) {
+        if (!fs::exists(Opts.SymbolFilePath)) {
           throw CLI::ParseError(
               fmt::format("Expected to find a state/symbol-store.json file in "
                           "'{}'. You need to generate it from Windows.",
@@ -286,8 +287,7 @@ int main(int argc, const char *argv[]) {
         // Ensure that they exist just as a quick check.
         //
 
-        if (!std::filesystem::exists(Opts.DumpPath) ||
-            !std::filesystem::exists(Opts.CpuStatePath)) {
+        if (!fs::exists(Opts.DumpPath) || !fs::exists(Opts.CpuStatePath)) {
           throw CLI::ParseError(
               fmt::format(
                   "Expected to find mem.dmp/regs.json files in '{}/state', "
@@ -313,7 +313,7 @@ int main(int argc, const char *argv[]) {
         }
 
 #ifdef LINUX
-        if (!std::filesystem::exists(Opts.SymbolFilePath)) {
+        if (!fs::exists(Opts.SymbolFilePath)) {
           throw CLI::ParseError(
               fmt::format("Expected to find a state/symbol-store.json file in "
                           "'{}'; you need to generate it from Windows.",
