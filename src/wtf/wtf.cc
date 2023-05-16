@@ -212,8 +212,7 @@ int main(int argc, const char *argv[]) {
 
   RunCmd->add_option("--backend", Opts.Backend, "Execution backend")
       ->transform(CLI::CheckedTransformer(BackendTypeMap, CLI::ignore_case))
-      ->description("Execution backend.")
-      ->required();
+      ->description("Execution backend.");
 
   RunCmd->add_option("--state", Opts.StatePath, "State directory")
       ->check(CLI::ExistingDirectory)
@@ -317,8 +316,7 @@ int main(int argc, const char *argv[]) {
 
   FuzzCmd->add_option("--backend", Opts.Backend, "Execution backend")
       ->transform(CLI::CheckedTransformer(BackendTypeMap, CLI::ignore_case))
-      ->description("Execution backend.")
-      ->required();
+      ->description("Execution backend.");
 
   FuzzCmd->add_flag("--edges", Opts.Edges, "Edge coverage")
       ->default_val(false)
