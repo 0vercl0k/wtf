@@ -1,9 +1,12 @@
 // Axel '0vercl0k' Souchet - November 7 2020
 #include "socket.h"
 #include <string_view>
+#include <utility>
+#include <variant>
 
 enum class Protocol_t {
   Tcp = IPPROTO_TCP,
+  Unix = 0,
 };
 
 enum class SocketType_t {
@@ -12,11 +15,38 @@ enum class SocketType_t {
 
 struct SocketAddress_t {
   Protocol_t Protocol;
-  SocketType_t Type;
-  sockaddr_in Addr;
+  int Family = -1;
+  SocketType_t Type = SocketType_t::Stream;
+  std::variant<sockaddr_in, sockaddr_un> Addr;
 
-  SocketAddress_t() { memset(this, 0, sizeof(*this)); }
-  const sockaddr *Sockaddr() const { return (sockaddr *)&Addr; }
+  SocketAddress_t(const Protocol_t Protocol_) : Protocol(Protocol_) {
+    if (Protocol == Protocol_t::Tcp) {
+      sockaddr_in Ip = {};
+      Family = AF_INET;
+      Ip.sin_family = Family;
+    }
+
+    sockaddr_un Unix = {};
+    Family = AF_UNIX;
+    Unix.sun_family = Family;
+    Addr = Unix;
+  }
+
+  sockaddr_un &Sockun() { return std::get<sockaddr_un>(Addr); }
+  const sockaddr_un &Sockun() const { return std::get<sockaddr_un>(Addr); }
+
+  sockaddr_in &Sockin() { return std::get<sockaddr_in>(Addr); }
+  const sockaddr_in &Sockin() const { return std::get<sockaddr_in>(Addr); }
+
+  std::pair<const sockaddr *, size_t> Sockaddr() const {
+    if (Protocol == Protocol_t::Tcp) {
+      const auto &In = Sockin();
+      return {(sockaddr *)&In, sizeof(In)};
+    }
+
+    const auto &Un = Sockun();
+    return {(sockaddr *)&Un, sizeof(Un)};
+  }
 };
 
 std::optional<Protocol_t>
@@ -25,46 +55,50 @@ ProtocolFromString(const std::string_view ProtoString) {
     return Protocol_t::Tcp;
   }
 
+  if (ProtoString == "unix") {
+    return Protocol_t::Unix;
+  }
+
   return std::nullopt;
 }
 
 SocketType_t SocketTypeFromProtocol(const Protocol_t Protocol) {
   switch (Protocol) {
+  case Protocol_t::Unix:
   case Protocol_t::Tcp: {
     return SocketType_t::Stream;
   }
   }
 
+  std::abort();
   return SocketType_t::Stream;
 }
 
 std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
   std::string_view AddressSv(Address);
-  if (AddressSv.length() < 3) {
-    fmt::print("The address needs to start with a protocol.\n");
-    return std::nullopt;
-  }
 
   //
   // Get the protocol.
   //
 
-  const auto &ProtoSv = AddressSv.substr(0, 3);
+  const auto &ProtoEndIdx = AddressSv.find("://");
+  if (ProtoEndIdx == AddressSv.npos) {
+    fmt::print("The address {} is malformed.\n", AddressSv);
+    return {};
+  }
+
+  const auto &ProtoSv = AddressSv.substr(0, ProtoEndIdx);
   const auto &Proto = ProtocolFromString(ProtoSv);
   if (!Proto) {
     fmt::print("Protocol {} is not supported.\n", ProtoSv);
-    return std::nullopt;
+    return {};
   }
 
   //
   // Strip the protocol part.
   //
 
-  AddressSv.remove_prefix(3);
-  if (!AddressSv.starts_with("://")) {
-    fmt::print("Protocol must be followed by ://.\n");
-    return std::nullopt;
-  }
+  AddressSv.remove_prefix(ProtoEndIdx);
 
   //
   // Strip the :// part.
@@ -73,100 +107,117 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
   AddressSv.remove_prefix(3);
 
   //
-  // If the address has a '/', strips it.
+  // If the address ends w/ a '/', strips it.
   //
 
-  const auto LastSlash = AddressSv.find_last_of('/');
-  if (LastSlash != AddressSv.npos) {
-    AddressSv.remove_suffix(AddressSv.length() - LastSlash);
+  if (AddressSv.back() == '//') {
+    AddressSv.remove_suffix(1);
   }
 
   //
-  // Locate the end of the Ip section.
+  // Handle TCP.
   //
 
-  const auto IpEndOffset = AddressSv.find_last_of(':');
-  if (IpEndOffset == AddressSv.npos) {
-    fmt::print("The address must contains a port\n");
-    return std::nullopt;
+  if (Proto == Protocol_t::Tcp) {
+
+    //
+    // Locate the end of the Ip section.
+    //
+
+    const auto IpEndOffset = AddressSv.find_last_of(':');
+    if (IpEndOffset == AddressSv.npos) {
+      fmt::print("The address must contains a port\n");
+      return std::nullopt;
+    }
+
+    //
+    // If the ':' delimiter is the last character, then we don't have a port
+    // specified.
+    //
+
+    if (IpEndOffset == AddressSv.npos) {
+      fmt::print("A port must be specified after the ':'\n");
+      return std::nullopt;
+    }
+
+    //
+    // The port is anything that comes after the delimiter.
+    //
+
+    const auto PortString = AddressSv.substr(IpEndOffset + 1);
+
+    //
+    // Convert the port to an integer.
+    //
+
+    const char *PortStringEnd = PortString.data() + PortString.length();
+    char *EndPtr = (char *)PortStringEnd;
+    const uint64_t Port = strtoull(PortString.data(), &EndPtr, 10);
+
+    if (EndPtr != PortStringEnd) {
+      fmt::print("Port failed conversion\n");
+      return std::nullopt;
+    }
+
+    //
+    // Ensure the port doesn't overflow the capacity of a uint16_t.
+    //
+
+    if (Port > std::numeric_limits<uint16_t>::max()) {
+      fmt::print("A port should be a 16 bit value\n");
+      return std::nullopt;
+    }
+
+    //
+    // Ensure that we have an hostname.
+    //
+
+    if (IpEndOffset == 0) {
+      fmt::print("Expected an hostname.\n");
+      return std::nullopt;
+    }
+
+    //
+    // Copy the ip in a string.
+    //
+
+    const std::string Ip(AddressSv.substr(0, IpEndOffset));
+
+    //
+    // Populate the structure now.
+    //
+
+    struct addrinfo Hints;
+    memset(&Hints, 0, sizeof(Hints));
+    Hints.ai_family = AF_INET;
+    Hints.ai_socktype = int(SocketTypeFromProtocol(*Proto));
+    Hints.ai_protocol = int(*Proto);
+
+    struct addrinfo *Results = nullptr;
+    if (getaddrinfo(Ip.data(), nullptr, &Hints, &Results) != 0) {
+      fmt::print("{} could not be converted by inet_pton / getaddrinfo\n", Ip);
+      return std::nullopt;
+    }
+
+    SocketAddress_t SocketAddress(Protocol_t(Results->ai_protocol));
+    memcpy(&SocketAddress.Sockin(), Results->ai_addr,
+           sizeof(SocketAddress.Addr));
+    SocketAddress.Sockin().sin_port = htons(Port);
+
+    return SocketAddress;
   }
 
   //
-  // If the ':' delimiter is the last character, then we don't have a port
-  // specified.
+  // Handle UNIX.
   //
 
-  if (IpEndOffset == AddressSv.length()) {
-    fmt::print("A port must be specified after the ':'\n");
-    return std::nullopt;
+  const std::string SocketName(AddressSv);
+  SocketAddress_t SocketAddress(Protocol_t::Unix);
+  if (strcpy_s(SocketAddress.Sockun().sun_path, SocketName.c_str()) != 0) {
+    fmt::print("strcpy_s'ing into the sockaddr_un failed, bailing.\n");
+    std::abort();
   }
 
-  //
-  // The port is anything that comes after the delimiter.
-  //
-
-  const auto PortString = AddressSv.substr(IpEndOffset + 1);
-
-  //
-  // Convert the port to an integer.
-  //
-
-  const char *PortStringEnd = PortString.data() + PortString.length();
-  char *EndPtr = (char *)PortStringEnd;
-  const uint64_t Port = strtoull(PortString.data(), &EndPtr, 10);
-
-  if (EndPtr != PortStringEnd) {
-    fmt::print("Port failed conversion\n");
-    return std::nullopt;
-  }
-
-  //
-  // Ensure the port doesn't overflow the capacity of a uint16_t.
-  //
-
-  if (Port > std::numeric_limits<uint16_t>::max()) {
-    fmt::print("A port should be a 16 bit value\n");
-    return std::nullopt;
-  }
-
-  //
-  // Ensure that we have an hostname.
-  //
-
-  if (IpEndOffset == 0) {
-    fmt::print("Expected an hostname.\n");
-    return std::nullopt;
-  }
-
-  //
-  // Copy the ip in a string.
-  //
-
-  const std::string Ip(AddressSv.substr(0, IpEndOffset));
-
-  //
-  // Populate the structure now.
-  //
-
-  struct addrinfo Hints;
-  memset(&Hints, 0, sizeof(Hints));
-  Hints.ai_family = AF_INET;
-  Hints.ai_socktype = int(SocketTypeFromProtocol(*Proto));
-  Hints.ai_protocol = int(*Proto);
-
-  struct addrinfo *Results = nullptr;
-  if (getaddrinfo(Ip.data(), nullptr, &Hints, &Results) != 0) {
-    fmt::print("{} could not be converted by inet_pton / getaddrinfo\n", Ip);
-    return std::nullopt;
-  }
-
-  SocketAddress_t SocketAddress;
-  SocketAddress.Protocol = Protocol_t(Results->ai_protocol);
-  SocketAddress.Type = SocketType_t(Results->ai_socktype);
-  memcpy(&SocketAddress.Addr, Results->ai_addr, sizeof(SocketAddress.Addr));
-  SocketAddress.Addr.sin_port = htons(Port);
-
-  freeaddrinfo(Results);
   return SocketAddress;
 }
 
@@ -177,14 +228,23 @@ std::optional<SocketFd_t> Listen(const std::string &Address) {
     return std::nullopt;
   }
 
-  SocketFd_t Fd = socket(SockAddr->Addr.sin_family, int(SockAddr->Type),
-                         int(SockAddr->Protocol));
+  if (SockAddr->Protocol == Protocol_t::Unix) {
+    const std::string SocketPath = SockAddr->Sockun().sun_path;
+    if (fs::is_socket(SocketPath)) {
+      fmt::print("'{}' already existed so deleting..\n");
+      fs::remove(SocketPath);
+    }
+  }
+
+  SocketFd_t Fd =
+      socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
     return std::nullopt;
   }
 
-  if (bind(Fd, SockAddr->Sockaddr(), sizeof(SockAddr->Addr)) == -1) {
+  const auto &[Addr, AddrLen] = SockAddr->Sockaddr();
+  if (bind(Fd, Addr, AddrLen) == -1) {
     fmt::print("bind failed\n");
     return std::nullopt;
   }
@@ -204,14 +264,15 @@ std::optional<SocketFd_t> Dial(const std::string &Address) {
     return std::nullopt;
   }
 
-  SocketFd_t Fd = socket(SockAddr->Addr.sin_family, int(SockAddr->Type),
-                         int(SockAddr->Protocol));
+  SocketFd_t Fd =
+      socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
     return std::nullopt;
   }
 
-  if (connect(Fd, SockAddr->Sockaddr(), sizeof(SockAddr->Addr)) == -1) {
+  const auto &[Addr, AddrLen] = SockAddr->Sockaddr();
+  if (connect(Fd, Addr, AddrLen) == -1) {
     fmt::print("connect failed\n");
     return std::nullopt;
   }
