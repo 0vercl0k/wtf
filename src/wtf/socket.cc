@@ -1,6 +1,5 @@
 // Axel '0vercl0k' Souchet - November 7 2020
 #include "socket.h"
-#define __STDC_WANT_LIB_EXT1__ 1
 #include <string.h>
 #include <string_view>
 #include <utility>
@@ -131,7 +130,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     const auto IpEndOffset = AddressSv.find_last_of(':');
     if (IpEndOffset == AddressSv.npos) {
       fmt::print("The address must contains a port\n");
-      return std::nullopt;
+      return {};
     }
 
     //
@@ -141,7 +140,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
     if (IpEndOffset == AddressSv.npos) {
       fmt::print("A port must be specified after the ':'\n");
-      return std::nullopt;
+      return {};
     }
 
     //
@@ -160,7 +159,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
     if (EndPtr != PortStringEnd) {
       fmt::print("Port failed conversion\n");
-      return std::nullopt;
+      return {};
     }
 
     //
@@ -169,7 +168,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
     if (Port > std::numeric_limits<uint16_t>::max()) {
       fmt::print("A port should be a 16 bit value\n");
-      return std::nullopt;
+      return {};
     }
 
     //
@@ -178,7 +177,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
     if (IpEndOffset == 0) {
       fmt::print("Expected an hostname.\n");
-      return std::nullopt;
+      return {};
     }
 
     //
@@ -207,7 +206,6 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     memcpy(&SocketAddress.Sockin(), Results->ai_addr,
            sizeof(SocketAddress.Addr));
     SocketAddress.Sockin().sin_port = htons(Port);
-
     return SocketAddress;
   }
 
@@ -217,9 +215,14 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
   const std::string SocketName(AddressSv);
   SocketAddress_t SocketAddress(Protocol_t::Unix);
-  if (strcpy_s(SocketAddress.Sockun().sun_path, SocketName.c_str()) != 0) {
+  if (SocketName.length() > 64) {
+    fmt::print("'{}' is too big as a name, bailing.\n");
+    return {};
+  }
+
+  if (strcpy(SocketAddress.Sockun().sun_path, SocketName.c_str()) != 0) {
     fmt::print("strcpy_s'ing into the sockaddr_un failed, bailing.\n");
-    std::abort();
+    return {};
   }
 
   return SocketAddress;
