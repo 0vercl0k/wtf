@@ -220,11 +220,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     return {};
   }
 
-  if (strcpy(SocketAddress.Sockun().sun_path, SocketName.c_str()) != 0) {
-    fmt::print("strcpy_s'ing into the sockaddr_un failed, bailing.\n");
-    return {};
-  }
-
+  strcpy(SocketAddress.Sockun().sun_path, SocketName.c_str());
   return SocketAddress;
 }
 
