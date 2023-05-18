@@ -21,15 +21,17 @@ struct SocketAddress_t {
 
   SocketAddress_t(const Protocol_t Protocol_) : Protocol(Protocol_) {
     if (Protocol == Protocol_t::Tcp) {
-      sockaddr_in Ip = {};
+      sockaddr_in In = {};
       Family = AF_INET;
-      Ip.sin_family = Family;
+      In.sin_family = Family;
+      Addr = In;
+      return;
     }
 
-    sockaddr_un Unix = {};
+    sockaddr_un Un = {};
     Family = AF_UNIX;
-    Unix.sun_family = Family;
-    Addr = Unix;
+    Un.sun_family = Family;
+    Addr = Un;
   }
 
   sockaddr_un &Sockun() { return std::get<sockaddr_un>(Addr); }
@@ -41,11 +43,11 @@ struct SocketAddress_t {
   std::pair<const sockaddr *, size_t> Sockaddr() const {
     if (Protocol == Protocol_t::Tcp) {
       const auto &In = Sockin();
-      return {(sockaddr *)&In, sizeof(In)};
+      return {(const sockaddr *)&In, sizeof(In)};
     }
 
     const auto &Un = Sockun();
-    return {(sockaddr *)&Un, sizeof(Un)};
+    return {(const sockaddr *)&Un, sizeof(Un)};
   }
 };
 
@@ -110,7 +112,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
   // If the address ends w/ a '/', strips it.
   //
 
-  if (AddressSv.back() == '//') {
+  if (AddressSv.back() == '/') {
     AddressSv.remove_suffix(1);
   }
 
@@ -231,7 +233,7 @@ std::optional<SocketFd_t> Listen(const std::string &Address) {
   if (SockAddr->Protocol == Protocol_t::Unix) {
     const std::string SocketPath = SockAddr->Sockun().sun_path;
     if (fs::is_socket(SocketPath)) {
-      fmt::print("'{}' already existed so deleting..\n");
+      fmt::print("'{}' already existed so deleting..\n", SocketPath);
       fs::remove(SocketPath);
     }
   }

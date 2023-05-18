@@ -39,6 +39,7 @@ static int SocketError() { return WSAGetLastError(); }
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/types.h>
 
 using SocketFd_t = int;
