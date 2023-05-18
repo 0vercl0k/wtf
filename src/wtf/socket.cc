@@ -216,7 +216,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
   const std::string SocketName(AddressSv);
   SocketAddress_t SocketAddress(Protocol_t::Unix);
   if (SocketName.length() > 64) {
-    fmt::print("'{}' is too big as a name, bailing.\n");
+    fmt::print("'{}' is too big as a name, bailing.\n", SocketName);
     return {};
   }
 
