@@ -1,5 +1,7 @@
 // Axel '0vercl0k' Souchet - November 7 2020
 #include "socket.h"
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <string.h>
 #include <string_view>
 #include <utility>
 #include <variant>
