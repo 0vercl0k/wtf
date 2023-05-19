@@ -21,19 +21,22 @@ struct SocketAddress_t {
   std::variant<sockaddr_in, sockaddr_un> Addr;
 
   SocketAddress_t(const Protocol_t Protocol_) : Protocol(Protocol_) {
-    if (Protocol == Protocol_t::Tcp) {
+    if (Tcp()) {
       sockaddr_in In = {};
       Family = AF_INET;
       In.sin_family = Family;
       Addr = In;
       return;
-    } else if (Protocol == Protocol_t::Unix) {
+    } else if (Unix()) {
       sockaddr_un Un = {};
       Family = AF_UNIX;
       Un.sun_family = Family;
       Addr = Un;
     }
   }
+
+  bool Unix() const { return Protocol == Protocol_t::Unix; }
+  bool Tcp() const { return Protocol == Protocol_t::Tcp; }
 
   sockaddr_un &Sockun() { return std::get<sockaddr_un>(Addr); }
   const sockaddr_un &Sockun() const { return std::get<sockaddr_un>(Addr); }
@@ -42,7 +45,7 @@ struct SocketAddress_t {
   const sockaddr_in &Sockin() const { return std::get<sockaddr_in>(Addr); }
 
   std::pair<const sockaddr *, size_t> Sockaddr() const {
-    if (Protocol == Protocol_t::Tcp) {
+    if (Tcp()) {
       const auto &In = Sockin();
       return {(const sockaddr *)&In, sizeof(In)};
     }
@@ -219,7 +222,9 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
   const std::string SocketName(AddressSv);
   SocketAddress_t SocketAddress(Protocol_t::Unix);
-  if (SocketName.length() > 64) {
+  const size_t SocketNameMaxLength =
+      sizeof(SocketAddress.Sockun().sun_path) - 1;
+  if (SocketName.length() > SocketNameMaxLength) {
     fmt::print("'{}' is too big as a name, bailing.\n", SocketName);
     return {};
   }
@@ -235,7 +240,7 @@ std::optional<SocketFd_t> Listen(const std::string &Address) {
     return {};
   }
 
-  if (SockAddr->Protocol == Protocol_t::Unix) {
+  if (SockAddr->Unix()) {
     const std::string SocketPath = SockAddr->Sockun().sun_path;
     fmt::print("Deleting {}..\n", SocketPath);
     fs::remove(SocketPath);
@@ -243,9 +248,23 @@ std::optional<SocketFd_t> Listen(const std::string &Address) {
 
   SocketFd_t Fd =
       socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
+
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
     return {};
+  }
+
+  //
+  // Make sure packets send as soon as possible if we're using a TCP server.
+  //
+
+  if (SockAddr->Tcp()) {
+    const int One = 1;
+    if (setsockopt(Fd, IPPROTO_TCP, TCP_NODELAY, (char *)&One, sizeof(One)) !=
+        0) {
+      fmt::print("setsockopt TCP_NODELAY failed\n");
+      return {};
+    }
   }
 
   const auto &[Addr, AddrLen] = SockAddr->Sockaddr();
@@ -274,6 +293,19 @@ std::optional<SocketFd_t> Dial(const std::string &Address) {
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
     return {};
+  }
+
+  //
+  // Make sure packets send as soon as possible if we're using a TCP server.
+  //
+
+  if (SockAddr->Tcp()) {
+    const int One = 1;
+    if (setsockopt(Fd, IPPROTO_TCP, TCP_NODELAY, (char *)&One, sizeof(One)) !=
+        0) {
+      fmt::print("setsockopt TCP_NODELAY failed\n");
+      return {};
+    }
   }
 
   const auto &[Addr, AddrLen] = SockAddr->Sockaddr();

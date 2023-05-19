@@ -38,9 +38,11 @@ static int SocketError() { return WSAGetLastError(); }
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
-#include <sys/un.h>
 #include <sys/types.h>
+#include <sys/un.h>
 
 using SocketFd_t = int;
 constexpr int INVALID_SOCKET = -1;
