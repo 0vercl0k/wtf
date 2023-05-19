@@ -27,12 +27,12 @@ struct SocketAddress_t {
       In.sin_family = Family;
       Addr = In;
       return;
+    } else if (Protocol == Protocol_t::Unix) {
+      sockaddr_un Un = {};
+      Family = AF_UNIX;
+      Un.sun_family = Family;
+      Addr = Un;
     }
-
-    sockaddr_un Un = {};
-    Family = AF_UNIX;
-    Un.sun_family = Family;
-    Addr = Un;
   }
 
   sockaddr_un &Sockun() { return std::get<sockaddr_un>(Addr); }
@@ -62,7 +62,7 @@ ProtocolFromString(const std::string_view ProtoString) {
     return Protocol_t::Unix;
   }
 
-  return std::nullopt;
+  return {};
 }
 
 SocketType_t SocketTypeFromProtocol(const Protocol_t Protocol) {
@@ -199,12 +199,16 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     struct addrinfo *Results = nullptr;
     if (getaddrinfo(Ip.data(), nullptr, &Hints, &Results) != 0) {
       fmt::print("{} could not be converted by inet_pton / getaddrinfo\n", Ip);
-      return std::nullopt;
+      return {};
     }
 
     SocketAddress_t SocketAddress(Protocol_t(Results->ai_protocol));
-    memcpy(&SocketAddress.Sockin(), Results->ai_addr,
-           sizeof(SocketAddress.Addr));
+    if (Results->ai_addrlen > sizeof(SocketAddress.Sockin())) {
+      fmt::print("getaddrinfo() returned a sockaddr larger than expected\n");
+      return {};
+    }
+
+    memcpy(&SocketAddress.Sockin(), Results->ai_addr, Results->ai_addrlen);
     SocketAddress.Sockin().sin_port = htons(Port);
     return SocketAddress;
   }
@@ -228,33 +232,31 @@ std::optional<SocketFd_t> Listen(const std::string &Address) {
   const auto SockAddr = SockAddrFromString(Address);
   if (!SockAddr) {
     fmt::print("SockAddrFromString failed\n");
-    return std::nullopt;
+    return {};
   }
 
   if (SockAddr->Protocol == Protocol_t::Unix) {
     const std::string SocketPath = SockAddr->Sockun().sun_path;
-    if (fs::is_socket(SocketPath)) {
-      fmt::print("'{}' already existed so deleting..\n", SocketPath);
-      fs::remove(SocketPath);
-    }
+    fmt::print("Deleting {}..\n", SocketPath);
+    fs::remove(SocketPath);
   }
 
   SocketFd_t Fd =
       socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
-    return std::nullopt;
+    return {};
   }
 
   const auto &[Addr, AddrLen] = SockAddr->Sockaddr();
   if (bind(Fd, Addr, AddrLen) == -1) {
     fmt::print("bind failed\n");
-    return std::nullopt;
+    return {};
   }
 
   if (listen(Fd, 1) == -1) {
     fmt::print("listen failed\n");
-    return std::nullopt;
+    return {};
   }
 
   return Fd;
@@ -264,20 +266,20 @@ std::optional<SocketFd_t> Dial(const std::string &Address) {
   const auto SockAddr = SockAddrFromString(Address);
   if (!SockAddr) {
     fmt::print("SockAddrFromString failed\n");
-    return std::nullopt;
+    return {};
   }
 
   SocketFd_t Fd =
       socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
-    return std::nullopt;
+    return {};
   }
 
   const auto &[Addr, AddrLen] = SockAddr->Sockaddr();
   if (connect(Fd, Addr, AddrLen) == -1) {
     fmt::print("connect failed\n");
-    return std::nullopt;
+    return {};
   }
 
   return Fd;
@@ -305,7 +307,7 @@ std::optional<uint32_t> Receive(const SocketFd_t Fd,
   if (const int R = recv(Fd, (char *)CurrentBuffer, sizeof(uint32_t), 0);
       R == -1 || R != sizeof(uint32_t)) {
     fmt::print("Could not receive size ({})\n", R);
-    return std::nullopt;
+    return {};
   }
 
   const uint32_t Expected = *(uint32_t *)ScratchBuffer;
@@ -322,7 +324,7 @@ std::optional<uint32_t> Receive(const SocketFd_t Fd,
   while (ReceivedSize != Expected) {
     const int ReceivedChunkSize = recv(Fd, CurrentBuffer, MaxSize, 0);
     if (ReceivedChunkSize == -1 || ReceivedChunkSize < 0) {
-      return std::nullopt;
+      return {};
     }
 
     ReceivedSize += ReceivedChunkSize;
