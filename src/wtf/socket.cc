@@ -17,7 +17,6 @@ enum class SocketType_t {
 struct SocketAddress_t {
   Protocol_t Protocol;
   int Family = -1;
-  SocketType_t Type = SocketType_t::Stream;
   std::variant<sockaddr_in, sockaddr_un> Addr;
 
   SocketAddress_t(const Protocol_t Protocol_) : Protocol(Protocol_) {
@@ -27,12 +26,12 @@ struct SocketAddress_t {
       In.sin_family = Family;
       Addr = In;
       return;
-    } else if (Unix()) {
-      sockaddr_un Un = {};
-      Family = AF_UNIX;
-      Un.sun_family = Family;
-      Addr = Un;
     }
+
+    sockaddr_un Un = {};
+    Family = AF_UNIX;
+    Un.sun_family = Family;
+    Addr = Un;
   }
 
   bool Unix() const { return Protocol == Protocol_t::Unix; }
@@ -66,18 +65,6 @@ ProtocolFromString(const std::string_view ProtoString) {
   }
 
   return {};
-}
-
-SocketType_t SocketTypeFromProtocol(const Protocol_t Protocol) {
-  switch (Protocol) {
-  case Protocol_t::Unix:
-  case Protocol_t::Tcp: {
-    return SocketType_t::Stream;
-  }
-  }
-
-  std::abort();
-  return SocketType_t::Stream;
 }
 
 std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
@@ -137,29 +124,23 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     }
 
     //
-    // If the ':' delimiter is the last character, then we don't have a port
-    // specified.
+    // The port is anything that comes after the delimiter.
     //
 
-    if (IpEndOffset == AddressSv.npos) {
-      fmt::print("A port must be specified after the ':'\n");
+    const auto &PortStringSv = AddressSv.substr(IpEndOffset + 1);
+    if (PortStringSv.length() == 0) {
+      fmt::print("A port is expected\n");
       return {};
     }
 
     //
-    // The port is anything that comes after the delimiter.
+    // Try to convert the port to an integer.
     //
 
-    const auto PortString = AddressSv.substr(IpEndOffset + 1);
-
-    //
-    // Convert the port to an integer.
-    //
-
-    const char *PortStringEnd = PortString.data() + PortString.length();
-    char *EndPtr = (char *)PortStringEnd;
+    const std::string PortString(PortStringSv);
+    const char *PortStringEnd = &PortString.back() + 1;
+    char *EndPtr = nullptr;
     const uint64_t Port = strtoull(PortString.data(), &EndPtr, 10);
-
     if (EndPtr != PortStringEnd) {
       fmt::print("Port failed conversion\n");
       return {};
@@ -196,8 +177,8 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     struct addrinfo Hints;
     memset(&Hints, 0, sizeof(Hints));
     Hints.ai_family = AF_INET;
-    Hints.ai_socktype = int(SocketTypeFromProtocol(*Proto));
-    Hints.ai_protocol = int(*Proto);
+    Hints.ai_socktype = SOCK_STREAM;
+    Hints.ai_protocol = int(Protocol_t::Tcp);
 
     struct addrinfo *Results = nullptr;
     if (getaddrinfo(Ip.data(), nullptr, &Hints, &Results) != 0) {
@@ -205,7 +186,12 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
       return {};
     }
 
-    SocketAddress_t SocketAddress(Protocol_t(Results->ai_protocol));
+    if (Results->ai_protocol != Hints.ai_protocol) {
+      fmt::print("getaddrinfo returned an unexpected hint\n");
+      return {};
+    }
+
+    SocketAddress_t SocketAddress(Protocol_t::Tcp);
     if (Results->ai_addrlen > sizeof(SocketAddress.Sockin())) {
       fmt::print("getaddrinfo() returned a sockaddr larger than expected\n");
       return {};
@@ -220,16 +206,20 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
   // Handle UNIX.
   //
 
-  const std::string SocketName(AddressSv);
   SocketAddress_t SocketAddress(Protocol_t::Unix);
   const size_t SocketNameMaxLength =
       sizeof(SocketAddress.Sockun().sun_path) - 1;
-  if (SocketName.length() > SocketNameMaxLength) {
-    fmt::print("'{}' is too big as a name, bailing.\n", SocketName);
+  if (AddressSv.size() > SocketNameMaxLength) {
+    fmt::print("'{}' is too big as a name, bailing.\n", AddressSv);
     return {};
   }
 
-  strcpy(SocketAddress.Sockun().sun_path, SocketName.c_str());
+  //
+  // Copy the socket name.
+  //
+
+  strncpy(SocketAddress.Sockun().sun_path, AddressSv.data(), AddressSv.size());
+  SocketAddress.Sockun().sun_path[AddressSv.size()] = 0;
   return SocketAddress;
 }
 
@@ -247,8 +237,7 @@ std::optional<SocketFd_t> Listen(const std::string &Address) {
   }
 
   SocketFd_t Fd =
-      socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
-
+      socket(SockAddr->Family, SOCK_STREAM, int(SockAddr->Protocol));
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
     return {};
@@ -289,7 +278,7 @@ std::optional<SocketFd_t> Dial(const std::string &Address) {
   }
 
   SocketFd_t Fd =
-      socket(SockAddr->Family, int(SockAddr->Type), int(SockAddr->Protocol));
+      socket(SockAddr->Family, SOCK_STREAM, int(SockAddr->Protocol));
   if (Fd == INVALID_SOCKET) {
     fmt::print("socket failed\n");
     return {};
