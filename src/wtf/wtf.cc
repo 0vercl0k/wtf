@@ -51,7 +51,7 @@ int main(int argc, const char *argv[]) {
 
         if (Opts.Master.OutputsPath.empty()) {
           Opts.Master.OutputsPath = Opts.Master.TargetPath / "outputs";
-        };
+        }
 
         if (Opts.Master.CrashesPath.empty()) {
           Opts.Master.CrashesPath = Opts.Master.TargetPath / "crashes";
