@@ -1,6 +1,6 @@
 // Axel '0vercl0k' Souchet - November 7 2020
 #include "socket.h"
-#include <string.h>
+#include <cstring>
 #include <string_view>
 #include <utility>
 #include <variant>
