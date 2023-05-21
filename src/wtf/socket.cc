@@ -199,6 +199,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
 
     memcpy(&SocketAddress.Sockin(), Results->ai_addr, Results->ai_addrlen);
     SocketAddress.Sockin().sin_port = htons(Port);
+    freeaddrinfo(Results);
     return SocketAddress;
   }
 
