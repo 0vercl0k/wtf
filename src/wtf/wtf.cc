@@ -33,6 +33,14 @@ int main(int argc, const char *argv[]) {
   CLI::App *MasterCmd =
       Wtf.add_subcommand("master", "Master options")->callback([&Opts] {
         //
+        // Use the CWD if the target path hasn't been specified.
+        //
+
+        if (Opts.Master.TargetPath.empty()) {
+          Opts.Master.TargetPath = fs::current_path();
+        }
+
+        //
         // Populate other paths based on the based target path.. unless the user
         // has overriden them.
         //
@@ -43,7 +51,7 @@ int main(int argc, const char *argv[]) {
 
         if (Opts.Master.OutputsPath.empty()) {
           Opts.Master.OutputsPath = Opts.Master.TargetPath / "outputs";
-        };
+        }
 
         if (Opts.Master.CrashesPath.empty()) {
           Opts.Master.CrashesPath = Opts.Master.TargetPath / "crashes";
@@ -85,8 +93,7 @@ int main(int argc, const char *argv[]) {
       ->required();
 
   MasterCmd->add_option("--target", Opts.Master.TargetPath, "Target path")
-      ->description("Target directory")
-      ->required();
+      ->description("Target directory");
 
   MasterCmd->add_option("--inputs", Opts.Master.InputsPath, "Inputs")
       ->description("Input corpus");
