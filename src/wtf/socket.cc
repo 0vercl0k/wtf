@@ -160,7 +160,7 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     //
 
     if (IpEndOffset == 0) {
-      fmt::print("Expected an hostname.\n");
+      fmt::print("Expected an hostname\n");
       return {};
     }
 
@@ -192,8 +192,8 @@ std::optional<SocketAddress_t> SockAddrFromString(const std::string &Address) {
     }
 
     SocketAddress_t SocketAddress(Protocol_t::Tcp);
-    if (Results->ai_addrlen > sizeof(SocketAddress.Sockin())) {
-      fmt::print("getaddrinfo() returned a sockaddr larger than expected\n");
+    if (Results->ai_addrlen != sizeof(SocketAddress.Sockin())) {
+      fmt::print("getaddrinfo() returned a sockaddr w/ an unexpected size\n");
       return {};
     }
 
