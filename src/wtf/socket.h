@@ -15,6 +15,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#include <afunix.h>
+
 #pragma comment(lib, "ws2_32.lib")
 
 struct WSAInitializer_t {
@@ -36,8 +38,11 @@ static int SocketError() { return WSAGetLastError(); }
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/un.h>
 
 using SocketFd_t = int;
 constexpr int INVALID_SOCKET = -1;
