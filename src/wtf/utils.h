@@ -21,10 +21,29 @@ using span_u8 = std::span<uint8_t>;
 const size_t StringMaxSize = 120;
 
 //
+// Hashing functions.
+//
+
+inline uint64_t SplitMix64(uint64_t Val) {
+  Val ^= Val >> 30;
+  Val *= 0xbf58476d1ce4e5b9U;
+  Val ^= Val >> 27;
+  Val *= 0x94d049bb133111ebU;
+  Val ^= Val >> 31;
+  return Val;
+}
+
+//
 // Compare two file path by their sizes.
 //
 
 [[nodiscard]] bool CompareTwoFileBySize(const fs::path &A, const fs::path &B);
+
+//
+// Bytes to hex string.
+//
+
+std::string BytesToHexString(const uint8_t *Bytes, uint32_t Length);
 
 //
 // Hexdump function.
@@ -34,6 +53,12 @@ void Hexdump(const span_u8 Buffer);
 void Hexdump(const uint64_t Address, const span_u8 Buffer);
 void Hexdump(const uint64_t Address, const void *Buffer, size_t Len);
 
+//
+// Parse LAF allowed ranges cmdline argument.
+//
+
+std::vector<std::pair<Gva_t, Gva_t>>
+ParseLafAllowedRanges(const std::string &input);
 //
 // Populate a bochscpu_state_t from a JSON file.
 //

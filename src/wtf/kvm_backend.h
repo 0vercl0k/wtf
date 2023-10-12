@@ -404,6 +404,8 @@ public:
 
   bool RevokeLastNewCoverage() override;
 
+  bool InsertCoverageEntry(const Gva_t Gva) override;
+
 private:
   //
   // Load the CPU state into the VP.

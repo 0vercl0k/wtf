@@ -2087,6 +2087,14 @@ bool KvmBackend_t::RevokeLastNewCoverage() {
   return true;
 }
 
+bool KvmBackend_t::InsertCoverageEntry(const Gva_t Gva) {
+  // TODO: implement
+
+  throw std::runtime_error(__func__ + std::string("is not implemented"));
+
+  return false;
+}
+
 bool KvmBackend_t::RegisterMemory(const KvmMemoryRegion_t &MemoryRegion) {
   if (ioctl(Vm_, KVM_SET_USER_MEMORY_REGION, &MemoryRegion.Kvm) < 0) {
     perror("Cannot RegisterMemory");

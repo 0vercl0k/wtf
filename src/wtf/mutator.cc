@@ -106,6 +106,9 @@ size_t HonggfuzzMutator_t::Mutate(uint8_t *Data, const size_t DataLen,
 }
 
 void HonggfuzzMutator_t::OnNewCoverage(const Testcase_t &Testcase) {
+  // Update the last coverage update time.
+  Run_.global->timing.lastCovUpdate = time(nullptr);
+
   Run_.RandomBuffer = std::make_unique<uint8_t[]>(Testcase.BufferSize_);
   Run_.RandomBufferSize = Testcase.BufferSize_;
   memcpy(Run_.RandomBuffer.get(), Testcase.Buffer_.get(),

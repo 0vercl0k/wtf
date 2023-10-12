@@ -1,0 +1,59 @@
+title: wtf-laf-config
+seed: 1337
+target-dir: .
+
+master:
+  runs: 999000000
+  max_len: 120000
+  name: rizin
+  inputs: inputs
+  outputs: outputs
+
+nodes:
+  bochs-laf-compcov:
+    backend: bochscpu
+    edges: 1
+    compcov: 1
+    laf: user
+    laf-allowed-ranges: 0x7FF7FE680000-0x7FF7FF405000
+    name: rizin
+    limit: 900000
+
+  bochs-laf:
+    backend: bochscpu
+    edges: 1
+    compcov: 0
+    laf: user
+    laf-allowed-ranges: 0x7FF7FE680000-0x7FF7FF405000
+    name: rizin
+    limit: 900000
+
+  kvm-none-0:
+    backend: kvm
+    name: rizin
+    limit: 2
+
+  kvm-none-1:
+    backend: kvm
+    name: rizin
+    limit: 2
+
+  kvm-none-2:
+    backend: kvm
+    name: rizin
+    limit: 2
+
+  kvm-none-3:
+    backend: kvm
+    name: rizin
+    limit: 2
+
+  kvm-none-4:
+    backend: kvm
+    name: rizin
+    limit: 2
+
+  kvm-none-5:
+    backend: kvm
+    name: rizin
+    limit: 2
