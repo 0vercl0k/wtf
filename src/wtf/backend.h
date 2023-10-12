@@ -313,6 +313,12 @@ public:
   }
 
   //
+  // Read a uint16_t.
+  //
+
+  uint16_t VirtRead2(const Gva_t Gva) const;
+
+  //
   // Read a uint32_t.
   //
 
@@ -503,7 +509,6 @@ public:
   [[nodiscard]] std::pair<uint64_t, Gva_t> GetArgAndAddress(const uint64_t Idx);
   [[nodiscard]] std::pair<Gva_t, Gva_t> GetArgAndAddressGva(const uint64_t Idx);
 
-
   //
   // Shortcuts to grab / set some registers.
   //
@@ -587,6 +592,12 @@ public:
   //
 
   virtual bool RevokeLastNewCoverage() = 0;
+
+  //
+  // Inserts a new coverage entry.
+  //
+
+  virtual bool InsertCoverageEntry(const Gva_t Gva) = 0;
 
   //
   // Print the registers.

@@ -2,6 +2,7 @@
 #pragma once
 #include "corpus.h"
 #include "dirwatch.h"
+#include "fmt/core.h"
 #include "globals.h"
 #include "mutator.h"
 #include "socket.h"
@@ -9,7 +10,10 @@
 #include "tsl/robin_set.h"
 #include "utils.h"
 #include <chrono>
+#include <cstdio>
+#include <filesystem>
 #include <fmt/format.h>
+#include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <span>
@@ -145,7 +149,7 @@ public:
   // Print the stats.
   //
 
-  void Print(const bool ForcePrint = false) {
+  void Print(const bool ForcePrint = false, std::FILE *Log_ = nullptr) {
 
     //
     // Let's check if we should print the stats.
@@ -191,14 +195,20 @@ public:
 
     const uint64_t CovDiff = Coverage_ - LastCoverage_;
 
-    fmt::print("#{} cov: {} (+{}) corp: {} ({:.1f}{}) exec/s: {:.1f}{} ({} "
-               "nodes) lastcov: "
-               "{:.1f}{} crash: {} "
-               "timeout: {} cr3: {} uptime: {:.1f}{}\n",
-               TestcasesNumber_, Coverage_, CovDiff, CorpusSize_, CorpusBytes,
-               CorpusSizeUnit, ExecsPerSecond, ExecsPerSecondUnit, Clients_,
-               LastCov, LastCovUnit, Crashes_, Timeouts_, Cr3s_, Uptime,
-               UptimeUnit);
+    std::string StatsStr = fmt::format(
+        "#{} cov: {} (+{}) corp: {} ({:.1f}{}) exec/s: {:.1f}{} ({} "
+        "nodes) lastcov: "
+        "{:.1f}{} crash: {} "
+        "timeout: {} cr3: {} uptime: {:.1f}{}\n",
+        TestcasesNumber_, Coverage_, CovDiff, CorpusSize_, CorpusBytes,
+        CorpusSizeUnit, ExecsPerSecond, ExecsPerSecondUnit, Clients_, LastCov,
+        LastCovUnit, Crashes_, Timeouts_, Cr3s_, Uptime, UptimeUnit);
+
+    fmt::print("{}", StatsStr);
+    if (Log_) {
+      fmt::print(Log_, "{}", StatsStr);
+      std::fflush(Log_);
+    }
 
     //
     // Remember last time we printed the stats as well as the coverage we
@@ -315,7 +325,13 @@ class Server_t {
   ServerStats_t Stats_;
 
   //
-  // This stores paths to files that needs their content to be sent to clientas
+  // Log file.
+  //
+
+  std::FILE *Log_ = nullptr;
+
+  //
+  // This stores paths to files that needs their content to be sent to clients
   // as is, without mutations. This is useful to send the corpus files for
   // example. It is later sorted from the biggest size to the smallest.
   //
@@ -337,6 +353,15 @@ class Server_t {
 public:
   explicit Server_t(const MasterOptions_t &Opts)
       : Opts_(Opts), Rng_(Opts.Seed), Corpus_(Opts.OutputsPath, Rng_) {
+
+    std::filesystem::path LogPath("master.log");
+    Log_ = std::fopen(LogPath.string().c_str(), "w");
+
+    if (!Log_) {
+      fmt::print("Failed to open log file: {}\n", LogPath.string());
+      std::abort();
+    }
+
     FD_ZERO(&ReadSet_);
     FD_ZERO(&WriteSet_);
   }
@@ -346,6 +371,10 @@ public:
   //
 
   ~Server_t() {
+    if (Log_) {
+      std::fclose(Log_);
+    }
+
     for (const auto &[Fd, _] : Clients_) {
       CloseSocket(Fd);
     }
@@ -485,7 +514,7 @@ public:
       // Display some stats.
       //
 
-      Stats_.Print();
+      Stats_.Print(false, Log_);
 
       //
       // Scan the read set.

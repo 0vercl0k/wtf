@@ -1,0 +1,9 @@
+title: laf-vs-nolaf
+
+round-duration: 21600 # 6 hours
+rounds: 5
+results-dir: laf-vs-nolaf-results
+cov-instructions-limit: 900000
+
+base-config: base.yaml
+alternative-config: alternative.yaml

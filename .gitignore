@@ -36,4 +36,8 @@ src/wtf/fuzzer_*
 src/build/
 src/build_msvc/
 src/out
+src/.cache
 targets/
+__pycache__/
+
+compile_commands.*

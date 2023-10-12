@@ -9,6 +9,7 @@ from binaryninja import PluginCommand, interaction
 def generate_coverage_file(bv):
     # bv.file.filename: 'C:/path/to/binary.bndb'
     name = Path(bv.file.filename).stem
+    name = name.replace("-", "_")
 
     bb_list = []
 

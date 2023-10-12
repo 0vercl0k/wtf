@@ -6399,7 +6399,7 @@ def main():
                 addrs.add(rva)
 
     cov = {
-        'name': filepath.with_suffix('').name,
+        'name': filepath.with_suffix('').name.replace("-", "_"),
         'addresses': sorted(addrs)
     }
 

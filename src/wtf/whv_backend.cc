@@ -112,7 +112,8 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
 
   HRESULT Hr = WHvCreatePartition(&Partition_);
   if (FAILED(Hr)) {
-    fmt::print("Failed WHvCreatePartition (Windows Hypervisor Platform enabled?)\n");
+    fmt::print(
+        "Failed WHvCreatePartition (Windows Hypervisor Platform enabled?)\n");
     return false;
   }
 
@@ -1312,6 +1313,14 @@ bool WhvBackend_t::RevokeLastNewCoverage() {
 
   Coverage_.clear();
   return true;
+}
+
+bool WhvBackend_t::InsertCoverageEntry(const Gva_t Gva) {
+  // TODO: implement
+
+  throw std::runtime_error(__func__ + std::string("is not implemented"));
+
+  return false;
 }
 
 void WhvBackend_t::PrintRunStats() { RunStats_.Print(); }
