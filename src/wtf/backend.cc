@@ -175,23 +175,7 @@ Gva_t Backend_t::GetArgAddress(const uint64_t Idx) {
   return Gva_t(Rsp() + (8 + (Idx * 8)));
 }
 
-uint32_t Backend_t::GetArg4(const uint64_t Idx) {
-  switch (Idx) {
-  case 0:
-    return (uint32_t)Rcx();
-  case 1:
-    return (uint32_t)Rdx();
-  case 2:
-    return (uint32_t)R8();
-  case 3:
-    return (uint32_t)R9();
-  default: {
-    return VirtRead4(GetArgAddress(Idx));
-  }
-  }
-}
-
-uint64_t Backend_t::GetArg8(const uint64_t Idx) {
+uint64_t Backend_t::GetArg(const uint64_t Idx) {
   switch (Idx) {
   case 0:
     return Rcx();
@@ -207,14 +191,10 @@ uint64_t Backend_t::GetArg8(const uint64_t Idx) {
   }
 }
 
-Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg8(Idx)); }
+Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg(Idx)); }
 
-std::pair<uint32_t, Gva_t> Backend_t::GetArg4AndAddress(const uint64_t Idx) {
-  return {GetArg4(Idx), GetArgAddress(Idx)};
-}
-
-std::pair<uint64_t, Gva_t> Backend_t::GetArg8AndAddress(const uint64_t Idx) {
-  return {GetArg8(Idx), GetArgAddress(Idx)};
+std::pair<uint64_t, Gva_t> Backend_t::GetArgAndAddress(const uint64_t Idx) {
+  return {GetArg(Idx), GetArgAddress(Idx)};
 }
 
 std::pair<Gva_t, Gva_t> Backend_t::GetArgAndAddressGva(const uint64_t Idx) {

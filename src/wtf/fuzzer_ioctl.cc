@@ -75,16 +75,16 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   //
 
   const auto &[InputBufferSize, InputBufferSizePtr] =
-      g_Backend->GetArg4AndAddress(7);
+      g_Backend->GetArgAndAddress(7);
   const uint32_t MutatedInputBufferSize =
-      std::min(TotalInputBufferSize, InputBufferSize);
+      std::min(TotalInputBufferSize, uint32_t(InputBufferSize));
 
   //
   // Calculate the new InputBuffer address by pushing the mutated buffer as
   // close as possible from its end.
   //
 
-  const auto &[InputBuffer, InputBufferPtr] = g_Backend->GetArg8AndAddress(6);
+  const auto &[InputBuffer, InputBufferPtr] = g_Backend->GetArgAndAddress(6);
   const auto NewInputBuffer =
       Gva_t(InputBuffer + InputBufferSize - MutatedInputBufferSize);
 
@@ -212,12 +212,12 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   //
 
   if (!g_Backend->SetBreakpoint("nt!KeBugCheck2", [](Backend_t *Backend) {
-        const uint32_t BCode = Backend->GetArg4(0);
-        const uint64_t B0 = Backend->GetArg8(1);
-        const uint64_t B1 = Backend->GetArg8(2);
-        const uint64_t B2 = Backend->GetArg8(3);
-        const uint64_t B3 = Backend->GetArg8(4);
-        const uint64_t B4 = Backend->GetArg8(5);
+        const uint64_t BCode = Backend->GetArg(0);
+        const uint64_t B0 = Backend->GetArg(1);
+        const uint64_t B1 = Backend->GetArg(2);
+        const uint64_t B2 = Backend->GetArg(3);
+        const uint64_t B3 = Backend->GetArg(4);
+        const uint64_t B4 = Backend->GetArg(5);
         const std::string Filename =
             fmt::format("crash-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}", BCode, B0,
                         B1, B2, B3, B4);
