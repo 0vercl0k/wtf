@@ -75,7 +75,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   //
 
   const auto &[InputBufferSize, InputBufferSizePtr] =
-      g_Backend->GetArg32AndAddress(7);
+      g_Backend->GetArg4AndAddress(7);
   const uint32_t MutatedInputBufferSize =
       std::min(TotalInputBufferSize, InputBufferSize);
 

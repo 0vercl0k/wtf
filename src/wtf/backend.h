@@ -490,9 +490,9 @@ public:
   //
 
   [[nodiscard]] uint64_t GetArg(const uint64_t Idx);
-  [[nodiscard]] uint32_t GetArg32(const uint64_t Idx);
+  [[nodiscard]] uint32_t GetArg4(const uint64_t Idx);
   [[nodiscard]] Gva_t GetArgGva(const uint64_t Idx);
-  [[nodiscard]] Gva_t GetArg32Gva(const uint64_t Idx);
+  [[nodiscard]] Gva_t GetArg4Gva(const uint64_t Idx);
 
   //
   // Utility function to get the address of a function argument. Oftentimes, you
@@ -503,9 +503,9 @@ public:
 
   [[nodiscard]] Gva_t GetArgAddress(const uint64_t Idx);
   [[nodiscard]] std::pair<uint64_t, Gva_t> GetArgAndAddress(const uint64_t Idx);
-  [[nodiscard]] std::pair<uint32_t, Gva_t> GetArg32AndAddress(const uint64_t Idx);
+  [[nodiscard]] std::pair<uint32_t, Gva_t> GetArg4AndAddress(const uint64_t Idx);
   [[nodiscard]] std::pair<Gva_t, Gva_t> GetArgAndAddressGva(const uint64_t Idx);
-  [[nodiscard]] std::pair<Gva_t, Gva_t> GetArg32AndAddressGva(const uint64_t Idx);
+  [[nodiscard]] std::pair<Gva_t, Gva_t> GetArg4AndAddressGva(const uint64_t Idx);
 
 
   //

@@ -240,16 +240,16 @@ bool SetupFilesystemHooks() {
         //  IN ULONG              EaLength
         //);
         const Gva_t GuestFileHandle = Backend->GetArgGva(0);
-        const uint32_t DesiredAccess = Backend->GetArg32(1);
+        const uint32_t DesiredAccess = Backend->GetArg4(1);
         const Gva_t GuestObjectAttributes = Backend->GetArgGva(2);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(3);
         const uint64_t GuestAllocationSize = Backend->GetArg(4);
-        const uint32_t FileAttributes = Backend->GetArg32(5);
-        const uint32_t ShareAccess = Backend->GetArg32(6);
-        const uint32_t CreateDisposition = Backend->GetArg32(7);
-        const uint32_t CreateOptions = Backend->GetArg32(8);
+        const uint32_t FileAttributes = Backend->GetArg4(5);
+        const uint32_t ShareAccess = Backend->GetArg4(6);
+        const uint32_t CreateDisposition = Backend->GetArg4(7);
+        const uint32_t CreateOptions = Backend->GetArg4(8);
         const uint64_t EaBuffer = Backend->GetArg(9);
-        const uint32_t EaLength = Backend->GetArg32(10);
+        const uint32_t EaLength = Backend->GetArg4(10);
 
         HostObjectAttributes_t HostObjectAttributes;
         if (!HostObjectAttributes.ReadFromGuest(Backend,
@@ -378,11 +378,11 @@ bool SetupFilesystemHooks() {
         //  IN ULONG              OpenOptions
         //);
         const Gva_t GuestFileHandle = Backend->GetArgGva(0);
-        const uint32_t DesiredAccess = Backend->GetArg32(1);
+        const uint32_t DesiredAccess = Backend->GetArg4(1);
         const Gva_t GuestObjectAttributes = Backend->GetArgGva(2);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(3);
-        const uint32_t ShareAccess = Backend->GetArg32(4);
-        const uint32_t OpenOptions = Backend->GetArg32(5);
+        const uint32_t ShareAccess = Backend->GetArg4(4);
+        const uint32_t OpenOptions = Backend->GetArg4(5);
 
         HostObjectAttributes_t HostObjectAttributes;
         if (!HostObjectAttributes.ReadFromGuest(Backend,
@@ -462,7 +462,7 @@ bool SetupFilesystemHooks() {
             const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFsInformation = Backend->GetArgGva(2);
-            const uint32_t Length = Backend->GetArg32(3);
+            const uint32_t Length = Backend->GetArg4(3);
             const FS_INFORMATION_CLASS FsInformationClass =
                 FS_INFORMATION_CLASS(Backend->GetArg(4));
 
@@ -559,7 +559,7 @@ bool SetupFilesystemHooks() {
             const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFileInformation = Backend->GetArgGva(2);
-            const uint32_t Length = Backend->GetArg32(3);
+            const uint32_t Length = Backend->GetArg4(3);
             const FILE_INFORMATION_CLASS FileInformationClass =
                 FILE_INFORMATION_CLASS(Backend->GetArg(4));
 
@@ -648,7 +648,7 @@ bool SetupFilesystemHooks() {
             const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFileInformation = Backend->GetArgGva(2);
-            const uint32_t Length = Backend->GetArg32(3);
+            const uint32_t Length = Backend->GetArg4(3);
             const FILE_INFORMATION_CLASS FileInformationClass =
                 FILE_INFORMATION_CLASS(Backend->GetArg(4));
 
@@ -742,7 +742,7 @@ bool SetupFilesystemHooks() {
         const uint64_t ApcContext = Backend->GetArg(3);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(4);
         const Gva_t GuestBuffer = Backend->GetArgGva(5);
-        const uint32_t Length = Backend->GetArg32(6);
+        const uint32_t Length = Backend->GetArg4(6);
         const uint64_t GuestByteOffset = Backend->GetArg(7);
         const uint64_t Key = Backend->GetArg(8);
 
@@ -831,7 +831,7 @@ bool SetupFilesystemHooks() {
         const uint64_t ApcContext = Backend->GetArg(3);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(4);
         const Gva_t GuestBuffer = Backend->GetArgGva(5);
-        const uint32_t Length = Backend->GetArg32(6);
+        const uint32_t Length = Backend->GetArg4(6);
         const Gva_t GuestByteOffset = Backend->GetArgGva(7);
         const uint64_t Key = Backend->GetArg(8);
 
