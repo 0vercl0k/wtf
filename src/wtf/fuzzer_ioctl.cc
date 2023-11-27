@@ -212,12 +212,12 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   //
 
   if (!g_Backend->SetBreakpoint("nt!KeBugCheck2", [](Backend_t *Backend) {
-        const uint64_t BCode = Backend->GetArg(0);
-        const uint64_t B0 = Backend->GetArg(1);
-        const uint64_t B1 = Backend->GetArg(2);
-        const uint64_t B2 = Backend->GetArg(3);
-        const uint64_t B3 = Backend->GetArg(4);
-        const uint64_t B4 = Backend->GetArg(5);
+        const uint64_t BCode = Backend->GetArg8(0);
+        const uint64_t B0 = Backend->GetArg8(1);
+        const uint64_t B1 = Backend->GetArg8(2);
+        const uint64_t B2 = Backend->GetArg8(3);
+        const uint64_t B3 = Backend->GetArg8(4);
+        const uint64_t B4 = Backend->GetArg8(5);
         const std::string Filename =
             fmt::format("crash-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}-{:#x}", BCode, B0,
                         B1, B2, B3, B4);

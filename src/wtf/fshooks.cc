@@ -116,7 +116,7 @@ bool SetupFilesystemHooks() {
         //__kernel_entry NTSTATUS NtClose(
         //  IN HANDLE Handle
         //);
-        const HANDLE Handle = HANDLE(Backend->GetArg(0));
+        const auto Handle = HANDLE(Backend->GetArg8(0));
 
         FsDebugPrint("ntdll!NtClose(Handle={})\n", fmt::ptr(Handle));
 
@@ -243,12 +243,12 @@ bool SetupFilesystemHooks() {
         const uint32_t DesiredAccess = Backend->GetArg4(1);
         const Gva_t GuestObjectAttributes = Backend->GetArgGva(2);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(3);
-        const uint64_t GuestAllocationSize = Backend->GetArg(4);
+        const uint64_t GuestAllocationSize = Backend->GetArg8(4);
         const uint32_t FileAttributes = Backend->GetArg4(5);
         const uint32_t ShareAccess = Backend->GetArg4(6);
         const uint32_t CreateDisposition = Backend->GetArg4(7);
         const uint32_t CreateOptions = Backend->GetArg4(8);
-        const uint64_t EaBuffer = Backend->GetArg(9);
+        const uint64_t EaBuffer = Backend->GetArg8(9);
         const uint32_t EaLength = Backend->GetArg4(10);
 
         HostObjectAttributes_t HostObjectAttributes;
@@ -459,12 +459,12 @@ bool SetupFilesystemHooks() {
             //  ULONG                Length,
             //  FS_INFORMATION_CLASS FsInformationClass
             //);
-            const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
+            const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFsInformation = Backend->GetArgGva(2);
             const uint32_t Length = Backend->GetArg4(3);
             const FS_INFORMATION_CLASS FsInformationClass =
-                FS_INFORMATION_CLASS(Backend->GetArg(4));
+                FS_INFORMATION_CLASS(Backend->GetArg8(4));
 
             FsDebugPrint("ntdll!NtQueryVolumeInformationFile(FileHandle={}, "
                          "IoStatusBlock={:#x}, "
@@ -556,12 +556,12 @@ bool SetupFilesystemHooks() {
             //  ULONG                  Length,
             //  FILE_INFORMATION_CLASS FileInformationClass
             //);
-            const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
+            const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFileInformation = Backend->GetArgGva(2);
             const uint32_t Length = Backend->GetArg4(3);
             const FILE_INFORMATION_CLASS FileInformationClass =
-                FILE_INFORMATION_CLASS(Backend->GetArg(4));
+                FILE_INFORMATION_CLASS(Backend->GetArg8(4));
 
             FsDebugPrint("ntdll!NtQueryInformationFile(FileHandle={}, "
                          "IoStatusBlock={:#x}, "
@@ -645,12 +645,12 @@ bool SetupFilesystemHooks() {
             //  ULONG                  Length,
             //  FILE_INFORMATION_CLASS FileInformationClass
             //);
-            const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
+            const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFileInformation = Backend->GetArgGva(2);
             const uint32_t Length = Backend->GetArg4(3);
             const FILE_INFORMATION_CLASS FileInformationClass =
-                FILE_INFORMATION_CLASS(Backend->GetArg(4));
+                FILE_INFORMATION_CLASS(Backend->GetArg8(4));
 
             FsDebugPrint("ntdll!NtSetInformationFile(FileHandle={}, "
                          "IoStatusBlock={:#x}, "
@@ -736,15 +736,15 @@ bool SetupFilesystemHooks() {
         //  PLARGE_INTEGER   ByteOffset,
         //  PULONG           Key
         //);
-        const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
-        const uint64_t Event = Backend->GetArg(1);
-        const uint64_t ApcRoutine = Backend->GetArg(2);
-        const uint64_t ApcContext = Backend->GetArg(3);
+        const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+        const uint64_t Event = Backend->GetArg8(1);
+        const uint64_t ApcRoutine = Backend->GetArg8(2);
+        const uint64_t ApcContext = Backend->GetArg8(3);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(4);
         const Gva_t GuestBuffer = Backend->GetArgGva(5);
         const uint32_t Length = Backend->GetArg4(6);
-        const uint64_t GuestByteOffset = Backend->GetArg(7);
-        const uint64_t Key = Backend->GetArg(8);
+        const uint64_t GuestByteOffset = Backend->GetArg8(7);
+        const uint64_t Key = Backend->GetArg8(8);
 
         FsDebugPrint(
             "nt!NtWriteFile(FileHandle={}, Event={:#x}, ApcRoutine={:#x}, "
@@ -825,15 +825,15 @@ bool SetupFilesystemHooks() {
         //  _In_opt_ PLARGE_INTEGER   ByteOffset,
         //  _In_opt_ PULONG           Key
         //);
-        const HANDLE FileHandle = HANDLE(Backend->GetArg(0));
-        const uint64_t Event = Backend->GetArg(1);
-        const uint64_t ApcRoutine = Backend->GetArg(2);
-        const uint64_t ApcContext = Backend->GetArg(3);
+        const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+        const uint64_t Event = Backend->GetArg8(1);
+        const uint64_t ApcRoutine = Backend->GetArg8(2);
+        const uint64_t ApcContext = Backend->GetArg8(3);
         const Gva_t GuestIoStatusBlock = Backend->GetArgGva(4);
         const Gva_t GuestBuffer = Backend->GetArgGva(5);
         const uint32_t Length = Backend->GetArg4(6);
         const Gva_t GuestByteOffset = Backend->GetArgGva(7);
-        const uint64_t Key = Backend->GetArg(8);
+        const uint64_t Key = Backend->GetArg8(8);
 
         FsDebugPrint(
             "nt!NtReadFile(FileHandle={}, Event={:#x}, ApcRoutine={:#x}, "
