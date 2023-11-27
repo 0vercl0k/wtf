@@ -199,10 +199,6 @@ uint32_t Backend_t::GetArg4(const uint64_t Idx) {
 
 Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg8(Idx)); }
 
-std::pair<uint64_t, Gva_t> Backend_t::GetArgAndAddress(const uint64_t Idx) {
-  return {GetArg8(Idx), GetArgAddress(Idx)};
-}
-
 std::pair<Gva_t, Gva_t> Backend_t::GetArgGvaAndAddress(const uint64_t Idx) {
   return {GetArgGva(Idx), GetArgAddress(Idx)};
 }

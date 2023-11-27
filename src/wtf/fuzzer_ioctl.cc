@@ -84,7 +84,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
   // close as possible from its end.
   //
 
-  const auto &[InputBuffer, InputBufferPtr] = g_Backend->GetArgAndAddress(6);
+  const auto &[InputBuffer, InputBufferPtr] = g_Backend->GetArg8AndAddress(6);
   const auto NewInputBuffer =
       Gva_t(InputBuffer + InputBufferSize - MutatedInputBufferSize);
 

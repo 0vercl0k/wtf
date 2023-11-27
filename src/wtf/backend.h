@@ -502,7 +502,6 @@ public:
   //
 
   [[nodiscard]] Gva_t GetArgAddress(const uint64_t Idx);
-  [[nodiscard]] std::pair<uint64_t, Gva_t> GetArgAndAddress(const uint64_t Idx);
   [[nodiscard]] std::pair<uint64_t, Gva_t>
   GetArg8AndAddress(const uint64_t Idx);
   [[nodiscard]] std::pair<uint32_t, Gva_t>

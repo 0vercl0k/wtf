@@ -459,7 +459,7 @@ bool SetupFilesystemHooks() {
             //  ULONG                Length,
             //  FS_INFORMATION_CLASS FsInformationClass
             //);
-            const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+            const auto FileHandle = HANDLE(Backend->GetArg8(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFsInformation = Backend->GetArgGva(2);
             const uint32_t Length = Backend->GetArg4(3);
@@ -556,7 +556,7 @@ bool SetupFilesystemHooks() {
             //  ULONG                  Length,
             //  FILE_INFORMATION_CLASS FileInformationClass
             //);
-            const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+            const auto FileHandle = HANDLE(Backend->GetArg8(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFileInformation = Backend->GetArgGva(2);
             const uint32_t Length = Backend->GetArg4(3);
@@ -645,7 +645,7 @@ bool SetupFilesystemHooks() {
             //  ULONG                  Length,
             //  FILE_INFORMATION_CLASS FileInformationClass
             //);
-            const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+            const auto FileHandle = HANDLE(Backend->GetArg8(0));
             const Gva_t GuestIoStatusBlock = Backend->GetArgGva(1);
             const Gva_t GuestFileInformation = Backend->GetArgGva(2);
             const uint32_t Length = Backend->GetArg4(3);
@@ -736,7 +736,7 @@ bool SetupFilesystemHooks() {
         //  PLARGE_INTEGER   ByteOffset,
         //  PULONG           Key
         //);
-        const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+        const auto FileHandle = HANDLE(Backend->GetArg8(0));
         const uint64_t Event = Backend->GetArg8(1);
         const uint64_t ApcRoutine = Backend->GetArg8(2);
         const uint64_t ApcContext = Backend->GetArg8(3);
@@ -825,7 +825,7 @@ bool SetupFilesystemHooks() {
         //  _In_opt_ PLARGE_INTEGER   ByteOffset,
         //  _In_opt_ PULONG           Key
         //);
-        const HANDLE FileHandle = HANDLE(Backend->GetArg8(0));
+        const auto FileHandle = HANDLE(Backend->GetArg8(0));
         const uint64_t Event = Backend->GetArg8(1);
         const uint64_t ApcRoutine = Backend->GetArg8(2);
         const uint64_t ApcContext = Backend->GetArg8(3);
