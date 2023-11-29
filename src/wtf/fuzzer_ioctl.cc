@@ -212,7 +212,7 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   //
 
   if (!g_Backend->SetBreakpoint("nt!KeBugCheck2", [](Backend_t *Backend) {
-        const uint64_t BCode = Backend->GetArg8(0);
+        const uint32_t BCode = Backend->GetArg4(0);
         const uint64_t B0 = Backend->GetArg8(1);
         const uint64_t B1 = Backend->GetArg8(2);
         const uint64_t B2 = Backend->GetArg8(3);
