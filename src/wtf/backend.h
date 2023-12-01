@@ -489,7 +489,8 @@ public:
   // calling convention.
   //
 
-  [[nodiscard]] uint64_t GetArg(const uint64_t Idx);
+  [[nodiscard]] [[deprecated("Use GetArg4/GetArg8 instead.")]] uint64_t
+  GetArg(const uint64_t Idx);
   [[nodiscard]] uint64_t GetArg8(const uint64_t Idx);
   [[nodiscard]] uint32_t GetArg4(const uint64_t Idx);
   [[nodiscard]] Gva_t GetArgGva(const uint64_t Idx);
