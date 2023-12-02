@@ -191,14 +191,24 @@ uint64_t Backend_t::GetArg(const uint64_t Idx) {
   }
 }
 
-Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg(Idx)); }
+uint64_t Backend_t::GetArg8(const uint64_t Idx) { return GetArg(Idx); }
 
-std::pair<uint64_t, Gva_t> Backend_t::GetArgAndAddress(const uint64_t Idx) {
-  return {GetArg(Idx), GetArgAddress(Idx)};
+uint32_t Backend_t::GetArg4(const uint64_t Idx) {
+  return uint32_t(GetArg8(Idx));
 }
 
-std::pair<Gva_t, Gva_t> Backend_t::GetArgAndAddressGva(const uint64_t Idx) {
+Gva_t Backend_t::GetArgGva(const uint64_t Idx) { return Gva_t(GetArg8(Idx)); }
+
+std::pair<Gva_t, Gva_t> Backend_t::GetArgGvaAndAddress(const uint64_t Idx) {
   return {GetArgGva(Idx), GetArgAddress(Idx)};
+}
+
+std::pair<uint64_t, Gva_t> Backend_t::GetArg8AndAddress(const uint64_t Idx) {
+  return {GetArg8(Idx), GetArgAddress(Idx)};
+}
+
+std::pair<uint32_t, Gva_t> Backend_t::GetArg4AndAddress(const uint64_t Idx) {
+  return {GetArg4(Idx), GetArgAddress(Idx)};
 }
 
 bool Backend_t::SaveCrash(const Gva_t ExceptionAddress,
