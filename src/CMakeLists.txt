@@ -7,7 +7,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 project(wtf)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/bochscpu-bins/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/robin-map/include)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/kdmp-parser/src/lib)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/kdmp-parser/)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/libfuzzer)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/readerwriterqueue)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/json/single_include)
@@ -20,12 +20,6 @@ file(
     GLOB_RECURSE
     wtf_srcfiles
     wtf/*.cc
-)
-
-file(
-    GLOB_RECURSE
-    kdmp_srcfiles
-    ${CMAKE_CURRENT_LIST_DIR}/libs/kdmp-parser/src/lib/*.cc
 )
 
 file(
@@ -44,7 +38,6 @@ set(
 add_executable(
     wtf
     ${wtf_srcfiles}
-    ${kdmp_srcfiles}
     ${libfuzzer_srcfiles}
     ${blake3_srcfiles}
 )
@@ -131,4 +124,5 @@ target_precompile_headers(
 target_link_libraries(
     wtf
     ${CMAKE_CURRENT_LIST_DIR}/libs/bochscpu-bins/lib/${CMAKE_SHARED_MODULE_PREFIX}bochscpu_ffi${CMAKE_STATIC_LIBRARY_SUFFIX}
+    kdmp-parser
 )
