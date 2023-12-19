@@ -1,0 +1,185 @@
+name: Builds
+
+on: [push, pull_request]
+
+jobs:
+  testdatas:
+    env:
+      TESTDATA_URL: https://github.com/0vercl0k/kdmp-parser/releases/download/v0.1/testdatas.7z
+
+    name: Fetch Test Data
+    runs-on: ubuntu-latest
+    steps:
+    - name: Cache Artifacts
+      id: cache-testdatas
+      uses: actions/cache@v3
+      with:
+        key: kdmp-parser-testdatas-cache
+        path: .
+    - if: steps.cache-testdatas.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get -y update; sudo apt-get install -y p7zip-full;
+        curl ${{ env.TESTDATA_URL }}  -O -L
+        7z x testdatas.7z; rm testdatas.7z
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        if-no-files-found: error
+        name: kdmp-parser-testdatas-cache
+        path: .
+
+  parser:
+    needs: testdatas
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - {os: windows-latest, generator: msvc, arch: x64, config: RelWithDebInfo}
+          - {os: windows-latest, generator: ninja, arch: x64, config: RelWithDebInfo}
+          - {os: windows-latest, generator: msvc, arch: win32, config: RelWithDebInfo}
+          # - {os: windows-latest, generator: msvc, arch: arm64, config: RelWithDebInfo}
+          - {os: ubuntu-latest, generator: gcc, arch: x64, config: RelWithDebInfo}
+          - {os: ubuntu-latest, generator: clang, arch: x64, config: RelWithDebInfo}
+          - {os: macos-latest, generator: clang, arch: x64, config: Release}
+    runs-on: ${{ matrix.variant.os }}
+    name: parser / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.variant.arch }}
+    env:
+      CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=ON -DBUILD_TESTS:BOOL=ON -DBUILD_PYTHON_BINDING:BOOL=OFF"
+      CMAKE_ARCH: ""
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Retrieve testdatas
+      uses: actions/download-artifact@v3
+      with:
+        name: kdmp-parser-testdatas-cache
+        path: .
+
+    - name: Environment Setup (Windows)
+      if: matrix.variant.os == 'windows-latest'
+      run: |
+        Import-Module .\.github\Invoke-VisualStudio.ps1
+        Invoke-VisualStudio2022${{ matrix.variant.arch }}
+        echo "CMAKE_ARCH='-A ${{ matrix.variant.arch }}'" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+    - name: Environment Setup (Linux)
+      if: matrix.variant.os == 'ubuntu-latest'
+      run: |
+        sudo apt update
+
+    - name: Build (Linux/GCC)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'gcc'
+      run: |
+        sudo apt install -y g++
+        echo CC=gcc >> $GITHUB_ENV
+        echo CXX=g++ >> $GITHUB_ENV
+
+    - name: Environment Setup (Linux/CLang)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'clang'
+      run: |
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        echo CC=clang >> $GITHUB_ENV
+        echo CXX=clang++ >> $GITHUB_ENV
+
+    - name: Build
+      run: |
+        mkdir build
+        mkdir artifact
+        cmake -S . -B ./build ${{ env.CMAKE_ARCH }} ${{ env.CMAKE_FLAGS }}
+        cmake --build ./build --verbose --config ${{ matrix.variant.config }}
+        cmake --install ./build --config ${{ matrix.variant.config }} --prefix ./artifact
+
+    - name: Tests
+      run: |
+        mv *.dmp ./build/src/tests/
+        ctest --progress --build-config ${{ matrix.variant.config }} -T test --test-dir ./build/src/tests/
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: parser-${{ matrix.variant.os }}.${{ matrix.variant.generator }}-${{ matrix.variant.arch }}.${{ matrix.variant.config }}-${{ github.sha }}
+        path: artifact/
+
+  bindings:
+    needs: testdatas
+    strategy:
+      fail-fast: false
+      matrix:
+        # nanobind does not support Python < 3.8.
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        variant:
+          - {os: windows-latest, generator: msvc, arch: x64, config: RelWithDebInfo, py-arch: x64}
+          - {os: windows-latest, generator: msvc, arch: win32, config: RelWithDebInfo, py-arch: x86}
+          # - {os: windows-latest, generator: msvc, arch: arm64, config: RelWithDebInfo, py-arch: x64} # Unsupported (see https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json)
+          - {os: ubuntu-latest, generator: gcc, arch: x64, config: RelWithDebInfo, py-arch: x64}
+          - {os: ubuntu-latest, generator: clang, arch: x64, config: RelWithDebInfo, py-arch: x64}
+          - {os: macos-latest, generator: clang, arch: x64, config: Release, py-arch: x64}
+    runs-on: ${{ matrix.variant.os }}
+    name: bindings / ${{ matrix.variant.os }} / ${{ matrix.variant.generator }} / ${{ matrix.python-version }} / ${{ matrix.variant.arch }}
+    env:
+      CMAKE_FLAGS: "-DBUILD_PARSER:BOOL=OFF -DBUILD_TESTS:BOOL=OFF -DBUILD_PYTHON_BINDING:BOOL=ON"
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Retrieve testdatas
+      uses: actions/download-artifact@v3
+      with:
+        name: kdmp-parser-testdatas-cache
+        path: .
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.variant.py-arch }}
+
+    - name: Environment Setup (Windows)
+      if: matrix.variant.os == 'windows-latest'
+      run: |
+        Import-Module .\.github\Invoke-VisualStudio.ps1
+        Invoke-VisualStudio2022${{ matrix.variant.arch }}
+
+    - name: Environment Setup (Linux)
+      if: matrix.variant.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get -y update
+
+    - name: Environment Setup (OSX)
+      if: matrix.variant.os == 'macos-latest'
+      run: |
+        echo
+
+    - name: Environment Setup (Linux/GCC)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'gcc'
+      run: |
+        sudo apt install -y g++
+        echo CC=gcc >> $GITHUB_ENV
+        echo CXX=g++ >> $GITHUB_ENV
+
+    - name: Environment Setup (Linux/CLang)
+      if: matrix.variant.os == 'ubuntu-latest' && matrix.variant.generator == 'clang'
+      run: |
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        echo CC=clang >> $GITHUB_ENV
+        echo CXX=clang++ >> $GITHUB_ENV
+
+    - name: Build wheel
+      run: |
+        mkdir wheel
+        pip wheel src/python -w ./wheel
+
+    - name: Python Binding Tests
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -U -r src/python/tests/requirements.txt
+        pip install -U --user src/python
+        pytest -vvv src/python/tests
+
+    - name: Upload wheel
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: wheel/*.whl
