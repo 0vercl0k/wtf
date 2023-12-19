@@ -1,0 +1,44 @@
+[build-system]
+requires = ["scikit-build-core >=0.4.3", "nanobind >=1.3.2"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "kdmp-parser"
+version = "0.7.0"
+description = "A Cross-Platform C++ parser library for Windows kernel minidumps."
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "0vercl0k", email = "0vercl0k@not-your-biz.net" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Assemblers",
+    "Natural Language :: English",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/0vercl0k/kdmp-parser"
+
+[tool.isort]
+profile = "black"
+
+[tool.scikit-build]
+wheel.py-api = "cp312"
+minimum-version = "0.4"
+build-dir = "build/{wheel_tag}"
+cmake.minimum-version = "3.20"
+cmake.args = [
+    "-DBUILD_PARSER:BOOL=OFF",
+    "-DBUILD_TESTS:BOOL=OFF",
+    "-DBUILD_PYTHON_PACKAGE:BOOL=ON",
+]
+
+[tool.cibuildwheel]
+build-verbosity = 1
+test-command = "pytest {project}/tests"
+test-requires = "pytest"
+
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "10.14"
