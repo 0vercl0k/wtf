@@ -1,33 +1,63 @@
-# Mastho - 2020
-find_package(Python3 COMPONENTS Interpreter Development)
+#
+# This file is part of kdmp-parser project
+#
+# Released under MIT License, by 0vercl0k - 2023
+#
+# With contributions from:
+# * masthoon - (github.com/masthoon)
+# * hugsy - (github.com/hugsy)
+#
+cmake_minimum_required(VERSION 3.20)
 
-message("Python3_Interpreter_FOUND:${Python3_Interpreter_FOUND}")
-message("Python3_Development_FOUND:${Python3_Development_FOUND}")
-message("Python3_LIBRARY_DIRS:${Python3_LIBRARY_DIRS}")
+project(
+    kdmp-parser-python
+    DESCRIPTION "A Cross-Platform C++ parser library for Windows kernel minidumps."
+    HOMEPAGE_URL https://github.com/0vercl0k/kdmp-parser
+    VERSION 0.7.1
+)
+set(PROJECT_AUTHOR 0vercl0k)
+set(PROJECT_LICENSE MIT)
+set(CMAKE_CXX_STANDARD 20)
 
-# Python on Windows Debug build only load $_d.pyd and require python_d.exe
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND WIN32)
-    set(PYMODULE kdmp_d CACHE INTERNAL "")
+find_package(Python 3
+    REQUIRED COMPONENTS Interpreter Development.Module
+    OPTIONAL_COMPONENTS Development.SABIModule
+)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+set(KDMPPARSER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+set(KDMPPARSER_INCLUDE_DIR "${KDMPPARSER_ROOT}/src/lib")
+configure_file(${KDMPPARSER_INCLUDE_DIR}/kdmp-parser-version.h.in ${KDMPPARSER_INCLUDE_DIR}/kdmp-parser-version.h)
+
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR)
+list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+
+find_package(nanobind CONFIG REQUIRED)
+
+nanobind_add_module(_kdmp_parser NB_STATIC src/kdmp_parser.cc)
+
+if(BUILD_PYTHON_PACKAGE)
+    #
+    # Those directives are only used when creating a standalone `kdmp_parser` python package
+    # Usual case is when build with `pip install src/python`
+    #
+    target_include_directories(_kdmp_parser PRIVATE ${KDMPPARSER_INCLUDE_DIR})
+    install(DIRECTORY kdmp_parser DESTINATION .)
+    install(TARGETS _kdmp_parser LIBRARY DESTINATION kdmp_parser)
 else()
-    set(PYMODULE kdmp CACHE INTERNAL "")
+    #
+    # This is the general case, when built from the root cmakefile
+    #
+    target_include_directories(_kdmp_parser PRIVATE $<TARGET_PROPERTY:kdmp-parser,INTERFACE_INCLUDE_DIRECTORIES>)
+    install(TARGETS _kdmp_parser DESTINATION bindings/python)
+
+    if(MSVC)
+        install(FILES $<TARGET_PDB_FILE:_kdmp_parser> DESTINATION . OPTIONAL)
+    endif(MSVC)
 endif()
-
-# Require Python3 interpreter and development libs
-if(NOT Python3_Interpreter_FOUND OR (NOT Python3_Development_FOUND) OR (CMAKE_BUILD_TYPE STREQUAL "Debug" AND WIN32 AND NOT Python3_LIBRARY_DEBUG))
-    message(WARNING "Python3 development library not found")
-    set(PYMODULE "" CACHE INTERNAL "")
-    return()
-endif()
-
-add_library(${PYMODULE} SHARED python-kdmp.cc)
-target_include_directories(${PYMODULE} PRIVATE ${Python3_INCLUDE_DIRS})
-target_link_directories(${PYMODULE} PRIVATE ${Python3_LIBRARY_DIRS} kdmp-parser)
-target_link_libraries(${PYMODULE} PRIVATE kdmp-parser)
-
-# On Windows Python load $.pyd :: On Linux remove lib$ prefix
-if(WIN32)
-    set_target_properties(${PYMODULE} PROPERTIES SUFFIX ".pyd")
-else()
-    set_target_properties(${PYMODULE} PROPERTIES PREFIX "")
-endif()
-

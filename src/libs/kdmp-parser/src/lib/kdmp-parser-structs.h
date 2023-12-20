@@ -2,11 +2,14 @@
 #pragma once
 
 #include "platform.h"
+#include <array>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <string_view>
 #include <type_traits>
+#include <variant>
 
 namespace kdmpparser {
 
@@ -21,7 +24,18 @@ struct uint128_t {
 
 static_assert(sizeof(uint128_t) == 16, "uint128_t's size looks wrong.");
 
-enum class DumpType_t : uint32_t { FullDump = 1, KernelDump = 2, BMPDump = 5 };
+enum class DumpType_t : uint32_t {
+  // Old dump types from dbgeng.dll
+  FullDump = 0x1,
+  KernelDump = 0x2,
+  BMPDump = 0x5,
+
+  // New stuff
+  MiniDump = 0x4,                // Produced by `.dump /m`
+  KernelMemoryDump = 0x8,        // Produced by `.dump /k`
+  KernelAndUserMemoryDump = 0x9, // Produced by `.dump /ka`
+  CompleteMemoryDump = 0xa,      // Produced by `.dump /f`
+};
 
 //
 // Save off the alignement setting and disable
@@ -61,6 +75,30 @@ static void DisplayHeader(const uint32_t Prefix, const char *FieldName,
 // This takes care of displaying basic types.
 //
 
+constexpr std::string_view DumpTypeToString(const DumpType_t Type) {
+  switch (Type) {
+  // Old dump types from dbgeng.dll
+  case DumpType_t::FullDump:
+    return "FullDump";
+  case DumpType_t::KernelDump:
+    return "KernelDump";
+  case DumpType_t::BMPDump:
+    return "BMPDump";
+
+  // New stuff
+  case DumpType_t::MiniDump:
+    return "MiniDump";
+  case DumpType_t::KernelMemoryDump:
+    return "KernelMemoryDump";
+  case DumpType_t::KernelAndUserMemoryDump:
+    return "KernelAndUserMemoryDump";
+  case DumpType_t::CompleteMemoryDump:
+    return "CompleteMemoryDump";
+  }
+
+  return "Unknown";
+}
+
 template <typename Field_t>
 static void DisplayField(const uint32_t Prefix, const char *FieldName,
                          const void *This, const Field_t *Field) {
@@ -73,25 +111,12 @@ static void DisplayField(const uint32_t Prefix, const char *FieldName,
     printf(": 0x%08x.\n", *Field);
   } else if constexpr (std::is_same<Field_t, uint64_t>::value) {
     printf(": 0x%016" PRIx64 ".\n", *Field);
+  } else if constexpr (std::is_same<Field_t, int64_t>::value) {
+    printf(": 0x%016" PRIx64 ".\n", *Field);
   } else if constexpr (std::is_same<Field_t, uint128_t>::value) {
     printf(": 0x%016" PRIx64 "%016" PRIx64 ".\n", Field->High, Field->Low);
   } else if constexpr (std::is_same<Field_t, DumpType_t>::value) {
-    switch (*Field) {
-    case DumpType_t::KernelDump: {
-      printf(": Kernel Dump.\n");
-      return;
-    }
-
-    case DumpType_t::FullDump: {
-      printf(": Full Dump.\n");
-      return;
-    }
-    case DumpType_t::BMPDump: {
-      printf(": BMP Dump.\n");
-      return;
-    }
-    }
-    printf(": Unknown.\n");
+    printf(": %s.\n", DumpTypeToString(*Field).data());
   } else {
 
     //
@@ -162,9 +187,9 @@ static_assert(sizeof(PHYSMEM_DESC) == 0x20,
               "PHYSICAL_MEMORY_DESCRIPTOR's size looks wrong.");
 
 struct BMP_HEADER64 {
-  static constexpr uint32_t ExpectedSignature = 0x504D4453;  // 'PMDS'
-  static constexpr uint32_t ExpectedSignature2 = 0x504D4446; // 'PMDF'
-  static constexpr uint32_t ExpectedValidDump = 0x504D5544;  // 'PMUD'
+  static constexpr uint32_t ExpectedSignature = 0x50'4D'44'53;  // 'PMDS'
+  static constexpr uint32_t ExpectedSignature2 = 0x50'4D'44'46; // 'PMDF'
+  static constexpr uint32_t ExpectedValidDump = 0x50'4D'55'44;  // 'PMUD'
 
   //
   // Should be FDMP.
@@ -188,7 +213,7 @@ struct BMP_HEADER64 {
   // 'FirstPage': [0x20, ['unsigned long long']],
   //
 
-  uint8_t Padding0[0x20 - (0x4 + sizeof(ValidDump))];
+  std::array<uint8_t, 0x20 - (0x4 + sizeof(ValidDump))> Padding0;
 
   //
   // The offset of the first page in the file.
@@ -209,7 +234,7 @@ struct BMP_HEADER64 {
 
   uint64_t Pages;
 
-  uint8_t Bitmap[1];
+  std::array<uint8_t, 1> Bitmap;
 
   bool LooksGood() const {
 
@@ -243,6 +268,79 @@ struct BMP_HEADER64 {
 
 static_assert(offsetof(BMP_HEADER64, FirstPage) == 0x20,
               "First page offset looks wrong.");
+
+struct RDMP_HEADER64 {
+  static constexpr uint32_t ExpectedMarker = 0x40;
+  static constexpr uint32_t ExpectedSignature = 0x50'4D'44'52; // 'PMDR'
+  static constexpr uint32_t ExpectedValidDump = 0x50'4D'55'44; // 'PMUD'
+
+  uint32_t Marker;
+  uint32_t Signature;
+  uint32_t ValidDump;
+  uint32_t __Unused;
+  uint64_t MetadataSize;
+  uint64_t FirstPageOffset;
+
+  bool LooksGood() const {
+    if (Marker != ExpectedMarker) {
+      return false;
+    }
+
+    if (Signature != RDMP_HEADER64::ExpectedSignature) {
+      return false;
+    }
+
+    if (ValidDump != RDMP_HEADER64::ExpectedValidDump) {
+      return false;
+    }
+
+    if (MetadataSize - 0x20 !=
+        FirstPageOffset -
+            0x20'40) { // sizeof(HEADER64) + sizeof(RDMP_HEADERS64)
+      return false;
+    }
+
+    return true;
+  }
+
+  void Show(const uint32_t Prefix = 0) const {
+    DISPLAY_HEADER("RDMP_HEADER64");
+    DISPLAY_FIELD(Signature);
+    DISPLAY_FIELD(ValidDump);
+    DISPLAY_FIELD(FirstPageOffset);
+    DISPLAY_FIELD(MetadataSize);
+  }
+};
+
+static_assert(sizeof(RDMP_HEADER64) == 0x20, "Invalid size for RDMP_HEADER64");
+
+struct KERNEL_RDMP_HEADER64 {
+  RDMP_HEADER64 Hdr;
+  uint64_t __Unknown1;
+  uint64_t __Unknown2;
+  std::array<uint8_t, 1> Bitmap;
+};
+
+static_assert(sizeof(KERNEL_RDMP_HEADER64) == 0x30 + 1,
+              "Invalid size for KERNEL_RDMP_HEADER64");
+
+static_assert(offsetof(KERNEL_RDMP_HEADER64, Bitmap) == 0x30,
+              "Invalid offset for KERNEL_RDMP_HEADER64");
+
+struct FULL_RDMP_HEADER64 {
+  RDMP_HEADER64 Hdr;
+  uint32_t NumberOfRanges;
+  uint16_t __Unknown1;
+  uint16_t __Unknown2;
+  uint64_t TotalNumberOfPages;
+  std::array<uint8_t, 1> Bitmap;
+};
+
+static_assert(sizeof(FULL_RDMP_HEADER64) == 0x30 + 1,
+              "Invalid size for FULL_RDMP_HEADER64");
+
+static_assert(offsetof(FULL_RDMP_HEADER64, Bitmap) == 0x30,
+              "Invalid offset for FULL_RDMP_HEADER64");
 
 struct CONTEXT {
 
@@ -341,7 +439,7 @@ struct CONTEXT {
   uint16_t Reserved3;
   uint32_t MxCsr2;
   uint32_t MxCsr_Mask;
-  uint128_t FloatRegisters[8];
+  std::array<uint128_t, 8> FloatRegisters;
   uint128_t Xmm0;
   uint128_t Xmm1;
   uint128_t Xmm2;
@@ -363,7 +461,7 @@ struct CONTEXT {
   // Vector registers.
   //
 
-  uint128_t VectorRegister[26];
+  std::array<uint128_t, 26> VectorRegister;
   uint64_t VectorControl;
 
   //
@@ -525,7 +623,7 @@ struct EXCEPTION_RECORD64 {
   uint64_t ExceptionAddress;
   uint32_t NumberParameters;
   uint32_t __unusedAlignment;
-  uint64_t ExceptionInformation[15];
+  std::array<uint64_t, 15> ExceptionInformation;
 
   void Show(const uint32_t Prefix = 0) const {
     DISPLAY_HEADER("KDMP_PARSER_EXCEPTION_RECORD64");
@@ -555,80 +653,73 @@ struct EXCEPTION_RECORD64 {
 static_assert(sizeof(EXCEPTION_RECORD64) == 0x98,
               "KDMP_PARSER_EXCEPTION_RECORD64's size looks wrong.");
 
+union DUMP_FILE_ATTRIBUTES {
+  struct DUMP_FILE_ATTRIBUTES_0 {
+    uint32_t _bitfield;
+  } Anonymous;
+  uint32_t Attributes;
+};
+
+//
+// Adjusted C struct for `DUMP_HEADERS64` from MS Rust docs. Padding
+// adjustment added from reversing `nt!IoFillDumpHeader`.
+//
+// @link
+// https://microsoft.github.io/windows-docs-rs/doc/windows/Win32/System/Diagnostics/Debug/struct.DUMP_HEADER64.html#structfield.DumpType
+//
+
 struct HEADER64 {
-  static const uint32_t ExpectedSignature = 0x45474150; // 'EGAP'
-  static const uint32_t ExpectedValidDump = 0x34365544; // '46UD'
+  static constexpr uint32_t ExpectedSignature = 0x45474150; // 'EGAP'
+  static constexpr uint32_t ExpectedValidDump = 0x34365544; // '46UD'
 
-  uint32_t Signature;
-  uint32_t ValidDump;
-  uint32_t MajorVersion;
-  uint32_t MinorVersion;
-  uint64_t DirectoryTableBase;
-  uint64_t PfnDatabase;
-  uint64_t PsLoadedModuleList;
-  uint64_t PsActiveProcessHead;
-  uint32_t MachineImageType;
-  uint32_t NumberProcessors;
-  uint32_t BugCheckCode;
+  /* 0x0000 */ uint32_t Signature;
+  /* 0x0004 */ uint32_t ValidDump;
+  /* 0x0008 */ uint32_t MajorVersion;
+  /* 0x000c */ uint32_t MinorVersion;
+  /* 0x0010 */ uint64_t DirectoryTableBase;
+  /* 0x0018 */ uint64_t PfnDatabase;
+  /* 0x0020 */ uint64_t PsLoadedModuleList;
+  /* 0x0028 */ uint64_t PsActiveProcessHead;
+  /* 0x0030 */ uint32_t MachineImageType;
+  /* 0x0034 */ uint32_t NumberProcessors;
+  /* 0x0038 */ uint32_t BugCheckCode;
+  /* 0x003c */ uint32_t __Padding0;
+  /* 0x0040 */ std::array<uint64_t, 4> BugCheckCodeParameters;
+  /* 0x0060 */ std::array<uint8_t, 32> VersionUser;
+  /* 0x0080 */ uint64_t KdDebuggerDataBlock;
+  /* 0x0088 */ union DUMP_HEADER64_0 {
+    PHYSMEM_DESC PhysicalMemoryBlock;
+    std::array<uint8_t, 700> PhysicalMemoryBlockBuffer;
+  } u1;
+  /* 0x0344 */ uint32_t __Padding1;
+  /* 0x0348 */ union CONTEXT_RECORD64_0 {
+    CONTEXT ContextRecord;
+    std::array<uint8_t, 3000> ContextRecordBuffer;
+  } u2;
+  /* 0x0f00 */ EXCEPTION_RECORD64 Exception;
+  /* 0x0f98 */ DumpType_t DumpType;
+  /* 0x0f9c */ uint32_t __Padding2;
+  /* 0x0fa0 */ int64_t RequiredDumpSpace;
+  /* 0x0fa8 */ int64_t SystemTime;
+  /* 0x0fb0 */ std::array<uint8_t, 128> Comment;
+  /* 0x1030 */ int64_t SystemUpTime;
+  /* 0x1038 */ uint32_t MiniDumpFields;
+  /* 0x103c */ uint32_t SecondaryDataState;
+  /* 0x1040 */ uint32_t ProductType;
+  /* 0x1044 */ uint32_t SuiteMask;
+  /* 0x1048 */ uint32_t WriterStatus;
+  /* 0x104c */ uint8_t Unused1;
+  /* 0x104d */ uint8_t KdSecondaryVersion;
+  /* 0x104e */ std::array<uint8_t, 2> Unused;
+  /* 0x1050 */ DUMP_FILE_ATTRIBUTES Attributes;
+  /* 0x1054 */ uint32_t BootId;
+  /* 0x1058 */ std::array<uint8_t, 4008> _reserved0;
 
-  //
-  // According to rekall there's a gap here:
-  // 'BugCheckCode' : [0x38, ['unsigned long']],
-  // 'BugCheckCodeParameter' : [0x40, ['array', 4, ['unsigned long long']]],
-  //
-
-  uint8_t Padding0[0x40 - (0x38 + sizeof(BugCheckCode))];
-  uint64_t BugCheckCodeParameter[4];
-
-  //
-  // According to rekall there's a gap here:
-  // 'BugCheckCodeParameter' : [0x40, ['array', 4, ['unsigned long long']]],
-  // 'KdDebuggerDataBlock' : [0x80, ['unsigned long long']],
-  //
-
-  uint8_t Padding1[0x80 - (0x40 + sizeof(BugCheckCodeParameter))];
-  uint64_t KdDebuggerDataBlock;
-  PHYSMEM_DESC PhysicalMemoryBlockBuffer;
-
-  //
-  // According to rekall there's a gap here:
-  // 'PhysicalMemoryBlockBuffer' : [0x88, ['_PHYSICAL_MEMORY_DESCRIPTOR']],
-  // 'ContextRecord' : [0x348, ['array', 3000, ['unsigned char']]],
-  //
-
-  uint8_t Padding2[0x348 - (0x88 + sizeof(PhysicalMemoryBlockBuffer))];
-  CONTEXT ContextRecord;
-
-  //
-  // According to rekall there's a gap here:
-  // 'ContextRecord' : [0x348, ['array', 3000, ['unsigned char']]],
-  // 'Exception' : [0xf00, ['_EXCEPTION_RECORD64']],
-  //
-
-  uint8_t Padding3[0xf00 - (0x348 + sizeof(ContextRecord))];
-  EXCEPTION_RECORD64 Exception;
-  DumpType_t DumpType;
-
-  //
-  // According to rekall there's a gap here:
-  // 'DumpType' : [0xf98, ['unsigned long']],
-  // 'RequiredDumpSpace' : [0xfa0, ['unsigned long long']],
-  //
-  uint8_t Padding4[0xfa0 - (0xf98 + sizeof(DumpType))];
-  uint64_t RequiredDumpSpace;
-  uint64_t SystemTime;
-  uint8_t Comment[128];
-  uint64_t SystemUpTime;
-  uint32_t MiniDumpFields;
-  uint32_t SecondaryDataState;
-  uint32_t ProductType;
-  uint32_t SuiteMask;
-  uint32_t WriterStatus;
-  uint8_t Unused1;
-  uint8_t KdSecondaryVersion;
-  uint8_t Unused[2];
-  uint8_t _reserved0[4016];
-  BMP_HEADER64 BmpHeader;
+  union {
+    BMP_HEADER64 BmpHeader;
+    KERNEL_RDMP_HEADER64 RdmpHeader;
+    FULL_RDMP_HEADER64 FullRdmpHeader;
+  } u3;
 
   bool LooksGood() const {
 
@@ -650,23 +741,57 @@ struct HEADER64 {
     // Make sure it's a dump type we know how to handle.
     //
 
-    if (DumpType == DumpType_t::FullDump) {
-      if (!PhysicalMemoryBlockBuffer.LooksGood()) {
+    switch (DumpType) {
+    case DumpType_t::FullDump: {
+      if (!u1.PhysicalMemoryBlock.LooksGood()) {
         printf("The PhysicalMemoryBlockBuffer looks wrong.\n");
         return false;
       }
-    } else if (DumpType == DumpType_t::BMPDump) {
-      if (!BmpHeader.LooksGood()) {
+      break;
+    }
+
+    case DumpType_t::BMPDump: {
+      if (!u3.BmpHeader.LooksGood()) {
         printf("The BmpHeader looks wrong.\n");
         return false;
       }
+      break;
+    }
+
+    case DumpType_t::KernelAndUserMemoryDump:
+    case DumpType_t::KernelMemoryDump: {
+      if (!u3.RdmpHeader.Hdr.LooksGood()) {
+        printf("The RdmpHeader looks wrong.\n");
+        return false;
+      }
+      break;
+    }
+
+    case DumpType_t::CompleteMemoryDump: {
+      if (!u3.FullRdmpHeader.Hdr.LooksGood()) {
+        printf("The RdmpHeader looks wrong.\n");
+        return false;
+      }
+      break;
+    }
+
+    case DumpType_t::MiniDump: {
+      printf("Unsupported type %s (%#x).\n", DumpTypeToString(DumpType).data(),
+             uint32_t(DumpType));
+      return false;
+    }
+
+    default: {
+      printf("Unknown Type %#x.\n", uint32_t(DumpType));
+      return false;
+    }
     }
 
     //
     // Integrity check the CONTEXT record.
     //
 
-    if (!ContextRecord.LooksGood()) {
+    if (!u2.ContextRecord.LooksGood()) {
       return false;
     }
 
@@ -686,12 +811,12 @@ struct HEADER64 {
     DISPLAY_FIELD(MachineImageType);
     DISPLAY_FIELD(NumberProcessors);
     DISPLAY_FIELD(BugCheckCode);
-    DISPLAY_FIELD_OFFSET(BugCheckCodeParameter);
+    DISPLAY_FIELD_OFFSET(BugCheckCodeParameters);
     DISPLAY_FIELD(KdDebuggerDataBlock);
-    DISPLAY_FIELD_OFFSET(PhysicalMemoryBlockBuffer);
-    PhysicalMemoryBlockBuffer.Show(Prefix + 2);
-    DISPLAY_FIELD_OFFSET(ContextRecord);
-    ContextRecord.Show(Prefix + 2);
+    DISPLAY_FIELD_OFFSET(u1.PhysicalMemoryBlockBuffer);
+    u1.PhysicalMemoryBlock.Show(Prefix + 2);
+    DISPLAY_FIELD_OFFSET(u2.ContextRecordBuffer);
+    u2.ContextRecord.Show(Prefix + 2);
     DISPLAY_FIELD_OFFSET(Exception);
     Exception.Show(Prefix + 2);
     DISPLAY_FIELD(DumpType);
@@ -706,8 +831,8 @@ struct HEADER64 {
     DISPLAY_FIELD(WriterStatus);
     DISPLAY_FIELD(KdSecondaryVersion);
     if (DumpType == DumpType_t::BMPDump) {
-      DISPLAY_FIELD_OFFSET(BmpHeader);
-      BmpHeader.Show();
+      DISPLAY_FIELD_OFFSET(u3.BmpHeader);
+      u3.BmpHeader.Show();
     }
   }
 };
@@ -730,13 +855,20 @@ struct HEADER64 {
 // layout, so hopefully they prevent any regressions regarding the layout.
 //
 
-static_assert(offsetof(HEADER64, BugCheckCodeParameter) == 0x40,
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif //__GNUC__
+static_assert(offsetof(HEADER64, Signature) == 0x00,
+              "The offset of KdDebuggerDataBlock looks wrong.");
+
+static_assert(offsetof(HEADER64, BugCheckCodeParameters) == 0x40,
               "The offset of KdDebuggerDataBlock looks wrong.");
 
 static_assert(offsetof(HEADER64, KdDebuggerDataBlock) == 0x80,
               "The offset of KdDebuggerDataBlock looks wrong.");
 
-static_assert(offsetof(HEADER64, ContextRecord) == 0x348,
+static_assert(offsetof(HEADER64, u2.ContextRecord) == 0x348,
               "The offset of ContextRecord looks wrong.");
 
 static_assert(offsetof(HEADER64, Exception) == 0xf00,
@@ -745,29 +877,11 @@ static_assert(offsetof(HEADER64, Exception) == 0xf00,
 static_assert(offsetof(HEADER64, Comment) == 0xfb0,
               "The offset of Comment looks wrong.");
 
-static_assert(offsetof(HEADER64, BmpHeader) == 0x2000,
+static_assert(offsetof(HEADER64, u3.BmpHeader) == 0x2000,
               "The offset of BmpHeaders looks wrong.");
-
-namespace Page {
-
-//
-// Page size.
-//
-
-constexpr uint64_t Size = 0x1000;
-
-//
-// Page align an address.
-//
-
-constexpr uint64_t Align(const uint64_t Address) { return Address & ~0xfff; }
-
-//
-// Extract the page offset off an address.
-//
-
-constexpr uint64_t Offset(const uint64_t Address) { return Address & 0xfff; }
-} // namespace Page
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif //__GNUC__
 
 //
 // Structure for parsing a PTE.

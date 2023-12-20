@@ -1,6 +1,38 @@
 // Axel '0vercl0k' Souchet - April 28 2020
 #include "platform.h"
+#include <cstdint>
 #include <cstdio>
+
+#if defined(LINUX)
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
+namespace kdmpparser {
+namespace Page {
+
+//
+// Page size.
+//
+
+constexpr uint64_t Size = 0x1000;
+
+//
+// Page align an address.
+//
+
+constexpr uint64_t Align(const uint64_t Address) { return Address & ~0xfff; }
+
+//
+// Extract the page offset off an address.
+//
+
+constexpr uint64_t Offset(const uint64_t Address) { return Address & 0xfff; }
+} // namespace Page
 
 #if defined(WINDOWS)
 class FileMap_t {
@@ -21,6 +53,12 @@ class FileMap_t {
   //
 
   PVOID ViewBase_ = nullptr;
+
+  //
+  // File size
+  //
+
+  uint64_t FileSize_ = 0;
 
 public:
   ~FileMap_t() {
@@ -63,6 +101,7 @@ public:
     HANDLE File = nullptr;
     HANDLE FileMap = nullptr;
     PVOID ViewBase = nullptr;
+    LARGE_INTEGER FileSize = {0};
 
     //
     // Open the dump file in read-only.
@@ -71,7 +110,7 @@ public:
     File = CreateFileA(PathFile, GENERIC_READ, FILE_SHARE_READ, nullptr,
                        OPEN_EXISTING, 0, nullptr);
 
-    if (File == NULL) {
+    if (File == nullptr) {
 
       //
       // If we fail to open the file, let the user know.
@@ -126,6 +165,19 @@ public:
     }
 
     //
+    // Get the file size.
+    //
+
+    if (!GetFileSizeEx(File, &FileSize)) {
+      const DWORD GLE = GetLastError();
+      printf("GetFileSizeEx failed with GLE=%lu.\n", GLE);
+      Success = false;
+      goto clean;
+    }
+
+    FileSize_ = Page::Align(FileSize.QuadPart) + Page::Size;
+
+    //
     // Everything went well, so grab a copy of the handles for
     // our class and null-out the temporary variables.
     //
@@ -161,16 +213,16 @@ public:
 
     return Success;
   }
+
+  bool InBounds(const void *Ptr, const size_t Size) const {
+    const uint8_t *ViewEnd = (uint8_t *)ViewBase_ + FileSize_;
+    const uint8_t *PtrEnd = (uint8_t *)Ptr + Size;
+    return PtrEnd > Ptr && ViewEnd > ViewBase_ && Ptr >= ViewBase_ &&
+           PtrEnd < ViewEnd;
+  }
 };
 
 #elif defined(LINUX)
-
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 class FileMap_t {
   void *ViewBase_ = nullptr;
@@ -210,7 +262,7 @@ public:
       return false;
     }
 
-    ViewSize_ = Stat.st_size;
+    ViewSize_ = Page::Align(Stat.st_size) + Page::Size;
     ViewBase_ = mmap(nullptr, ViewSize_, PROT_READ, MAP_SHARED, Fd_, 0);
     if (ViewBase_ == MAP_FAILED) {
       perror("Could not mmap");
@@ -219,6 +271,13 @@ public:
 
     return true;
   }
-};
 
+  bool InBounds(const void *Ptr, const size_t Size) const {
+    const uint8_t *ViewEnd = (uint8_t *)ViewBase_ + ViewSize_;
+    const uint8_t *PtrEnd = (uint8_t *)Ptr + Size;
+    return PtrEnd > Ptr && ViewEnd > ViewBase_ && Ptr >= ViewBase_ &&
+           PtrEnd < ViewEnd;
+  }
+};
 #endif
+} // namespace kdmpparser
