@@ -85,6 +85,7 @@ if (WIN32)
         winhvplatform.lib
         delayimp.lib
         bcrypt.lib
+        ntdll.lib
     )
 
     add_executable(
@@ -95,6 +96,11 @@ if (WIN32)
     add_executable(
         hevd_client
         hevd_client/hevd_client.cc
+    )
+
+    add_executable(
+        fuzzy_goat
+        fuzzy_goat/fuzzy_goat.cc
     )
 else (WIN32)
     enable_language(ASM)

@@ -11,11 +11,24 @@
 #include <fmt/format.h>
 #include <fstream>
 #include <limits>
+#include <stdlib.h>
+#include <string>
 
 namespace json = nlohmann;
 
 bool CompareTwoFileBySize(const fs::path &A, const fs::path &B) {
   return fs::file_size(A) < fs::file_size(B);
+}
+
+std::string BytesToHexString(const uint8_t *Bytes, uint32_t Length) {
+  std::stringstream SS;
+  SS << std::hex;
+
+  for (uint32_t i = 0; i < Length; ++i) {
+    SS << std::setw(2) << std::setfill('0') << static_cast<uint32_t>(Bytes[i]);
+  }
+
+  return SS.str();
 }
 
 void Hexdump(const span_u8 Buffer) {
@@ -52,6 +65,34 @@ void Hexdump(const uint64_t Address, const void *Buffer, size_t Len) {
     }
     fmt::print("|\n");
   }
+}
+
+std::vector<std::pair<Gva_t, Gva_t>>
+ParseLafAllowedRanges(const std::string &input) {
+  std::vector<std::pair<Gva_t, Gva_t>> ranges;
+  std::istringstream iss(input);
+  std::string range;
+
+  while (std::getline(iss, range, ',')) {
+    std::istringstream rangeIss(range);
+    std::string start, end;
+
+    if (std::getline(rangeIss, start, '-') && std::getline(rangeIss, end)) {
+      try {
+        const Gva_t startValue = Gva_t{std::stoull(start, nullptr, 16)};
+        const Gva_t endValue = Gva_t{std::stoull(end, nullptr, 16)};
+        ranges.emplace_back(startValue, endValue);
+      } catch (const std::exception &) {
+        fmt::print("Invalid LAF range format: {}", range);
+        exit(EXIT_FAILURE);
+      }
+    } else {
+      fmt::print("Invalid LAF range format: {}", range);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  return ranges;
 }
 
 bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {

@@ -19,7 +19,7 @@ while block:
     block = block_iterator.next()
 
 json_object = {
-    'name': program_name,
+    'name': program_name.replace("-", "_"),
     'addresses': address_list
 }
 

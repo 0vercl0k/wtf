@@ -58,6 +58,30 @@ static const uint32_t BOCHSCPU_OPCODE_ERROR = 0;
 
 static const uint32_t BOCHSCPU_OPCODE_INSERTED = 1;
 
+enum class DisasmStyle : uint32_t {
+  Intel = 0,
+  Gas = 1,
+};
+
+enum class GpRegs : uint32_t {
+  Rax = 0,
+  Rcx = 1,
+  Rdx = 2,
+  Rbx = 3,
+  Rsp = 4,
+  Rbp = 5,
+  Rsi = 6,
+  Rdi = 7,
+  R8 = 8,
+  R9 = 9,
+  R10 = 10,
+  R11 = 11,
+  R12 = 12,
+  R13 = 13,
+  R14 = 14,
+  R15 = 15,
+};
+
 using bochscpu_cpu_t = void*;
 
 /// FFI Hook object
@@ -211,6 +235,8 @@ void bochscpu_cpu_delete(bochscpu_cpu_t p);
 
 void bochscpu_cpu_set_mode(bochscpu_cpu_t p);
 
+uint32_t bochscpu_total_gpregs();
+
 /// Start emulation
 ///
 /// To hook emulation, pass in a NULL terminated list of one or more pointers to
@@ -228,6 +254,18 @@ void bochscpu_cpu_set_state(bochscpu_cpu_t p, const bochscpu_cpu_state_t *s);
 void bochscpu_cpu_set_state_no_flush(bochscpu_cpu_t p, const bochscpu_cpu_state_t *s);
 
 void bochscpu_cpu_set_exception(bochscpu_cpu_t p, uint32_t vector, uint16_t error);
+
+uint64_t bochscpu_get_reg64(bochscpu_cpu_t p, GpRegs reg);
+
+void bochscpu_set_reg64(bochscpu_cpu_t p, GpRegs reg, uint64_t val);
+
+uint32_t bochscpu_get_reg32(bochscpu_cpu_t p, GpRegs reg);
+
+void bochscpu_set_reg32(bochscpu_cpu_t p, GpRegs reg, uint32_t val);
+
+uint16_t bochscpu_get_reg16(bochscpu_cpu_t p, GpRegs reg);
+
+void bochscpu_set_reg16(bochscpu_cpu_t p, GpRegs reg, uint16_t val);
 
 uint64_t bochscpu_cpu_rax(bochscpu_cpu_t p);
 
@@ -360,6 +398,24 @@ uint16_t bochscpu_instr_imm16(bochscpu_instr_t p);
 uint32_t bochscpu_instr_imm32(bochscpu_instr_t p);
 
 uint64_t bochscpu_instr_imm64(bochscpu_instr_t p);
+
+uint32_t bochscpu_instr_src(bochscpu_instr_t p);
+
+uint32_t bochscpu_instr_dst(bochscpu_instr_t p);
+
+uint32_t bochscpu_instr_seg(bochscpu_instr_t p);
+
+uint32_t bochscpu_instr_modC0(bochscpu_instr_t p);
+
+uint64_t bochscpu_instr_resolve_addr(bochscpu_instr_t p);
+
+uint32_t bochscpu_opcode_disasm(uint32_t is32,
+                                uint32_t is64,
+                                Address *cs_base,
+                                Address *ip,
+                                uint8_t *instr_bytes,
+                                const char *distbuf,
+                                DisasmStyle disasm_style);
 
 /// Add GPA mapping to HVA
 ///

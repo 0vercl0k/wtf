@@ -34,7 +34,7 @@ The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/f
 
 ### Starting a server node
 
-The server is basically the brain and keeps track of all the state: the  aggregated code-coverage, the corpus, it generates and distributes the test-cases to client.
+The server is basically the brain and keeps track of all the state: the aggregated code-coverage, the corpus, it generates and distributes the test-cases to client.
 
 This is how you might choose to launch a server node:
 
@@ -284,6 +284,7 @@ In this section I briefly mention various differences between the execution back
 
 ### bochscpu
 - ✅ Full system code-coverage (edge coverage available via `--edges`),
+- ✅ LAF/Compcov assisted coverage collection (available via `--compcov` and `--laf` options),
 - ✅ Demand-paging,
 - ✅ Timeout is the number of instructions which is very precise,
 - ✅ Full execution traces are supported,
