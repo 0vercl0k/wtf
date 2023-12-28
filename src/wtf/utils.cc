@@ -230,17 +230,20 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
   // Validate that the Reserved field of each segment contains bits 16-19 of the
   // Limit
   //
+  
 
-  Seg_t *Segments[] = {&CpuState.Es, &CpuState.Fs, &CpuState.Cs,
-                       &CpuState.Gs, &CpuState.Ss, &CpuState.Ds};
+  #if ELF_COMPILATION != 1
 
-  for (Seg_t *Seg : Segments) {
-    if (Seg->Reserved != ((Seg->Limit >> 16) & 0xF)) {
-      fmt::print("Segment with selector {:x} has invalid attributes.\n",
-                 Seg->Selector);
-      return false;
+    Seg_t *Segments[] = {&CpuState.Es, &CpuState.Fs, &CpuState.Cs,
+                        &CpuState.Gs, &CpuState.Ss, &CpuState.Ds};
+
+    for (Seg_t *Seg : Segments) {
+      if (Seg->Reserved != ((Seg->Limit >> 16) & 0xF)) {
+        fmt::print("Segment with selector {:x} has invalid attributes.\n",
+                  Seg->Selector);
+        return false;
+      }
     }
-  }
 
   //
   // If mxcsr_mask is equal to 0 it means something is wrong (old version of
@@ -254,6 +257,8 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
     CpuState.MxcsrMask = 0xff'bf;
   }
 
+  #endif 
+  
   return true;
 }
 

@@ -33,7 +33,7 @@
 
 .vs
 src/wtf/fuzzer_*
+src/out
 src/build/
 src/build_msvc/
-src/out
 targets/
