@@ -113,7 +113,7 @@ jobs:
         ./build-release.sh
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
