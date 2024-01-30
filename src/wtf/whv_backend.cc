@@ -112,7 +112,8 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
 
   HRESULT Hr = WHvCreatePartition(&Partition_);
   if (FAILED(Hr)) {
-    fmt::print("Failed WHvCreatePartition (Windows Hypervisor Platform enabled?)\n");
+    fmt::print(
+        "Failed WHvCreatePartition (Windows Hypervisor Platform enabled?)\n");
     return false;
   }
 
@@ -370,7 +371,8 @@ HRESULT WhvBackend_t::LoadState(const CpuState_t &CpuState) {
 #define REG128(_Whv_, _Wtf_)                                                   \
   {                                                                            \
     WHV_REGISTER_VALUE_t Reg;                                                  \
-    Reg->Reg128.Low64 = CpuState._Wtf_;                                        \
+    Reg->Reg128.Low64 = CpuState._Wtf_.fraction;                               \
+    Reg->Reg128.High64 = CpuState._Wtf_.exp;                                   \
     const HRESULT Hr = SetRegister(WHvX64Register##_Whv_, &Reg);               \
     if (FAILED(Hr)) {                                                          \
       fmt::print("Setting " #_Wtf_ " failed\n");                               \

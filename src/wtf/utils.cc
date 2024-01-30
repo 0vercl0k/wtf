@@ -161,25 +161,38 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   // the stack, it'll trigger an exception.
   //
   // To try to work around this issue, we will artificially force an empty FPU
-  // stack by setting @fptw to 0xff'ff as well as setting every slots to zero.
-  // But we'll do this only if state.fptw is equal to 0 and that every slots are
-  // set to '0xInfinity' / '0x-Infinity'. Otherwise, we'll assume that the dump
-  // did capture a sane state.
+  // stack by setting @fptw to 0xff'ff if it is set to zero.
   //
 
-  bool AllSlotsZero = true;
-  for (uint64_t Idx = 0; Idx < 8; Idx++) {
-    const std::string &Value = Json["fpst"][Idx].get<std::string>();
-    const bool Infinity = Value.find("Infinity") != Value.npos;
-    AllSlotsZero = AllSlotsZero && Infinity;
-    if (Infinity) {
-      CpuState.Fpst[Idx] = 0;
+  for (size_t Idx = 0; Idx < 8; Idx++) {
+    std::optional<uint64_t> Fraction = 0;
+    std::optional<uint16_t> Exp = 0;
+
+    //
+    // This is what `bdump` outputs and what 'old' wtf used, so let's keep that
+    // working.
+    //
+
+    if (Json["fpst"][Idx].is_string()) {
+      const std::string &Value = Json["fpst"][Idx].get<std::string>();
+      const bool Infinity = Value.find("Infinity") != Value.npos;
+      if (!Infinity) {
+        fmt::print("There is a fpst register that isn't set to 0xInfinity "
+                   "which should not happen, bailing.");
+        return false;
+      }
     } else {
-      CpuState.Fpst[Idx] = std::strtoull(Value.c_str(), nullptr, 0);
+      Fraction = std::strtoull(
+          Json["fpst"][Idx]["fraction"].get<std::string>().c_str(), nullptr, 0);
+      Exp = uint16_t(std::strtoull(
+          Json["fpst"][Idx]["exp"].get<std::string>().c_str(), nullptr, 0));
     }
+
+    CpuState.Fpst[Idx].fraction = Fraction.value_or(0);
+    CpuState.Fpst[Idx].exp = Exp.value_or(0);
   }
 
-  if (CpuState.Fptw == 0 && AllSlotsZero) {
+  if (CpuState.Fptw == 0) {
 
     //
     // Two bits per register, 11 for empty.

@@ -116,6 +116,11 @@ struct Zmm {
   uint64_t q[8];
 };
 
+struct Float80 {
+  uint64_t fraction;
+  uint16_t exp;
+};
+
 struct State {
   uint64_t bochscpu_seed;
   uint64_t rax;
@@ -163,7 +168,7 @@ struct State {
   uint16_t fpsw;
   uint16_t fptw;
   uint16_t fpop;
-  uint64_t fpst[8];
+  Float80 fpst[8];
   uint32_t mxcsr;
   uint32_t mxcsr_mask;
   uint64_t tsc;
@@ -188,6 +193,8 @@ using bochscpu_cpu_seg_t = Seg;
 using bochscpu_cpu_global_seg_t = GlobalSeg;
 
 using bochscpu_cpu_zmm_t = Zmm;
+
+using bochscpu_cpu_float80_t = Float80;
 
 using bochscpu_instr_t = const void*;
 
@@ -352,6 +359,26 @@ void bochscpu_cpu_set_cr3(bochscpu_cpu_t p, uint64_t val);
 void bochscpu_cpu_zmm(bochscpu_cpu_t p, uintptr_t idx, bochscpu_cpu_zmm_t *z);
 
 void bochscpu_cpu_set_zmm(bochscpu_cpu_t p, uintptr_t idx, const bochscpu_cpu_zmm_t *z);
+
+void bochscpu_cpu_fp_st(bochscpu_cpu_t p, uintptr_t idx, bochscpu_cpu_float80_t *f);
+
+void bochscpu_cpu_set_fp_st(bochscpu_cpu_t p, uintptr_t idx, const bochscpu_cpu_float80_t *f);
+
+uint16_t bochscpu_cpu_fp_cw(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_fp_cw(bochscpu_cpu_t p, uint16_t f);
+
+uint16_t bochscpu_cpu_fp_sw(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_fp_sw(bochscpu_cpu_t p, uint16_t f);
+
+uint16_t bochscpu_cpu_fp_tw(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_fp_tw(bochscpu_cpu_t p, uint16_t f);
+
+uint16_t bochscpu_cpu_fp_op(bochscpu_cpu_t p);
+
+void bochscpu_cpu_set_fp_op(bochscpu_cpu_t p, uint16_t f);
 
 uint32_t bochscpu_instr_bx_opcode(bochscpu_instr_t p);
 

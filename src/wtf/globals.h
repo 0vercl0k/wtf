@@ -1,5 +1,6 @@
 // Axel '0vercl0k' Souchet - March 29 2020
 #pragma once
+#include <bochscpu.hpp>
 #include <cstring>
 #include <filesystem>
 #include <fmt/format.h>
@@ -1064,7 +1065,7 @@ struct CpuState_t {
   uint16_t Fpsw;
   uint16_t Fptw;
   uint16_t Fpop;
-  uint64_t Fpst[8];
+  Float80 Fpst[8];
   uint32_t Mxcsr;
   uint32_t MxcsrMask;
   uint64_t Tsc;
@@ -1136,7 +1137,8 @@ struct CpuState_t {
     Equal = Equal && Fpop == B.Fpop;
 
     for (size_t Idx = 0; Idx < 8; Idx++) {
-      Equal = Equal && Fpst[Idx] == B.Fpst[Idx];
+      Equal =
+          Equal && (memcmp(&Fpst[Idx], &B.Fpst[Idx], sizeof(Fpst[Idx])) == 0);
     }
 
     Equal = Equal && Mxcsr == B.Mxcsr;
