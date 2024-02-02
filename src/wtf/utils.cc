@@ -54,6 +54,19 @@ void Hexdump(const uint64_t Address, const void *Buffer, size_t Len) {
   }
 }
 
+uint16_t WinDbgFptwToRealFptw(const uint16_t WindbgFptw) {
+  uint16_t RealFptw = 0;
+  for (size_t BitIdx = 0; BitIdx < 8; BitIdx++) {
+    const uint16_t Bits = (WindbgFptw >> BitIdx) & 0b1;
+    if (Bits == 1) {
+      RealFptw |= 0b00 << (BitIdx * 2);
+    } else {
+      RealFptw |= 0b11 << (BitIdx * 2);
+    }
+  }
+  return RealFptw;
+}
+
 bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   std::ifstream File(CpuStatePath);
   json::json Json;
@@ -184,9 +197,6 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
     CpuState.Fpst[Idx].exp = Exp.value_or(0);
   }
 
-  const auto Fptw = uint16_t(
-      std::strtoull(Json["fptw"].get<std::string>().c_str(), nullptr, 0));
-
   if (BdumpGenerated) {
 
     //
@@ -196,23 +206,11 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
     // break people that have generated dumps that don't account for that.
     //
 
-    uint16_t RealFptw = 0;
-    for (size_t BitIdx = 0; BitIdx < 8; BitIdx++) {
-      const uint16_t Bits = (RealFptw >> BitIdx) & 0b1;
-      if (Bits == 1) {
-        RealFptw |= 0b00 << (BitIdx * 2);
-      } else {
-        RealFptw |= 0b11 << (BitIdx * 2);
-      }
-
-      fmt::print("Setting @fptw to {:x} as this is looking like an old dump "
-                 "taken with bdump..\n",
-                 RealFptw);
-      CpuState.Fptw = RealFptw;
-    }
-  } else {
-    CpuState.Fptw = uint16_t(
-        std::strtoull(Json["fptw"].get<std::string>().c_str(), nullptr, 0));
+    const uint16_t RealFptw = WinDbgFptwToRealFptw(CpuState.Fptw);
+    fmt::print("Setting @fptw to {:x} as this is looking like an old dump "
+               "taken with bdump..\n",
+               RealFptw);
+    CpuState.Fptw = RealFptw;
   }
 
   return true;
