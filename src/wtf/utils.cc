@@ -54,7 +54,7 @@ void Hexdump(const uint64_t Address, const void *Buffer, size_t Len) {
   }
 }
 
-uint16_t WinDbgFptwToRealFptw(const uint16_t WindbgFptw) {
+uint16_t AbridgedToFptw(const uint8_t WindbgFptw) {
   uint16_t RealFptw = 0;
   for (size_t BitIdx = 0; BitIdx < 8; BitIdx++) {
     const uint16_t Bits = (WindbgFptw >> BitIdx) & 0b1;
@@ -65,6 +65,37 @@ uint16_t WinDbgFptwToRealFptw(const uint16_t WindbgFptw) {
     }
   }
   return RealFptw;
+}
+
+uint8_t FptwToAbridged(const uint16_t WindbgFptw) {
+  // The FXSAVE instruction saves an abridged version of the x87 FPU tag word in
+  // the FTW field (unlike the FSAVE instruction, which saves the complete tag
+  // word). The tag information is saved in physical register order (R0 through
+  // R7), rather than in top-of-stack (TOS) order. With the FXSAVE instruction,
+  // however, only a single bit (1 for valid or 0 for empty) is saved for each
+  // tag. For example, assume that the tag word is currently set as follows:
+  //
+  // R7 R6 R5 R4 R3 R2 R1 R0
+  // 11 xx xx xx 11 11 11 11
+  //
+  // Here, 11B indicates empty stack elements and “xx” indicates valid (00B),
+  // zero (01B), or special (10B). For this example, the FXSAVE instruction
+  // saves only the following 8 bits of information:
+  //
+  // R7 R6 R5 R4 R3 R2 R1 R0
+  // 0  1   1  1 0  0   0  0
+  //
+
+  uint8_t AbridgedFptw = 0;
+  for (size_t Idx = 0; Idx < 8; Idx++) {
+    const uint16_t Bits = (WindbgFptw >> (Idx * 2)) & 0b11;
+    if (Bits == 0b11) {
+      AbridgedFptw |= 0b0 << Idx;
+    } else {
+      AbridgedFptw |= 0b1 << Idx;
+    }
+  }
+  return AbridgedFptw;
 }
 
 bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
@@ -206,11 +237,11 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
     // break people that have generated dumps that don't account for that.
     //
 
-    const uint16_t RealFptw = WinDbgFptwToRealFptw(CpuState.Fptw);
-    fmt::print("Setting @fptw to {:x} as this is looking like an old dump "
-               "taken with bdump..\n",
-               RealFptw);
-    CpuState.Fptw = RealFptw;
+    const uint16_t Fptw = AbridgedToFptw(CpuState.Fptw);
+    fmt::print(
+        "Setting @fptw to {:x} as this is an old dump taken with bdump..\n",
+        Fptw);
+    CpuState.Fptw = Fptw;
   }
 
   return true;
