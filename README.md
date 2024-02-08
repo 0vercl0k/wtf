@@ -1,14 +1,19 @@
-# what the fuzz
-
-![Builds](https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg)
+<div align='center'>
+  <h1><code>wtf</code></h1>
+  <p>
+    <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows.</strong>
+  </p>
+  <p>
+    <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
+  </p>
+  <p>
+    <img src='pics/wtf.gif'/>
+  </p>
+</div>
 
 ## Overview
 
 **what the fuzz** or **wtf** is a distributed, code-coverage guided, customizable, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows. Execution of the target can be done inside an emulator with [bochscpu](https://github.com/yrp604/bochscpu) (slowest, most precise), inside a Windows VM with the [Windows Hypervisor Platform APIs](https://docs.microsoft.com/en-us/virtualization/api/hypervisor-platform/hypervisor-platform) or inside a Linux VM with the [KVM APIs](https://www.kernel.org/doc/html/latest/virt/kvm/api.html) (fastest).
-
-<p align='center'>
-<img src='pics/wtf.gif'>
-</p>
 
 It uncovered memory corruption vulnerabilities in a wide range of softwares: [IDA Pro](https://github.com/0vercl0k/fuzzing-ida75), a popular [AAA game](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/), the [Windows kernel](https://microsoft.fandom.com/wiki/Architecture_of_Windows_NT), the [Microsoft RDP client](https://www.hexacon.fr/slides/Hexacon2022-Fuzzing_RDPEGFX_with_wtf.pdf), [NVIDIA GPU Display driver](https://nvidia.custhelp.com/app/answers/detail/a_id/5383), etc.
 
