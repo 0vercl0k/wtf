@@ -260,9 +260,3 @@ SaveFile(const fs::path &Path, const uint8_t *Buffer, const size_t BufferSize);
 //
 
 [[nodiscard]] std::string_view ExceptionCodeToStr(const uint32_t ExceptionCode);
-
-//
-// Utility to convert FPTW (2 bytes) into its abridged version (1 byte).
-//
-
-[[nodiscard]] uint8_t FptwToAbridged(const uint16_t WindbgFptw);

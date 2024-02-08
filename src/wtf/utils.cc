@@ -54,50 +54,6 @@ void Hexdump(const uint64_t Address, const void *Buffer, size_t Len) {
   }
 }
 
-uint16_t AbridgedToFptw(const uint8_t WindbgFptw) {
-  uint16_t RealFptw = 0;
-  for (size_t BitIdx = 0; BitIdx < 8; BitIdx++) {
-    const uint16_t Bits = (WindbgFptw >> BitIdx) & 0b1;
-    if (Bits == 1) {
-      RealFptw |= 0b00 << (BitIdx * 2);
-    } else {
-      RealFptw |= 0b11 << (BitIdx * 2);
-    }
-  }
-  return RealFptw;
-}
-
-uint8_t FptwToAbridged(const uint16_t WindbgFptw) {
-  // The FXSAVE instruction saves an abridged version of the x87 FPU tag word in
-  // the FTW field (unlike the FSAVE instruction, which saves the complete tag
-  // word). The tag information is saved in physical register order (R0 through
-  // R7), rather than in top-of-stack (TOS) order. With the FXSAVE instruction,
-  // however, only a single bit (1 for valid or 0 for empty) is saved for each
-  // tag. For example, assume that the tag word is currently set as follows:
-  //
-  // R7 R6 R5 R4 R3 R2 R1 R0
-  // 11 xx xx xx 11 11 11 11
-  //
-  // Here, 11B indicates empty stack elements and “xx” indicates valid (00B),
-  // zero (01B), or special (10B). For this example, the FXSAVE instruction
-  // saves only the following 8 bits of information:
-  //
-  // R7 R6 R5 R4 R3 R2 R1 R0
-  // 0  1   1  1 0  0   0  0
-  //
-
-  uint8_t AbridgedFptw = 0;
-  for (size_t Idx = 0; Idx < 8; Idx++) {
-    const uint16_t Bits = (WindbgFptw >> (Idx * 2)) & 0b11;
-    if (Bits == 0b11) {
-      AbridgedFptw |= 0b0 << Idx;
-    } else {
-      AbridgedFptw |= 0b1 << Idx;
-    }
-  }
-  return AbridgedFptw;
-}
-
 bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   std::ifstream File(CpuStatePath);
   json::json Json;
@@ -144,7 +100,6 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   REGISTER(tsc_aux, TscAux)
   REGISTER(fpcw, Fpcw)
   REGISTER(fpsw, Fpsw)
-  REGISTER(fptw, Fptw)
   REGISTER(cr0, Cr0.Flags)
   REGISTER(cr2, Cr2)
   REGISTER(cr3, Cr3)
@@ -228,6 +183,9 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
     CpuState.Fpst[Idx].exp = Exp.value_or(0);
   }
 
+  CpuState.Fptw = Fptw_t(uint16_t(
+      std::strtoull(Json["fptw"].get<std::string>().c_str(), nullptr, 0)));
+
   if (BdumpGenerated) {
 
     //
@@ -237,10 +195,10 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
     // break people that have generated dumps that don't account for that.
     //
 
-    const uint16_t Fptw = AbridgedToFptw(CpuState.Fptw);
+    const auto Fptw = Fptw_t::FromAbridged(CpuState.Fptw.Value);
     fmt::print(
         "Setting @fptw to {:x} as this is an old dump taken with bdump..\n",
-        Fptw);
+        Fptw.Value);
     CpuState.Fptw = Fptw;
   }
 

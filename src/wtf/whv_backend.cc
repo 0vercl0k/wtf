@@ -359,7 +359,7 @@ HRESULT WhvBackend_t::LoadState(const CpuState_t &CpuState) {
     Reg->FpControlStatus.LastFpOp = CpuState.Fpop;
     Reg->FpControlStatus.FpControl = CpuState.Fpcw;
     Reg->FpControlStatus.FpStatus = CpuState.Fpsw;
-    Reg->FpControlStatus.FpTag = FptwToAbridged(CpuState.Fptw);
+    Reg->FpControlStatus.FpTag = CpuState.Fptw.Abridged();
     Reg->FpControlStatus.Reserved = 0;
     const HRESULT Hr = SetRegister(WHvX64RegisterFpControlStatus, &Reg);
     if (FAILED(Hr)) {
