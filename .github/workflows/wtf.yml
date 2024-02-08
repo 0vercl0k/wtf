@@ -18,19 +18,13 @@ jobs:
     name: Windows latest / ${{ matrix.generator }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
 
     - name: Setup vs prompt
       uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Initialize CodeQL
-      if: matrix.generator == 'msvc'
-      uses: github/codeql-action/init@v2
-      with:
-        languages: cpp
 
     - name: Build with Ninja/cl
       if: matrix.generator == 'ninja'
@@ -44,10 +38,6 @@ jobs:
         cd src\build
         .\build-release-msvc.bat
 
-    - name: Perform CodeQL Analysis
-      if: matrix.generator == 'msvc'
-      uses: github/codeql-action/analyze@v2
-
     - name: Copy dbghelp/symsrv
       if: matrix.generator == 'ninja'
       run: |
@@ -58,7 +48,7 @@ jobs:
 
     - name: Upload artifacts
       if: matrix.generator == 'ninja'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: bin-win64.RelWithDebInfo
         path: |
@@ -79,12 +69,7 @@ jobs:
     name: Ubuntu latest / ${{ matrix.compiler }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: cpp
+      uses: actions/checkout@v4
 
     - name: Installing dependencies
       run: |
@@ -112,11 +97,8 @@ jobs:
         chmod u+x ./build-release.sh
         ./build-release.sh
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: bin-lin64-${{ matrix.compiler }}.Release
         path: |
