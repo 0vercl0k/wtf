@@ -965,10 +965,10 @@ bool KvmBackend_t::LoadFpu(const CpuState_t &CpuState) {
 
   Fregs.fcw = CpuState.Fpcw;
   Fregs.fsw = CpuState.Fpsw;
-  // Fregs.ftwx = ??
+  Fregs.ftwx = CpuState.Fptw.Abridged();
   Fregs.last_opcode = CpuState.Fpop;
-  // Fregs.last_ip = ??
-  // Fregs.last_dp = ??
+  Fregs.last_ip = 0;
+  Fregs.last_dp = 0;
   Fregs.mxcsr = CpuState.Mxcsr;
   for (uint64_t Idx = 0; Idx < 16; Idx++) {
     memcpy(Fregs.xmm[Idx], &CpuState.Zmm[Idx].Q[0], 16);

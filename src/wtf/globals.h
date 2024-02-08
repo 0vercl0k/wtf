@@ -1019,6 +1019,27 @@ union Rflags_t {
 };
 
 struct Fptw_t {
+  //
+  // The FXSAVE instruction saves an abridged version of the x87 FPU tag word
+  // in
+  // the FTW field (unlike the FSAVE instruction, which saves the complete tag
+  // word). The tag information is saved in physical register order (R0
+  // through R7), rather than in top-of-stack (TOS) order. With the FXSAVE
+  // instruction, however, only a single bit (1 for valid or 0 for empty) is
+  // saved for each tag. For example, assume that the tag word is currently
+  // set as follows:
+  //
+  // R7 R6 R5 R4 R3 R2 R1 R0
+  // 11 xx xx xx 11 11 11 11
+  //
+  // Here, 11B indicates empty stack elements and "xx" indicates valid (00B),
+  // zero (01B), or special (10B). For this example, the FXSAVE instruction
+  // saves only the following 8 bits of information:
+  //
+  // R7 R6 R5 R4 R3 R2 R1 R0
+  // 0  1   1  1 0  0   0  0
+  //
+
   uint16_t Value = 0;
 
   Fptw_t() = default;
@@ -1039,26 +1060,6 @@ struct Fptw_t {
   }
 
   uint8_t Abridged() const {
-    // The FXSAVE instruction saves an abridged version of the x87 FPU tag word
-    // in
-    // the FTW field (unlike the FSAVE instruction, which saves the complete tag
-    // word). The tag information is saved in physical register order (R0
-    // through R7), rather than in top-of-stack (TOS) order. With the FXSAVE
-    // instruction, however, only a single bit (1 for valid or 0 for empty) is
-    // saved for each tag. For example, assume that the tag word is currently
-    // set as follows:
-    //
-    // R7 R6 R5 R4 R3 R2 R1 R0
-    // 11 xx xx xx 11 11 11 11
-    //
-    // Here, 11B indicates empty stack elements and "xx" indicates valid (00B),
-    // zero (01B), or special (10B). For this example, the FXSAVE instruction
-    // saves only the following 8 bits of information:
-    //
-    // R7 R6 R5 R4 R3 R2 R1 R0
-    // 0  1   1  1 0  0   0  0
-    //
-
     uint8_t Abridged = 0;
     for (size_t Idx = 0; Idx < 8; Idx++) {
       const uint16_t Bits = (Value >> (Idx * 2)) & 0b11;
