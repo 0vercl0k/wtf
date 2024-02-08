@@ -1,5 +1,5 @@
 <div align='center'>
-  <h1><code>wtf</code></h1>
+  <h1><code>what the fuzz</code></h1>
   <p>
     <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows.</strong>
   </p>
