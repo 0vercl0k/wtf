@@ -194,8 +194,6 @@ using bochscpu_cpu_global_seg_t = GlobalSeg;
 
 using bochscpu_cpu_zmm_t = Zmm;
 
-using bochscpu_cpu_float80_t = Float80;
-
 using bochscpu_instr_t = const void*;
 
 extern "C" {
@@ -359,26 +357,6 @@ void bochscpu_cpu_set_cr3(bochscpu_cpu_t p, uint64_t val);
 void bochscpu_cpu_zmm(bochscpu_cpu_t p, uintptr_t idx, bochscpu_cpu_zmm_t *z);
 
 void bochscpu_cpu_set_zmm(bochscpu_cpu_t p, uintptr_t idx, const bochscpu_cpu_zmm_t *z);
-
-void bochscpu_cpu_fp_st(bochscpu_cpu_t p, uintptr_t idx, bochscpu_cpu_float80_t *f);
-
-void bochscpu_cpu_set_fp_st(bochscpu_cpu_t p, uintptr_t idx, const bochscpu_cpu_float80_t *f);
-
-uint16_t bochscpu_cpu_fp_cw(bochscpu_cpu_t p);
-
-void bochscpu_cpu_set_fp_cw(bochscpu_cpu_t p, uint16_t f);
-
-uint16_t bochscpu_cpu_fp_sw(bochscpu_cpu_t p);
-
-void bochscpu_cpu_set_fp_sw(bochscpu_cpu_t p, uint16_t f);
-
-uint16_t bochscpu_cpu_fp_tw(bochscpu_cpu_t p);
-
-void bochscpu_cpu_set_fp_tw(bochscpu_cpu_t p, uint16_t f);
-
-uint16_t bochscpu_cpu_fp_op(bochscpu_cpu_t p);
-
-void bochscpu_cpu_set_fp_op(bochscpu_cpu_t p, uint16_t f);
 
 uint32_t bochscpu_instr_bx_opcode(bochscpu_instr_t p);
 
