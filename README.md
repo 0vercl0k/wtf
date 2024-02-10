@@ -193,50 +193,35 @@ The usual workflow to harness a target is as follows:
     00007ff6`f5bb111e ff15dc1e0100    call    qword ptr [hevd_client!_imp_DeviceIoControl (00007ff6`f5bc3000)] ds:002b:00007ff6`f5bc3000={KERNEL32!DeviceIoControlImplementation (00007ff8`3e2e6360)}
     ```
 
-1. Use [bdump.js](https://github.com/yrp604/bdump) to generate the kernel crash-dump as well as the `regs.json` file that contains the CPU state. I recommend to dump those file in a `state` directory under your `target` directory (`targets/hevd/state` for example):
+1. Use [snapshot](https://github.com/0vercl0k/snapshot) to generate the kernel crash-dump as well as the `regs.json` file that contains the CPU state. I recommend to dump those file in a `state` directory under your `target` directory (`targets/hevd/state` for example):
 
     ```
-    kd> .scriptload c:\\work\\codes\\bdump\\bdump.js
-    [bdump] Usage: !bdump "C:\\path\\to\\dump"
-    [bdump] Usage: !bdump_full "C:\\path\\to\\dump"
-    [bdump] Usage: !bdump_active_kernel "C:\\path\\to\\dump"
-    [bdump] This will create a dump directory and fill it with a memory and register files
-    [bdump] NOTE: you must include the quotes and escape the backslashes!
-    JavaScript script successfully loaded from 'c:\work\codes\bdump\bdump.js'
+    kd> .load c:\work\codes\snapshot\target\release\snapshot.dll
 
-    kd> !bdump_active_kernel "c:\\work\\codes\\wtf\\targets\\hevd\\state"
-    [bdump] creating dir...
-    [bdump] saving regs...
-    [bdump] register fixups...
-    [bdump] don't know how to get mxcsr_mask or fpop, setting to zero...
-    [bdump]
-    [bdump] don't know how to get avx registers, skipping...
-    [bdump]
-    [bdump] tr.base is not cannonical...
-    [bdump] old tr.base: 0x7375c000
-    [bdump] new tr.base: 0xfffff8047375c000
-    [bdump]
-    [bdump] setting flag 0x2000 on cs.attr...
-    [bdump] old cs.attr: 0x2fb
-    [bdump] new cs.attr: 0x22fb
-    [bdump]
-    [bdump] rip and gs don't match kernel/user, swapping...
-    [bdump] rip: 0x7ff6f5bb111e
-    [bdump] new gs.base: 0xdfd9621000
-    [bdump] new kernel_gs_base: 0xfffff8046b6f3000
-    [bdump]
-    [bdump] non-zero IRQL in usermode, resetting to zero...
-    [bdump] saving mem, get a coffee or have a smoke, this will probably take around 10-15 minutes...
-    [bdump] Creating c:\work\codes\wtf\targets\hevd\state\mem.dmp - Active kernel and user memory bitmap dump
-    [bdump] Collecting pages to write to the dump. This may take a while.
-    [bdump] 0% written.
+    kd> !snapshot -h
+    [snapshot] Usage: snapshot [OPTIONS] [STATE_PATH]
+
+    Arguments:
+      [STATE_PATH]  The path to save the snapshot to
+
+    Options:
+      -k, --kind <KIND>  The kind of snapshot to take [default: full] [possible values: active-kernel, full]
+      -h, --help         Print help
+
+    kd> !snapshot c:\work\codes\wtf\targets\hevd\state
+    [snapshot] Creating c:\work\codes\wtf\targets\hevd\state..
+    [snapshot] Dumping the CPU state into c:\work\codes\wtf\targets\hevd\state\regs.json..
+    [snapshot] Dumping the memory state into c:\work\codes\wtf\targets\hevd\state\mem.dmp..
+    Creating c:\\work\\codes\\wtf\\targets\\hevd\\state\\mem.dmp - Full memory range dump
+    0% written.
+    5% written. 1 min 50 sec remaining.
+    10% written. 1 min 17 sec remaining.
+    15% written. 1 min 30 sec remaining.
     [...]
-    [bdump] 95% written. 1 sec remaining.
-    [bdump] Wrote 1.5 GB in 23 sec.
-    [bdump] The average transfer rate was 64.7 MB/s.
-    [bdump] Dump successfully written
-    [bdump] done!
-    @$bdump_active_kernel("c:\\work\\codes\\wtf\\targets\\hevd\\state")
+    Wrote 4.0 GB in 1 min 32 sec.
+    The average transfer rate was 44.5 MB/s.
+    Dump successfully written
+    [snapshot] Done!
     ```
 
 1. Create a [fuzzer module](src/wtf/fuzzer_hevd.cc), write the code that [inserts a test-case](src/wtf/fuzzer_hevd.cc#L20) into your target and define [the](src/wtf/fuzzer_hevd.cc#L81) [various](src/wtf/fuzzer_hevd.cc#L104) [conditions](src/wtf/fuzzer_hevd.cc#L115) to [detect crashes](src/wtf/fuzzer_hevd.cc#L115) or [the end of a test-case](src/wtf/fuzzer_hevd.cc#L69).
@@ -254,7 +239,7 @@ You can also target [WoW64](https://docs.microsoft.com/en-us/windows/win32/winpr
 The context is partially valid. Only x86 user-mode context is available.
 Switched to Host mode
 
-32.kd> !bdump "c:\\dump"
+32.kd> !snapshot
 ```
 
 ## How to deliver multi-packets to my target?
