@@ -209,7 +209,6 @@ The usual workflow to harness a target is as follows:
       -h, --help         Print help
 
     kd> !snapshot c:\work\codes\wtf\targets\hevd\state
-    [snapshot] Creating c:\work\codes\wtf\targets\hevd\state..
     [snapshot] Dumping the CPU state into c:\work\codes\wtf\targets\hevd\state\regs.json..
     [snapshot] Dumping the memory state into c:\work\codes\wtf\targets\hevd\state\mem.dmp..
     Creating c:\\work\\codes\\wtf\\targets\\hevd\\state\\mem.dmp - Full memory range dump
