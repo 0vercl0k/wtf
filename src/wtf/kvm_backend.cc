@@ -952,22 +952,23 @@ bool KvmBackend_t::LoadFpu(const CpuState_t &CpuState) {
   // Set the FPU registers.
   //
 
-  struct kvm_fpu Fregs;
+  struct kvm_fpu Fregs = {};
   if (ioctl(Vp_, KVM_GET_FPU, &Fregs) < 0) {
     perror("KVM_GET_FPU failed");
     return false;
   }
 
   for (uint64_t Idx = 0; Idx < 8; Idx++) {
-    memcpy(&Fregs.fpr[Idx], &CpuState.Fpst[Idx], 16);
+    Fregs.fpr[Idx][0] = CpuState.Fpst[Idx].fraction;
+    Fregs.fpr[Idx][1] = CpuState.Fpst[Idx].exp;
   }
 
   Fregs.fcw = CpuState.Fpcw;
   Fregs.fsw = CpuState.Fpsw;
-  // Fregs.ftwx = ??
+  Fregs.ftwx = CpuState.Fptw.Abridged();
   Fregs.last_opcode = CpuState.Fpop;
-  // Fregs.last_ip = ??
-  // Fregs.last_dp = ??
+  Fregs.last_ip = 0;
+  Fregs.last_dp = 0;
   Fregs.mxcsr = CpuState.Mxcsr;
   for (uint64_t Idx = 0; Idx < 16; Idx++) {
     memcpy(Fregs.xmm[Idx], &CpuState.Zmm[Idx].Q[0], 16);

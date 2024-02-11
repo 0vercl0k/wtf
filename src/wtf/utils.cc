@@ -100,7 +100,6 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   REGISTER(tsc_aux, TscAux)
   REGISTER(fpcw, Fpcw)
   REGISTER(fpsw, Fpsw)
-  REGISTER(fptw, Fptw)
   REGISTER(cr0, Cr0.Flags)
   REGISTER(cr2, Cr2)
   REGISTER(cr3, Cr3)
@@ -153,40 +152,54 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   GLOBALSEGMENT(idtr, Idtr)
 #undef GLOBALSEGMENT
 
-  //
-  // It would appear that Windbg doesn't dump properly the @fptw register. In my
-  // tests, it is always zero which means that the FPU stack is full when
-  // usually the stack is usually empty (all bits are set).
-  // In that case, if the target uses an FPU instruction that pushes data onto
-  // the stack, it'll trigger an exception.
-  //
-  // To try to work around this issue, we will artificially force an empty FPU
-  // stack by setting @fptw to 0xff'ff as well as setting every slots to zero.
-  // But we'll do this only if state.fptw is equal to 0 and that every slots are
-  // set to '0xInfinity' / '0x-Infinity'. Otherwise, we'll assume that the dump
-  // did capture a sane state.
-  //
+  bool BdumpGenerated = false;
+  for (size_t Idx = 0; Idx < 8; Idx++) {
+    std::optional<uint64_t> Fraction = 0;
+    std::optional<uint16_t> Exp = 0;
 
-  bool AllSlotsZero = true;
-  for (uint64_t Idx = 0; Idx < 8; Idx++) {
-    const std::string &Value = Json["fpst"][Idx].get<std::string>();
-    const bool Infinity = Value.find("Infinity") != Value.npos;
-    AllSlotsZero = AllSlotsZero && Infinity;
-    if (Infinity) {
-      CpuState.Fpst[Idx] = 0;
+    //
+    // This is what `bdump` outputs and what 'old' wtf used, so let's keep that
+    // working.
+    //
+
+    if (Json["fpst"][Idx].is_string()) {
+      const std::string &Value = Json["fpst"][Idx].get<std::string>();
+      const bool Infinity = Value.find("Infinity") != Value.npos;
+      if (!Infinity) {
+        fmt::print("There is a fpst register that isn't set to 0xInfinity "
+                   "which should not happen, bailing.");
+        return false;
+      }
+
+      BdumpGenerated = true;
     } else {
-      CpuState.Fpst[Idx] = std::strtoull(Value.c_str(), nullptr, 0);
+      Fraction = std::strtoull(
+          Json["fpst"][Idx]["fraction"].get<std::string>().c_str(), nullptr, 0);
+      Exp = uint16_t(std::strtoull(
+          Json["fpst"][Idx]["exp"].get<std::string>().c_str(), nullptr, 0));
     }
+
+    CpuState.Fpst[Idx].fraction = Fraction.value_or(0);
+    CpuState.Fpst[Idx].exp = Exp.value_or(0);
   }
 
-  if (CpuState.Fptw == 0 && AllSlotsZero) {
+  CpuState.Fptw = Fptw_t(uint16_t(
+      std::strtoull(Json["fptw"].get<std::string>().c_str(), nullptr, 0)));
+
+  if (BdumpGenerated) {
 
     //
-    // Two bits per register, 11 for empty.
+    // The bdump project dumps the @fptw correctly but WinDbg encodes it in a
+    // special way that makes it uncorrect to be loaded directly into a CPU's
+    // fptw. As a result, we will calculate what the real value should be to not
+    // break people that have generated dumps that don't account for that.
     //
 
-    fmt::print("Setting @fptw to 0xff'ff.\n");
-    CpuState.Fptw = 0b11'11'11'11'11'11'11'11;
+    const auto Fptw = Fptw_t::FromAbridged(CpuState.Fptw.Value);
+    fmt::print(
+        "Setting @fptw to {:x} as this is an old dump taken with bdump..\n",
+        Fptw.Value);
+    CpuState.Fptw = Fptw;
   }
 
   return true;
@@ -227,8 +240,8 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
   }
 
   //
-  // Validate that the Reserved field of each segment contains bits 16-19 of the
-  // Limit
+  // Validate that the Reserved field of each segment contains bits 16-19 of
+  // the Limit
   //
 
   Seg_t *Segments[] = {&CpuState.Es, &CpuState.Fs, &CpuState.Cs,
@@ -244,8 +257,8 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
 
   //
   // If mxcsr_mask is equal to 0 it means something is wrong (old version of
-  // bdump, etc.) and will cause #GPs. In that case, let's use a default value
-  // that's been taken from the Linux kernel (src:
+  // bdump, etc.) and will cause #GPs. In that case, let's use a default
+  // value that's been taken from the Linux kernel (src:
   // https://github.com/yrp604/bdump/commit/5a86bdc45acaf65a32aa9149ea47b717d899c85e)
   //
 
@@ -364,8 +377,9 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
   }
 
   //
-  // Warn the user if there has been no coverage breakpoint found. This usually
-  // means that the user didn't add .cov file in the coverage folder/
+  // Warn the user if there has been no coverage breakpoint found. This
+  // usually means that the user didn't add .cov file in the coverage
+  // folder/
   //
 
   if (CovBreakpoints.size() == 0) {
