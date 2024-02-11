@@ -1,11 +1,7 @@
 # WTF: I can fuzz ELF files with this?
 
-This provides Linux ELF userland snapshotting support based on wtf work by
-Kasimir[^1] and scripts in Snapchange[^2].
-
-[^1]: https://github.com/0vercl0k/wtf/pull/102
-[^2]: https://github.com/awslabs/snapchange/tree/main/qemu_snapshot
-
+This provides Linux ELF userland snapshotting support based on previous work by
+[Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot)
 
 ## Limitations 
 
@@ -79,7 +75,6 @@ Then transfer the target file to the VM:
 
 ```console
 user@pc:/wtf/linux_mode/crash_test$ pushd ../qemu_snapshot/target_vm
-/wtf/linux_mode/qemu_snapshot/target_vm /wtf/linux_mode/crash_test
 user@pc:/wtf/linux_mode/qemu_snapshot/target_vm$ ./scp.sh ../../crash_test/a.out
 a.out                                                                                     100%   16KB   1.2MB/s   00:00
 
@@ -88,7 +83,7 @@ a.out                                                                           
 Go back to the `crash_test` directory.
 
 ```console
-$ popd
+user@pc:/wtf/linux_mode/qemu_snapshot/target_vm$ popd
 /wtf/linux_mode/crash_test
 user@pc:/wtf/linux_mode/crash_test$
 ```
@@ -99,7 +94,7 @@ Now, run `../qemu_snapshot/gdb_client.sh`:
 user@pc:/wtf/linux_mode/crash_test$ ../qemu_snapshot/gdb_client.sh 
 ```
 
-In the first tab, log in to the Linux machine and run the target file:
+In the first tab, log in to the Linux machine (user `root`) and run the target file:
 
 ```console
 linux login: root
