@@ -10,6 +10,7 @@ export IMAGE=${LINUX_MODE_BASE}qemu_snapshot/target_vm/image/bookworm.img
 gdb \
     --ex "set confirm off" \
     --ex "starti" \
+    --ex "handle SIGUSR1 noprint nostop" \
     -x ${GDB_QEMU_PY_SCRIPT} \
     --args ${QEMU} \
     -m 2G \
