@@ -205,7 +205,7 @@ class DumpCPUStateCommand(gdb.Command):
         data["fpsw"] = "0x0"
         data["fptw"] = "0x0"
         data["mxcsr_mask"] = "0x0"
-        data["fpst"] = [{"fraction": 0, "exp": 0}] * 8
+        data["fpst"] = [{"fraction": "0x0", "exp": "0x0"}] * 8
 
         # writes the data dictionary to the file
         json.dump(data, f)
