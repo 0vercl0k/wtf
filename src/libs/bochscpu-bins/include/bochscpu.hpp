@@ -116,6 +116,11 @@ struct Zmm {
   uint64_t q[8];
 };
 
+struct Float80 {
+  uint64_t fraction;
+  uint16_t exp;
+};
+
 struct State {
   uint64_t bochscpu_seed;
   uint64_t rax;
@@ -163,7 +168,7 @@ struct State {
   uint16_t fpsw;
   uint16_t fptw;
   uint16_t fpop;
-  uint64_t fpst[8];
+  Float80 fpst[8];
   uint32_t mxcsr;
   uint32_t mxcsr_mask;
   uint64_t tsc;

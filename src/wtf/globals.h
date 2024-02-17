@@ -1,5 +1,6 @@
 // Axel '0vercl0k' Souchet - March 29 2020
 #pragma once
+#include <bochscpu.hpp>
 #include <cstring>
 #include <filesystem>
 #include <fmt/format.h>
@@ -1017,6 +1018,63 @@ union Rflags_t {
   uint64_t Flags;
 };
 
+struct Fptw_t {
+  //
+  // The FXSAVE instruction saves an abridged version of the x87 FPU tag word
+  // in
+  // the FTW field (unlike the FSAVE instruction, which saves the complete tag
+  // word). The tag information is saved in physical register order (R0
+  // through R7), rather than in top-of-stack (TOS) order. With the FXSAVE
+  // instruction, however, only a single bit (1 for valid or 0 for empty) is
+  // saved for each tag. For example, assume that the tag word is currently
+  // set as follows:
+  //
+  // R7 R6 R5 R4 R3 R2 R1 R0
+  // 11 xx xx xx 11 11 11 11
+  //
+  // Here, 11B indicates empty stack elements and "xx" indicates valid (00B),
+  // zero (01B), or special (10B). For this example, the FXSAVE instruction
+  // saves only the following 8 bits of information:
+  //
+  // R7 R6 R5 R4 R3 R2 R1 R0
+  // 0  1   1  1 0  0   0  0
+  //
+
+  uint16_t Value = 0;
+
+  Fptw_t() = default;
+  Fptw_t(const uint16_t Value) : Value(Value) {}
+
+  static Fptw_t FromAbridged(const uint8_t Abridged) {
+    uint16_t Fptw = 0;
+    for (size_t BitIdx = 0; BitIdx < 8; BitIdx++) {
+      const uint16_t Bits = (Abridged >> BitIdx) & 0b1;
+      if (Bits == 1) {
+        Fptw |= 0b00 << (BitIdx * 2);
+      } else {
+        Fptw |= 0b11 << (BitIdx * 2);
+      }
+    }
+
+    return Fptw_t(Fptw);
+  }
+
+  uint8_t Abridged() const {
+    uint8_t Abridged = 0;
+    for (size_t Idx = 0; Idx < 8; Idx++) {
+      const uint16_t Bits = (Value >> (Idx * 2)) & 0b11;
+      if (Bits == 0b11) {
+        Abridged |= 0b0 << Idx;
+      } else {
+        Abridged |= 0b1 << Idx;
+      }
+    }
+    return Abridged;
+  }
+
+  bool operator==(const Fptw_t &Other) const { return Value == Other.Value; }
+};
+
 struct CpuState_t {
   uint64_t Seed;
   uint64_t Rax;
@@ -1062,9 +1120,9 @@ struct CpuState_t {
   Zmm_t Zmm[32];
   uint16_t Fpcw;
   uint16_t Fpsw;
-  uint16_t Fptw;
+  Fptw_t Fptw;
   uint16_t Fpop;
-  uint64_t Fpst[8];
+  Float80 Fpst[8];
   uint32_t Mxcsr;
   uint32_t MxcsrMask;
   uint64_t Tsc;
@@ -1136,7 +1194,8 @@ struct CpuState_t {
     Equal = Equal && Fpop == B.Fpop;
 
     for (size_t Idx = 0; Idx < 8; Idx++) {
-      Equal = Equal && Fpst[Idx] == B.Fpst[Idx];
+      Equal =
+          Equal && (memcmp(&Fpst[Idx], &B.Fpst[Idx], sizeof(Fpst[Idx])) == 0);
     }
 
     Equal = Equal && Mxcsr == B.Mxcsr;
