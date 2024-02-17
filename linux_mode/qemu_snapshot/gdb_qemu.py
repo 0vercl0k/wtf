@@ -42,33 +42,33 @@ class DumpCPUStateCommand(gdb.Command):
 
         data = {}
 
-        data["rax"] = str(gdb.parse_and_eval(get_reg("regs[0]")))
-        data["rcx"] = str(gdb.parse_and_eval(get_reg("regs[1]")))
-        data["rdx"] = str(gdb.parse_and_eval(get_reg("regs[2]")))
-        data["rbx"] = str(gdb.parse_and_eval(get_reg("regs[3]")))
-        data["rsp"] = str(gdb.parse_and_eval(get_reg("regs[4]")))
-        data["rbp"] = str(gdb.parse_and_eval(get_reg("regs[5]")))
-        data["rsi"] = str(gdb.parse_and_eval(get_reg("regs[6]")))
-        data["rdi"] = str(gdb.parse_and_eval(get_reg("regs[7]")))
-        data["r8"] = str(gdb.parse_and_eval(get_reg("regs[8]")))
-        data["r9"] = str(gdb.parse_and_eval(get_reg("regs[9]")))
-        data["r10"] = str(gdb.parse_and_eval(get_reg("regs[10]")))
-        data["r11"] = str(gdb.parse_and_eval(get_reg("regs[11]")))
-        data["r12"] = str(gdb.parse_and_eval(get_reg("regs[12]")))
-        data["r13"] = str(gdb.parse_and_eval(get_reg("regs[13]")))
-        data["r14"] = str(gdb.parse_and_eval(get_reg("regs[14]")))
-        data["r15"] = str(gdb.parse_and_eval(get_reg("regs[15]")))
+        data["rax"] = hex(gdb.parse_and_eval(get_reg("regs[0]")))
+        data["rcx"] = hex(gdb.parse_and_eval(get_reg("regs[1]")))
+        data["rdx"] = hex(gdb.parse_and_eval(get_reg("regs[2]")))
+        data["rbx"] = hex(gdb.parse_and_eval(get_reg("regs[3]")))
+        data["rsp"] = hex(gdb.parse_and_eval(get_reg("regs[4]")))
+        data["rbp"] = hex(gdb.parse_and_eval(get_reg("regs[5]")))
+        data["rsi"] = hex(gdb.parse_and_eval(get_reg("regs[6]")))
+        data["rdi"] = hex(gdb.parse_and_eval(get_reg("regs[7]")))
+        data["r8"] = hex(gdb.parse_and_eval(get_reg("regs[8]")))
+        data["r9"] = hex(gdb.parse_and_eval(get_reg("regs[9]")))
+        data["r10"] = hex(gdb.parse_and_eval(get_reg("regs[10]")))
+        data["r11"] = hex(gdb.parse_and_eval(get_reg("regs[11]")))
+        data["r12"] = hex(gdb.parse_and_eval(get_reg("regs[12]")))
+        data["r13"] = hex(gdb.parse_and_eval(get_reg("regs[13]")))
+        data["r14"] = hex(gdb.parse_and_eval(get_reg("regs[14]")))
+        data["r15"] = hex(gdb.parse_and_eval(get_reg("regs[15]")))
 
-        data["rip"] = str(gdb.parse_and_eval(get_reg("eip")))
+        data["rip"] = hex(gdb.parse_and_eval(get_reg("eip")))
 
-        data["rflags"] = str(gdb.parse_and_eval(get_reg("eflags")))
+        data["rflags"] = hex(gdb.parse_and_eval(get_reg("eflags")))
 
-        data["dr0"] = str(gdb.parse_and_eval(get_reg("dr[0]")))
-        data["dr1"] = str(gdb.parse_and_eval(get_reg("dr[1]")))
-        data["dr2"] = str(gdb.parse_and_eval(get_reg("dr[2]")))
-        data["dr3"] = str(gdb.parse_and_eval(get_reg("dr[3]")))
-        data["dr6"] = str(gdb.parse_and_eval(get_reg("dr[6]")))
-        data["dr7"] = str(gdb.parse_and_eval(get_reg("dr[7]")))
+        data["dr0"] = hex(gdb.parse_and_eval(get_reg("dr[0]")))
+        data["dr1"] = hex(gdb.parse_and_eval(get_reg("dr[1]")))
+        data["dr2"] = hex(gdb.parse_and_eval(get_reg("dr[2]")))
+        data["dr3"] = hex(gdb.parse_and_eval(get_reg("dr[3]")))
+        data["dr6"] = hex(gdb.parse_and_eval(get_reg("dr[6]")))
+        data["dr7"] = hex(gdb.parse_and_eval(get_reg("dr[7]")))
 
         def update_attr(val, limit):
             # Satisfy wtf sanity checks
@@ -80,60 +80,60 @@ class DumpCPUStateCommand(gdb.Command):
         attr = update_attr(gdb.parse_and_eval(get_reg("segs[0].flags")), limit)
         data["es"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("segs[0].selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("segs[0].base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("segs[0].selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("segs[0].base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("segs[1].limit"))
         attr = update_attr(gdb.parse_and_eval(get_reg("segs[1].flags")), limit)
         data["cs"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("segs[1].selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("segs[1].base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("segs[1].selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("segs[1].base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("segs[2].limit"))
         attr = update_attr(gdb.parse_and_eval(get_reg("segs[2].flags")), limit)
         data["ss"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("segs[2].selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("segs[2].base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("segs[2].selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("segs[2].base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("segs[3].limit"))
         attr = update_attr(gdb.parse_and_eval(get_reg("segs[3].flags")), limit)
         data["ds"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("segs[3].selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("segs[3].base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("segs[3].selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("segs[3].base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("segs[4].limit"))
         attr = update_attr(gdb.parse_and_eval(get_reg("segs[4].flags")), limit)
         data["fs"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("segs[4].selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("segs[4].base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("segs[4].selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("segs[4].base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("segs[5].limit"))
         attr = update_attr(gdb.parse_and_eval(get_reg("segs[5].flags")), limit)
         data["gs"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("segs[5].selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("segs[5].base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("segs[5].selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("segs[5].base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("tr.limit"))
