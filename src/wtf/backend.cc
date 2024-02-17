@@ -316,6 +316,11 @@ uint64_t Backend_t::R15() { return GetReg(Registers_t::R15); }
 void Backend_t::R15(const uint64_t Value) { SetReg(Registers_t::R15, Value); }
 void Backend_t::R15(const Gva_t Value) { R15(Value.U64()); }
 
+uint64_t Backend_t::Cr2() { return GetReg(Registers_t::Cr2); }
+void Backend_t::Cr2(const uint64_t Value) { SetReg(Registers_t::Cr2, Value); }
+void Backend_t::Cr2(const Gva_t Value) { Cr2(Value.U64()); }
+
+
 void Backend_t::PrintRegisters() {
   const uint64_t Rax = GetReg(Registers_t::Rax), Rbx = GetReg(Registers_t::Rbx),
                  Rcx = GetReg(Registers_t::Rcx);
