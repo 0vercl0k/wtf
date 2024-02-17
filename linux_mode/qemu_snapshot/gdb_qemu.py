@@ -213,7 +213,7 @@ class DumpCPUStateCommand(gdb.Command):
         json.dump(data, f)
 
         # updates entry_syscall in symbol-store.json
-        gdb_utils.write_to_store({"entry_syscall": data["lstar"]})
+        gdb_utils.write_to_store({"entry_syscall": hex(data["lstar"])})
 
     # function that gets called when the cpu command has been called
     def invoke(self, args, from_tty):

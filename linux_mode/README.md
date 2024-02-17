@@ -19,6 +19,10 @@ snapshot in the first place.
 Currently, the snapshotting scripts are unable to create snapshots that are
 readable by wtf when the target VM has more than 2 GB of memory.
 
+### Symbolizing
+
+TODO
+
 ## Setting up the environment
 
 Change into the `linux_mode/qemu_snapshot` directory and run `setup.sh`:
@@ -174,13 +178,13 @@ user@pc:/wtf/targets/linux_crash_test$ echo a>inputs/a
 Run the master:
 
 ```console
-user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf master --name linux_crash_test --runs=9999999999999 --max_len=10
+user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf master --name linux_crash_test --max_len=10
 ```
 
 Run the fuzzee and note that crashes are found quickly.
 
 ```console
-user@pc:/wtf/targets/linux_crash_test$ $ ../../src/build/wtf fuzz --backend=bochscpu --name linux_crash_test
+user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf fuzz --backend=bochscpu --name linux_crash_test
 Setting @fptw to 0xff'ff.
 The debugger instance is loaded with 16 items
 Setting debug register status to zero.
@@ -193,7 +197,7 @@ Dialing to tcp://localhost:31337/..
 To fuzz with KVM, create a coverage breakpoints file by loading the target file in IDA and running [scripts/gen_linux_coveragefile_ida.py](../scripts/gen_linux_coveragefile_ida.py). Transfer the coverage breakpoints file to the `coverage` subfolder in the target's directory. For example, for `linux_crash_test` transfer the coverage breakpoint file to `targets/linux_crash_test/coverage/a.cov`. Once transferred, KVM can be used for fuzzing:
 
 ```console
-$ sudo ../../src/build/wtf fuzz --backend=kvm --name linux_crash_test
+user@pc:/wtf/targets/linux_crash_test$ sudo ../../src/build/wtf fuzz --backend=kvm --name linux_crash_test
 Setting @fptw to 0xff'ff.
 The debugger instance is loaded with 16 items
 Parsing coverage/a.cov..
