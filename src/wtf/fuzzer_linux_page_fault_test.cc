@@ -2,28 +2,42 @@
 #include "backend.h"
 
 namespace linux_page_fault_test {
+std::string TestcaseHash;
+
+Crash_t GetCrashTestcaseName(const char *Prefix) {
+  return Crash_t(fmt::format("crash-{}-{}", Prefix, TestcaseHash));
+}
 
 bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
+  TestcaseHash = Blake3HexDigest(Buffer, BufferSize);
   return true;
 }
 
 bool Init(const Options_t &Opts, const CpuState_t &) {
-  if (!g_Backend->SetCrashBreakpoint("asm_exc_page_fault")) {
+  if (!g_Backend->SetBreakpoint("asm_exc_page_fault", [](Backend_t *Backend) {
+        Backend->Stop(GetCrashTestcaseName("asm_exc_page_fault"));
+      })) {
     fmt::print("Failed to insert crash breakpoint.\n");
     return false;
   }
 
-  if (!g_Backend->SetCrashBreakpoint("asm_exc_divide_error")) {
+  if (!g_Backend->SetBreakpoint("asm_exc_divide_error", [](Backend_t *Backend) {
+        Backend->Stop(GetCrashTestcaseName("asm_exc_divide_error"));
+      })) {
     fmt::print("Failed to insert crash breakpoint.\n");
     return false;
   }
 
-  if (!g_Backend->SetCrashBreakpoint("force_sigsegv")) {
+  if (!g_Backend->SetBreakpoint("force_sigsegv", [](Backend_t *Backend) {
+        Backend->Stop(GetCrashTestcaseName("force_sigsegv"));
+      })) {
     fmt::print("Failed to insert crash breakpoint.\n");
     return false;
   }
 
-  if (!g_Backend->SetCrashBreakpoint("page_fault_oops")) {
+  if (!g_Backend->SetBreakpoint("page_fault_oops", [](Backend_t *Backend) {
+        Backend->Stop(GetCrashTestcaseName("page_fault_oops"));
+      })) {
     fmt::print("Failed to insert crash breakpoint.\n");
     return false;
   }
