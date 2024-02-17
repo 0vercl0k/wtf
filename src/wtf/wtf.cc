@@ -80,7 +80,7 @@ int main(int argc, const char *argv[]) {
 
   MasterCmd->add_option("--runs", Opts.Master.Runs, "Runs")
       ->description("Number of mutations done.")
-      ->required();
+      ->default_val(std::numeric_limits<decltype(Opts.Master.Runs)>::max());
 
   MasterCmd
       ->add_option("--max_len", Opts.Master.TestcaseBufferMaxSize,

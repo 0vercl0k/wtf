@@ -109,7 +109,6 @@ permitted by applicable law.
 A valid context for root could not be obtained.
 Last login: Fri Dec  1 21:21:22 UTC 2023 on ttyS0
 root@linux:~# ./a.out
-root@linux:~# ./a.out [Thread 0x7ffff6a98640 (LWP 2148566) exited]
 
 Enter some input.
 d
@@ -128,7 +127,7 @@ Restored
 In the Qemu tab, press Ctrl+C, run the `cpu` command
 ```
 
-Once the second tab indicates to run the `cpu` command, run the `cpu` command from the first tab:
+Once the second tab indicates to run the `cpu` command, press Ctrl+C and run the `cpu` command from the first tab:
 
 ```console
 Thread 1 "qemu-system-x86" received signal SIGINT, Interrupt.
