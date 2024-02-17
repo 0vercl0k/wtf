@@ -8,6 +8,8 @@ export KERNEL=${LINUX_MODE_BASE}qemu_snapshot/target_vm/linux/arch/x86_64/boot/b
 export IMAGE=${LINUX_MODE_BASE}qemu_snapshot/target_vm/image/bookworm.img
 
 gdb \
+    -q \
+    --ex "set pagination off" \
     --ex "set confirm off" \
     --ex "starti" \
     --ex "handle SIGUSR1 noprint nostop" \
