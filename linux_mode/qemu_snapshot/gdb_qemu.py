@@ -203,7 +203,7 @@ class DumpCPUStateCommand(gdb.Command):
         data["sfmask"] = "0x4700"
         data["fpcw"] = "0x27f"
         data["fpsw"] = "0x0"
-        data["fptw"] = "0x0"
+        data["fptw"] = "0xffff"
         data["mxcsr_mask"] = "0x0"
         data["fpst"] = [{"fraction": "0x0", "exp": "0x0"}] * 8
 
