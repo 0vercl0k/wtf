@@ -211,15 +211,13 @@ class DumpCPUStateCommand(gdb.Command):
         json.dump(data, f)
 
         # updates entry_syscall in symbol-store.json
-        gdb_utils.write_to_store({"entry_syscall": hex(data["lstar"])})
+        gdb_utils.write_to_store({"entry_syscall": data["lstar"]})
 
     # function that gets called when the cpu command has been called
     def invoke(self, args, from_tty):
         global cpu_state
 
         self.dont_repeat()
-
-        argv = gdb.string_to_argv(args)
 
         print("cpu_state: 0x%x" % cpu_state)
         print("Writing register information to %s" % REGS_JSON_FILENAME)
