@@ -10,9 +10,9 @@ export LINUX_GDB=${LINUX_MODE_BASE}qemu_snapshot/target_vm/linux/scripts/gdb/vml
 # initialize gdb
 gdb \
     ${KERNEL} \
+    -q \
     -iex "add-auto-load-safe-path ${LINUX_GDB}" \
     -ex "set confirm off" \
     -ex "target remote localhost:1234" \
     -x ./bkpt.py \
     -ex continue
-    -q
