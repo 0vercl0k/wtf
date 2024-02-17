@@ -143,61 +143,61 @@ class DumpCPUStateCommand(gdb.Command):
         attr |= 0xB
         data["tr"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("tr.selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("tr.base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("tr.selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("tr.base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
         limit = gdb.parse_and_eval(get_reg("ldt.limit"))
         attr = update_attr(gdb.parse_and_eval(get_reg("ldt.flags")), limit)
         data["ldtr"] = {
             "present": True,
-            "selector": str(gdb.parse_and_eval(get_reg("ldt.selector"))),
-            "base": str(gdb.parse_and_eval(get_reg("ldt.base"))),
-            "limit": str(limit),
-            "attr": str(attr),
+            "selector": hex(gdb.parse_and_eval(get_reg("ldt.selector"))),
+            "base": hex(gdb.parse_and_eval(get_reg("ldt.base"))),
+            "limit": hex(limit),
+            "attr": hex(attr),
         }
 
-        data["tsc"] = str(gdb.parse_and_eval(get_reg("tsc")))
+        data["tsc"] = hex(gdb.parse_and_eval(get_reg("tsc")))
 
-        data["sysenter_cs"] = str(gdb.parse_and_eval(get_reg("sysenter_cs")))
-        data["sysenter_esp"] = str(gdb.parse_and_eval(get_reg("sysenter_esp")))
-        data["sysenter_eip"] = str(gdb.parse_and_eval(get_reg("sysenter_eip")))
+        data["sysenter_cs"] = hex(gdb.parse_and_eval(get_reg("sysenter_cs")))
+        data["sysenter_esp"] = hex(gdb.parse_and_eval(get_reg("sysenter_esp")))
+        data["sysenter_eip"] = hex(gdb.parse_and_eval(get_reg("sysenter_eip")))
 
-        data["pat"] = str(gdb.parse_and_eval(get_reg("pat")))
+        data["pat"] = hex(gdb.parse_and_eval(get_reg("pat")))
 
-        data["efer"] = str(gdb.parse_and_eval(get_reg("efer")))
+        data["efer"] = hex(gdb.parse_and_eval(get_reg("efer")))
 
-        data["star"] = str(gdb.parse_and_eval(get_reg("star")))
-        data["lstar"] = str(gdb.parse_and_eval(get_reg("lstar")))
+        data["star"] = hex(gdb.parse_and_eval(get_reg("star")))
+        data["lstar"] = hex(gdb.parse_and_eval(get_reg("lstar")))
 
-        data["cstar"] = str(gdb.parse_and_eval(get_reg("cstar")))
-        data["fmask"] = str(gdb.parse_and_eval(get_reg("fmask")))
-        data["kernel_gs_base"] = str(gdb.parse_and_eval(get_reg("kernelgsbase")))
-        data["tsc_aux"] = str(gdb.parse_and_eval(get_reg("tsc_aux")))
+        data["cstar"] = hex(gdb.parse_and_eval(get_reg("cstar")))
+        data["fmask"] = hex(gdb.parse_and_eval(get_reg("fmask")))
+        data["kernel_gs_base"] = hex(gdb.parse_and_eval(get_reg("kernelgsbase")))
+        data["tsc_aux"] = hex(gdb.parse_and_eval(get_reg("tsc_aux")))
 
-        data["mxcsr"] = str(gdb.parse_and_eval(get_reg("mxcsr")))
+        data["mxcsr"] = hex(gdb.parse_and_eval(get_reg("mxcsr")))
 
-        data["cr0"] = str(gdb.parse_and_eval(get_reg("cr[0]")))
-        data["cr2"] = str(gdb.parse_and_eval(get_reg("cr[2]")))
-        data["cr3"] = str(gdb.parse_and_eval(get_reg("cr[3]")))
-        data["cr4"] = str(gdb.parse_and_eval(get_reg("cr[4]")))
+        data["cr0"] = hex(gdb.parse_and_eval(get_reg("cr[0]")))
+        data["cr2"] = hex(gdb.parse_and_eval(get_reg("cr[2]")))
+        data["cr3"] = hex(gdb.parse_and_eval(get_reg("cr[3]")))
+        data["cr4"] = hex(gdb.parse_and_eval(get_reg("cr[4]")))
         data["cr8"] = "0x0"
 
-        data["xcr0"] = str(gdb.parse_and_eval(get_reg("xcr0")))
+        data["xcr0"] = hex(gdb.parse_and_eval(get_reg("xcr0")))
 
         data["gdtr"] = {
-            "base": str(gdb.parse_and_eval(get_reg("gdt.base"))),
-            "limit": str(gdb.parse_and_eval(get_reg("gdt.limit"))),
+            "base": hex(gdb.parse_and_eval(get_reg("gdt.base"))),
+            "limit": hex(gdb.parse_and_eval(get_reg("gdt.limit"))),
         }
 
         data["idtr"] = {
-            "base": str(gdb.parse_and_eval(get_reg("idt.base"))),
-            "limit": str(gdb.parse_and_eval(get_reg("idt.limit"))),
+            "base": hex(gdb.parse_and_eval(get_reg("idt.base"))),
+            "limit": hex(gdb.parse_and_eval(get_reg("idt.limit"))),
         }
 
-        data["fpop"] = str(gdb.parse_and_eval(get_reg("fpop")))
+        data["fpop"] = hex(gdb.parse_and_eval(get_reg("fpop")))
 
         data["apic_base"] = "0xfee00900"
         data["sfmask"] = "0x4700"
