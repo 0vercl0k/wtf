@@ -15,3 +15,4 @@ gdb \
     -ex "target remote localhost:1234" \
     -x ./bkpt.py \
     -ex continue
+    -q
