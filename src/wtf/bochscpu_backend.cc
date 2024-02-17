@@ -1062,7 +1062,7 @@ void BochscpuBackend_t::LoadState(const CpuState_t &State) {
   Bochs.tsc_aux = State.TscAux;
   Bochs.fpcw = State.Fpcw;
   Bochs.fpsw = State.Fpsw;
-  Bochs.fptw = State.Fptw;
+  Bochs.fptw = State.Fptw.Value;
   Bochs.cr0 = uint32_t(State.Cr0.Flags);
   Bochs.cr2 = State.Cr2;
   Bochs.cr3 = State.Cr3;
