@@ -144,7 +144,7 @@ class qemu_monitor:
         qemu_monitor.wait_ready(s)
 
         print("Instructing Qemu to dump physical memory to file %s" % RAW_FILENAME)
-        s.send(b"pmemsave 0 0xffffffff %s\n" % RAW_FILENAME.encode())
+        s.send(f"pmemsave 0 0xffffffff {RAW_FILENAME}\n".encode())
         qemu_monitor.wait_ready(s)
         print("Done")
 
