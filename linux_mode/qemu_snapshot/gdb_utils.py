@@ -11,7 +11,7 @@ SYMBOL_STORE = pathlib.Path("symbol-store.json")
 def write_to_store(content):
     # if the file doesn't exist then create it
     if not SYMBOL_STORE.exists():
-        SYMBOL_STORE.touch()
+        SYMBOL_STORE.write_text("{}")
 
     # read the symbol store data into data variable
     data = json.loads(SYMBOL_STORE.read_text("utf-8"))
