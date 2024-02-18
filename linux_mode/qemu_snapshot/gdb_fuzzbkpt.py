@@ -10,11 +10,11 @@ import socket
 import select
 import struct
 import subprocess
+import pathlib
 
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-qemusnapshotdir = os.path.sep.join([parentdir, "qemu_snapshot"])
-sys.path.insert(0, qemusnapshotdir)
+currentdir = pathlib.Path(inspect.getfile(inspect.currentframe()))
+currentdir = currentdir.absolute().parent
+sys.path.insert(0, str(currentdir.parent / "qemu_snapshot"))
 
 import gdb_utils
 
@@ -25,10 +25,10 @@ import pwn
 # set architecture
 pwn.context.arch = "amd64"
 
-SYMSTORE_FILENAME = "symbol-store.json"
-RAW_FILENAME = "raw"
-DMP_FILENAME = "mem.dmp"
-REGS_JSON_FILENAME = "regs.json"
+SYMSTORE_FILENAME = pathlib.Path("symbol-store.json")
+RAW_FILENAME = pathlib.Path("raw")
+DMP_FILENAME = pathlib.Path("mem.dmp")
+REGS_JSON_FILENAME = pathlib.Path("regs.json")
 
 
 class dump_file:
@@ -43,14 +43,14 @@ class dump_file:
     BMP_EXPECTED_SIGNATURE = b"SDMP"
     BMP_EXPECTED_VALID_DUMP = b"DUMP"
 
-    def convert_raw_to_dmp(out_filename=DMP_FILENAME):
-        dump_size = os.stat(RAW_FILENAME).st_size
+    def convert_raw_to_dmp(out_filename: pathlib.Path = DMP_FILENAME):
+        dump_size = RAW_FILENAME.stat().st_size
         pages_count = int(dump_size / dump_file.PAGE_SIZE)
         bitmap_size = int(pages_count / 8)
 
-        out_file = open(out_filename, "wb")
+        out_file = out_filename.open("wb")
 
-        print("Converting raw file %s to dump file %s" % (RAW_FILENAME, out_filename))
+        print(f"Converting raw file {RAW_FILENAME} to dump file {out_filename}")
 
         d = dump_file.EXPECTED_SIGNATURE
         assert len(d) == 4
@@ -100,13 +100,13 @@ class dump_file:
 
         out_file.write(d)
 
-        with open(RAW_FILENAME, "rb") as f:
+        with RAW_FILENAME.open("rb") as f:
             while in_bytes := f.read(10 * 2**20):
                 out_file.write(in_bytes)
 
         out_file.close()
 
-        os.remove(RAW_FILENAME)
+        RAW_FILENAME.unlink()
         print("Done")
 
 
@@ -123,7 +123,7 @@ class qemu_monitor:
         data_buf = b""
         sock_list = [s]
         while True:
-            r_socks, w_socks, e_socks = select.select(sock_list, [], [])
+            r_socks, _, _ = select.select(sock_list, [], [])
             for sock in r_socks:
                 d = sock.recv(4096)
                 if not d:
@@ -245,12 +245,8 @@ class FuzzBkpt(gdb.Breakpoint):
 
         gdb_utils.write_to_store(target_syms_dict)
 
-        try:
-            print("Removing regs.json file if it exists...", end="")
-            os.remove(REGS_JSON_FILENAME)
-            print("deleted")
-        except FileNotFoundError:
-            print("not found")
+        print("Removing regs.json file if it exists...", end="")
+        REGS_JSON_FILENAME.unlink(missing_ok=True)
 
         # convert address into format that gdb takes: break *0xFFFF
         loc = f"""*{addr}"""
@@ -258,25 +254,19 @@ class FuzzBkpt(gdb.Breakpoint):
         # intialize the gdb breakpoint
         gdb.Breakpoint.__init__(self, spec=loc, type=gdb.BP_HARDWARE_BREAKPOINT)
 
-        target_dir = os.path.join(os.environ["WTF"], "targets", target_dir)
-        target_dir = os.path.abspath(target_dir)
-        print("Using %s as target directory" % target_dir)
+        target_dir = pathlib.Path(os.environ["WTF"]) / "targets" / target_dir
+        target_dir = target_dir.absolute()
+        print(f"Using {target_dir} as target directory")
         self.target_dir = target_dir
 
-        print("mkdir %s" % target_dir)
-        try:
-            os.mkdir(target_dir)
-        except FileExistsError:
-            pass
+        print(f"mkdir {target_dir}")
+        target_dir.mkdir(exist_ok=True)
 
         dirs = ("crashes", "inputs", "outputs", "state")
         for d in dirs:
-            new_dir = os.path.join(self.target_dir, d)
-            print("mkdir %s" % new_dir)
-            try:
-                os.mkdir(new_dir)
-            except FileExistsError:
-                pass
+            new_dir = self.target_dir / d
+            print(f"mkdir {new_dir}")
+            new_dir.mkdir(exist_ok=True)
 
         # set the program name and whether or not we should check the name
         self.program_name = program_name
@@ -321,17 +311,17 @@ class FuzzBkpt(gdb.Breakpoint):
 
         def wait_for_cpu_regs_dump():
             print("In the Qemu tab, press Ctrl+C, run the `cpu` command")
-            while not os.path.exists(REGS_JSON_FILENAME):
+            while not REGS_JSON_FILENAME.exists():
                 time.sleep(1)
-            file_size = os.stat(REGS_JSON_FILENAME)
+            file_size = REGS_JSON_FILENAME.stat()
             # Make sure entirety of regs file has been written
             while True:
                 time.sleep(1)
-                new_file_size = os.stat(REGS_JSON_FILENAME)
+                new_file_size = REGS_JSON_FILENAME.stat()
                 if file_size == new_file_size:
                     break
                 file_size = new_file_size
-            print("Detected cpu registers dumped to %s" % REGS_JSON_FILENAME)
+            print(f"Detected cpu registers dumped to {REGS_JSON_FILENAME}")
             # sleep for a few seconds to allow Qemu to continue
             time.sleep(3)
 
@@ -339,17 +329,14 @@ class FuzzBkpt(gdb.Breakpoint):
 
         qemu_monitor.write_phys_mem_file_to_disk()
 
-        out_filename = os.path.join(self.target_dir, "state", DMP_FILENAME)
+        out_filename = self.target_dir / "state" / DMP_FILENAME
         dump_file.convert_raw_to_dmp(out_filename)
 
         files = (REGS_JSON_FILENAME, SYMSTORE_FILENAME)
         for f in files:
-            dst = os.path.join(self.target_dir, "state", f)
-            print("mv %s %s" % (f, dst))
-            try:
-                os.replace(f, dst)
-            except Exception as e:
-                print("Exception %s when attempting to move file" % e)
+            dst = self.target_dir / "state" / f
+            print(f"mv {f} {dst}" % (f, dst))
+            f.replace(dst)
         print("Snapshotting complete")
         self.did_snapshot = True
         return True
@@ -418,26 +405,23 @@ class FuzzBkpt(gdb.Breakpoint):
 
     def save_orig_bytes(self, start_addr, num_bytes):
         if self.orig_bytes is None:
-            print("Saving %d bytes at 0x%x" % (num_bytes, start_addr))
+            print(f"Saving {num_bytes} bytes at 0x{start_addr:x}")
             self.orig_bytes = []
             self.start_orig_rip = start_addr
             addr_to_read = start_addr
             for i in range(num_bytes):
                 self.orig_bytes.append(kernel.read_byte(addr_to_read))
-                # print('%x -> %x' % (addr_to_read, self.orig_bytes[-1]))
                 addr_to_read += 1
         elif start_addr < self.start_orig_rip:
             num_bytes = self.start_orig_rip - start_addr
             print(
-                "Saving %d bytes from 0x%x to 0x%x"
-                % (num_bytes, start_addr, self.start_orig_rip)
+                f"Saving {num_bytes} bytes from 0x{start_addr:x} to 0x{self.start_orig_rip:x}"
             )
             self.start_orig_rip = start_addr
             addr_to_read = start_addr
             prepend_bytes = []
             for i in range(num_bytes):
                 prepend_bytes.append(kernel.read_byte(addr_to_read))
-                # print('%x -> %x' % (addr_to_read, prepend_bytes[-1]))
                 addr_to_read += 1
             self.orig_bytes = prepend_bytes + self.orig_bytes
 
@@ -445,9 +429,8 @@ class FuzzBkpt(gdb.Breakpoint):
         if self.orig_bytes is None:
             return
         addr_to_write = self.start_orig_rip
-        print("Restoring %d bytes at 0x%x" % (len(self.orig_bytes), addr_to_write))
+        print(f"Restoring {len(self.orig_bytes)} bytes at 0x{addr_to_write:x}")
         for b in self.orig_bytes:
-            # print('%x -> %x' % (addr_to_write, b))
             kernel.write_byte(addr_to_write, b)
             addr_to_write += 1
         print("Restored")

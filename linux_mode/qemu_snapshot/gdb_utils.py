@@ -1,31 +1,23 @@
 # Jason Crowder - February 2024
 # This file contains shared code between Python modules used for Qemu and the
 # Linux kernel
-import json, os.path
+import json, pathlib
 
 # symbol store filename
-SYMBOL_STORE = "symbol-store.json"
+SYMBOL_STORE = pathlib.Path("symbol-store.json")
 
 
 # write data to the symbol store file
 def write_to_store(content):
     # if the file doesn't exist then create it
-    if not os.path.isfile(SYMBOL_STORE):
-        with open(SYMBOL_STORE, "w"):
-            pass
-
-    data = {}
+    if not SYMBOL_STORE.exists():
+        SYMBOL_STORE.touch()
 
     # read the symbol store data into data variable
-    with open(SYMBOL_STORE, "r") as f:
-        try:
-            data = json.load(f)
-        except:
-            pass
+    data = json.loads(SYMBOL_STORE.read_text("utf-8"))
 
     # update the dictionary
     data.update(content)
 
     # write the data to the symbol store file
-    with open(SYMBOL_STORE, "w") as f:
-        json.dump(data, f)
+    SYMBOL_STORE.write_text(json.dumps(data))
