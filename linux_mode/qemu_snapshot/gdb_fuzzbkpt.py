@@ -335,7 +335,7 @@ class FuzzBkpt(gdb.Breakpoint):
         files = (REGS_JSON_FILENAME, SYMSTORE_FILENAME)
         for f in files:
             dst = self.target_dir / "state" / f
-            print(f"mv {f} {dst}" % (f, dst))
+            print(f"mv {f} {dst}")
             f.replace(dst)
         print("Snapshotting complete")
         self.did_snapshot = True
