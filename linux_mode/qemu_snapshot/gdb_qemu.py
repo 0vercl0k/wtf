@@ -1,12 +1,12 @@
 # Jason Crowder - February 2024
 # imports
-import gdb, json, os, sys
+import gdb, json, sys, pathlib
 
-sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(1, str(pathlib.Path(__file__).parent))
 
 import gdb_utils
 
-REGS_JSON_FILENAME = "regs.json"
+REGS_JSON_FILENAME = pathlib.Path("regs.json")
 
 cpu_state = 0
 
@@ -219,11 +219,11 @@ class DumpCPUStateCommand(gdb.Command):
 
         self.dont_repeat()
 
-        print("cpu_state: 0x%x" % cpu_state)
-        print("Writing register information to %s" % REGS_JSON_FILENAME)
+        print(f"cpu_state: 0x{cpu_state:x}")
+        print(f"Writing register information to '{REGS_JSON_FILENAME}'")
 
         # dump the cpu state to regs.json
-        with open(REGS_JSON_FILENAME, "w") as f:
+        with REGS_JSON_FILENAME.open("w") as f:
             self.dump(f)
 
         print("Done...continuing debuggee")

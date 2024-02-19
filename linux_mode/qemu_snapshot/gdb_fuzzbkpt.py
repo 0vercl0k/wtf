@@ -43,14 +43,14 @@ class dump_file:
     BMP_EXPECTED_SIGNATURE = b"SDMP"
     BMP_EXPECTED_VALID_DUMP = b"DUMP"
 
-    def convert_raw_to_dmp(out_filename: pathlib.Path = DMP_FILENAME):
+    def convert_raw_to_dmp(out_filename: pathlib.Path):
         dump_size = RAW_FILENAME.stat().st_size
         pages_count = int(dump_size / dump_file.PAGE_SIZE)
         bitmap_size = int(pages_count / 8)
 
         out_file = out_filename.open("wb")
 
-        print(f"Converting raw file {RAW_FILENAME} to dump file {out_filename}")
+        print(f"Converting raw file '{RAW_FILENAME}' to dump file '{out_filename}'")
 
         d = dump_file.EXPECTED_SIGNATURE
         assert len(d) == 4
@@ -135,15 +135,12 @@ class qemu_monitor:
         return data_buf[: -len(b"(qemu) ")]
 
     def write_phys_mem_file_to_disk():
-        print(
-            "Connecting to Qemu monitor at %s:%d"
-            % (qemu_monitor.HOSTNAME, qemu_monitor.PORT)
-        )
+        print(f"Connecting to Qemu monitor at {qemu_monitor.HOSTNAME}:{qemu_monitor.PORT}")
         s = qemu_monitor.setup_sock()
         print("Connected")
         qemu_monitor.wait_ready(s)
 
-        print("Instructing Qemu to dump physical memory to file %s" % RAW_FILENAME)
+        print(f"Instructing Qemu to dump physical memory into '{RAW_FILENAME}'")
         s.send(f"pmemsave 0 0xffffffff {RAW_FILENAME}\n".encode())
         qemu_monitor.wait_ready(s)
         print("Done")
@@ -161,7 +158,7 @@ class kernel:
         gdb.execute(
             "set logging enabled"
         )  # older versions of gdb do not support set logging enabled on so we need to use this.
-        gdb.execute("print %s" % cmd)
+        gdb.execute(f"print {cmd}")
         gdb.execute("set logging enabled off")
         return gdb.history(0)
 
@@ -186,8 +183,7 @@ class kernel:
             match = re.search("0x[a-fA-F0-9]+", s)
             if match:
                 return match.group()
-            else:
-                return ""
+            return ""
 
         raw = str(kernel.parse_and_eval(cmd))
         raw_hex = search_hex(raw)
@@ -207,7 +203,7 @@ class kernel:
             task_struct = str(kernel.parse_and_eval("&$lx_current()"))
 
             process_name = str(
-                kernel.parse_and_eval("((struct task_struct*)%s)->comm" % task_struct)
+                kernel.parse_and_eval(f"((struct task_struct*){task_struct})->comm")
             )
 
             process_name = process_name.replace('"', "")
@@ -234,7 +230,7 @@ class FuzzBkpt(gdb.Breakpoint):
         if sym_path:
             text_offset = self.get_text_offset(sym_path)
 
-            gdb.execute("add-symbol-file %s %s" % (sym_path, target_base + text_offset))
+            gdb.execute(f"add-symbol-file {sym_path} {target_base + text_offset}")
 
             target_syms_list = self.get_target_syms(sym_path)
             for name, rva in target_syms_list:
@@ -245,7 +241,7 @@ class FuzzBkpt(gdb.Breakpoint):
 
         gdb_utils.write_to_store(target_syms_dict)
 
-        print("Removing regs.json file if it exists...", end="")
+        print("Removing '{REGS_JSON_FILENAME}' file if it exists...")
         REGS_JSON_FILENAME.unlink(missing_ok=True)
 
         # convert address into format that gdb takes: break *0xFFFF
@@ -255,17 +251,17 @@ class FuzzBkpt(gdb.Breakpoint):
         gdb.Breakpoint.__init__(self, spec=loc, type=gdb.BP_HARDWARE_BREAKPOINT)
 
         target_dir = pathlib.Path(os.environ["WTF"]) / "targets" / target_dir
-        target_dir = target_dir.absolute()
-        print(f"Using {target_dir} as target directory")
+        target_dir = target_dir.absolute().resolve()
+        print(f"Using '{target_dir}' as target directory")
         self.target_dir = target_dir
 
-        print(f"mkdir {target_dir}")
+        print(f"mkdir '{target_dir}'")
         target_dir.mkdir(exist_ok=True)
 
         dirs = ("crashes", "inputs", "outputs", "state")
         for d in dirs:
             new_dir = self.target_dir / d
-            print(f"mkdir {new_dir}")
+            print(f"mkdir '{new_dir}'")
             new_dir.mkdir(exist_ok=True)
 
         # set the program name and whether or not we should check the name
@@ -296,10 +292,7 @@ class FuzzBkpt(gdb.Breakpoint):
             return False
         self.bp_hits += 1
         if self.bp_hits < self.bp_hits_required:
-            print(
-                "Hit bp %d time, but need to hit it %d times"
-                % (self.bp_hits, self.bp_hits_required)
-            )
+            print(f"Hit bp {self.bp_hits} time, but need to hit it {self.bp_hits_required} times")
             return False
 
         if not self.mlock:
@@ -310,9 +303,10 @@ class FuzzBkpt(gdb.Breakpoint):
         self.restore_orig_bytes()
 
         def wait_for_cpu_regs_dump():
-            print("In the Qemu tab, press Ctrl+C, run the `cpu` command")
+            print("In the QEMU tab, press Ctrl+C, run the `cpu` command")
             while not REGS_JSON_FILENAME.exists():
                 time.sleep(1)
+
             file_size = REGS_JSON_FILENAME.stat()
             # Make sure entirety of regs file has been written
             while True:
@@ -321,7 +315,7 @@ class FuzzBkpt(gdb.Breakpoint):
                 if file_size == new_file_size:
                     break
                 file_size = new_file_size
-            print(f"Detected cpu registers dumped to {REGS_JSON_FILENAME}")
+            print(f"Detected cpu registers dumped to '{REGS_JSON_FILENAME}'")
             # sleep for a few seconds to allow Qemu to continue
             time.sleep(3)
 
@@ -335,7 +329,7 @@ class FuzzBkpt(gdb.Breakpoint):
         files = (REGS_JSON_FILENAME, SYMSTORE_FILENAME)
         for f in files:
             dst = self.target_dir / "state" / f
-            print(f"mv {f} {dst}")
+            print(f"mv '{f}' '{dst}'")
             f.replace(dst)
         print("Snapshotting complete")
         self.did_snapshot = True
