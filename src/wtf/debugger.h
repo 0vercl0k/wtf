@@ -6,6 +6,7 @@
 #include "tsl/robin_map.h"
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
@@ -13,6 +14,59 @@
 
 namespace fs = std::filesystem;
 namespace json = nlohmann;
+
+struct Debugger_t {
+  virtual bool Init(const fs::path &DumpPath,
+                    const fs::path &SymbolFilePath) = 0;
+
+  virtual uint64_t GetModuleBase(const char *Name) const = 0;
+
+  virtual uint64_t GetSymbol(const char *Name) const = 0;
+
+  virtual const std::string &GetName(const uint64_t SymbolAddress,
+                                     const bool Symbolized) = 0;
+};
+
+class DebuggerLess_t : public Debugger_t {
+  std::unordered_map<std::string, uint64_t> Symbols_;
+
+public:
+  explicit DebuggerLess_t() = default;
+  bool Init(const fs::path &DumpPath, const fs::path &SymbolFilePath) {
+    json::json Json;
+    std::ifstream SymbolFile(SymbolFilePath);
+    SymbolFile >> Json;
+    for (const auto &[Key, Value] : Json.items()) {
+      const uint64_t Address =
+          std::strtoull(Value.get<std::string>().c_str(), nullptr, 0);
+      Symbols_.emplace(Key, Address);
+    }
+
+    fmt::print("The debugger instance is loaded with {} items\n",
+               Symbols_.size());
+    return true;
+  }
+
+  uint64_t GetModuleBase(const char *Name) const { return GetSymbol(Name); }
+
+  uint64_t GetSymbol(const char *Name) const {
+    if (!Symbols_.contains(Name)) {
+      fmt::print("{} could not be found in the symbol store\n", Name);
+      exit(0);
+      return 0;
+    }
+
+    return Symbols_.at(Name);
+  }
+
+  const std::string &GetName(const uint64_t SymbolAddress,
+                             const bool Symbolized) {
+    static const std::string foo("hello");
+    fmt::print("GetName does not work on Linux\n");
+    exit(0);
+    return foo;
+  }
+};
 
 #ifdef WINDOWS
 #include "globals.h"
@@ -54,7 +108,7 @@ public:
   }
 };
 
-class Debugger_t {
+class WindowsDebugger_t : public Debugger_t {
   IDebugClient *Client_ = nullptr;
   IDebugControl *Control_ = nullptr;
   IDebugRegisters *Registers_ = nullptr;
@@ -65,9 +119,9 @@ class Debugger_t {
   tsl::robin_map<uint64_t, std::string> SymbolCache_;
 
 public:
-  explicit Debugger_t() = default;
+  explicit WindowsDebugger_t() = default;
 
-  ~Debugger_t() {
+  ~WindowsDebugger_t() {
     if (Client_) {
       Client_->EndSession(DEBUG_END_ACTIVE_DETACH);
       Client_->Release();
@@ -86,8 +140,8 @@ public:
     }
   }
 
-  Debugger_t(const Debugger_t &) = delete;
-  Debugger_t &operator=(const Debugger_t &) = delete;
+  WindowsDebugger_t(const WindowsDebugger_t &) = delete;
+  WindowsDebugger_t &operator=(const WindowsDebugger_t &) = delete;
 
   [[nodiscard]] bool AddSymbol(const char *Name, const uint64_t Address) const {
     json::json Json;
@@ -204,13 +258,13 @@ public:
     // Turn the below on to debug issues.
     //
 
-    //#define SYMOPT_DEBUG 0x80000000
-    //    Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
-    //    if (FAILED(Status)) {
-    //      fmt::print("IDebugSymbols::SetSymbolOptions failed with
-    //      hr={:#x}\n", Status); return false;
-    //    }
-    // Client_->SetOutputCallbacks(&StdioCallbacks_);
+    // #define SYMOPT_DEBUG 0x80000000
+    //     Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
+    //     if (FAILED(Status)) {
+    //       fmt::print("IDebugSymbols::SetSymbolOptions failed with
+    //       hr={:#x}\n", Status); return false;
+    //     }
+    //  Client_->SetOutputCallbacks(&StdioCallbacks_);
 
     const std::string &DumpFileString = DumpPath.string();
     const char *DumpFileA = DumpFileString.c_str();
@@ -341,48 +395,8 @@ public:
   }
 };
 #else
-#include <cstdlib>
 
-class Debugger_t {
-  std::unordered_map<std::string, uint64_t> Symbols_;
-
-public:
-  explicit Debugger_t() = default;
-  bool Init(const fs::path &DumpPath, const fs::path &SymbolFilePath) {
-    json::json Json;
-    std::ifstream SymbolFile(SymbolFilePath);
-    SymbolFile >> Json;
-    for (const auto &[Key, Value] : Json.items()) {
-      const uint64_t Address =
-          std::strtoull(Value.get<std::string>().c_str(), nullptr, 0);
-      Symbols_.emplace(Key, Address);
-    }
-
-    fmt::print("The debugger instance is loaded with {} items\n",
-               Symbols_.size());
-    return true;
-  }
-
-  uint64_t GetModuleBase(const char *Name) const { return GetSymbol(Name); }
-
-  uint64_t GetSymbol(const char *Name) const {
-    if (!Symbols_.contains(Name)) {
-      fmt::print("{} could not be found in the symbol store\n", Name);
-      exit(0);
-      return 0;
-    }
-
-    return Symbols_.at(Name);
-  }
-
-  const std::string &GetName(const uint64_t SymbolAddress,
-                             const bool Symbolized) {
-    static const std::string foo("hello");
-    fmt::print("GetName does not work on Linux\n");
-    exit(0);
-    return foo;
-  }
-};
 #endif
 
-extern Debugger_t g_Dbg;
+extern Debugger_t *g_Dbg;
+extern DebuggerLess_t g_NoDbg;

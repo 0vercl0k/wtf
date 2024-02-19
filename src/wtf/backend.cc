@@ -223,7 +223,7 @@ bool Backend_t::SaveCrash(const Gva_t ExceptionAddress,
 
 bool Backend_t::SetBreakpoint(const char *Symbol,
                               const BreakpointHandler_t Handler) {
-  const Gva_t Gva = Gva_t(g_Dbg.GetSymbol(Symbol));
+  const Gva_t Gva = Gva_t(g_Dbg->GetSymbol(Symbol));
   if (Gva == Gva_t(0)) {
     fmt::print("Could not set a breakpoint at {}.\n", Symbol);
     return false;

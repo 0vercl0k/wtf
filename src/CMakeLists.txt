@@ -85,6 +85,7 @@ if (WIN32)
         winhvplatform.lib
         delayimp.lib
         bcrypt.lib
+        ntdll.lib
     )
 
     add_executable(

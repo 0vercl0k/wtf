@@ -5,19 +5,10 @@ This provides Linux ELF userland snapshotting support based on previous work by
 
 ## Limitations 
 
-### Only runs on a Linux machine
-
-Since the mem.dmp file created by the dump and convert process is not an actual
-mem.dmp file the Windows build of WTF will error out while trying to read the
-file since it seems to use winapi to parse the dump file. On Linux it seems to
-only parse what is needed. This is not really too much of an issue since for
-faster fuzzing people will use KVM anyways and someone needs Linux to take the
-snapshot in the first place.
-
 ### Guest virtual machine RAM is limited to 2 GB
 
 Currently, the snapshotting scripts are unable to create snapshots that are
-readable by wtf when the target VM has more than 2 GB of memory.
+readable by `wtf` when the target VM has more than 2 GB of memory.
 
 ### Symbolizing
 
@@ -27,7 +18,7 @@ TODO
 
 Change into the `linux_mode/qemu_snapshot` directory and run `setup.sh`:
 
-```
+```console
 user@pc:/wtf/linux_mode/qemu_snapshot$ ./setup.sh
 ```
 
@@ -81,7 +72,6 @@ Then transfer the target file to the VM:
 user@pc:/wtf/linux_mode/crash_test$ pushd ../qemu_snapshot/target_vm
 user@pc:/wtf/linux_mode/qemu_snapshot/target_vm$ ./scp.sh ../../crash_test/a.out
 a.out                                                                                     100%   16KB   1.2MB/s   00:00
-
 ```
 
 Go back to the `crash_test` directory.
