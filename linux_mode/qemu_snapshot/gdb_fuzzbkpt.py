@@ -135,7 +135,9 @@ class qemu_monitor:
         return data_buf[: -len(b"(qemu) ")]
 
     def write_phys_mem_file_to_disk():
-        print(f"Connecting to Qemu monitor at {qemu_monitor.HOSTNAME}:{qemu_monitor.PORT}")
+        print(
+            f"Connecting to Qemu monitor at {qemu_monitor.HOSTNAME}:{qemu_monitor.PORT}"
+        )
         s = qemu_monitor.setup_sock()
         print("Connected")
         qemu_monitor.wait_ready(s)
@@ -292,7 +294,9 @@ class FuzzBkpt(gdb.Breakpoint):
             return False
         self.bp_hits += 1
         if self.bp_hits < self.bp_hits_required:
-            print(f"Hit bp {self.bp_hits} time, but need to hit it {self.bp_hits_required} times")
+            print(
+                f"Hit bp {self.bp_hits} time, but need to hit it {self.bp_hits_required} times"
+            )
             return False
 
         if not self.mlock:

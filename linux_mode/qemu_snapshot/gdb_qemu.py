@@ -35,10 +35,7 @@ class DumpCPUStateCommand(gdb.Command):
         # grabs a register
         def get_reg(x):
             global cpu_state
-            return (
-                f"""(   (CPUX86State*)  ( (CPUState*)({cpu_state}) )->env_ptr   )->"""
-                + x
-            )
+            return f"""((CPUX86State*)((CPUState*)({cpu_state}) )->env_ptr)->{x}"""
 
         data = {}
 
