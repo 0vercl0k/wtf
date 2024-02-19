@@ -36,7 +36,7 @@ class DumpCPUStateCommand(gdb.Command):
         def get_reg(x):
             global cpu_state
             return gdb.parse_and_eval(
-                f"""((CPUX86State*)((CPUState*)({cpu_state:x}))->env_ptr)->{x}"""
+                f"""((CPUX86State*)((CPUState*)({cpu_state}))->env_ptr)->{x}"""
             )
 
         data = {}
@@ -216,7 +216,7 @@ class DumpCPUStateCommand(gdb.Command):
 
         self.dont_repeat()
 
-        print(f"cpu_state: 0x{cpu_state:x}")
+        print(f"cpu_state: 0x{cpu_state}")
         print(f"Writing register information to '{REGS_JSON_FILENAME}'")
 
         # dump the cpu state to regs.json
