@@ -35,37 +35,37 @@ class DumpCPUStateCommand(gdb.Command):
         # grabs a register
         def get_reg(x):
             global cpu_state
-            return f"""((CPUX86State*)((CPUState*)({cpu_state}) )->env_ptr)->{x}"""
+            return gdb.parse_and_eval(
+                f"""((CPUX86State*)((CPUState*)({cpu_state:x}))->env_ptr)->{x}"""
+            )
 
         data = {}
 
-        data["rax"] = hex(gdb.parse_and_eval(get_reg("regs[0]")))
-        data["rcx"] = hex(gdb.parse_and_eval(get_reg("regs[1]")))
-        data["rdx"] = hex(gdb.parse_and_eval(get_reg("regs[2]")))
-        data["rbx"] = hex(gdb.parse_and_eval(get_reg("regs[3]")))
-        data["rsp"] = hex(gdb.parse_and_eval(get_reg("regs[4]")))
-        data["rbp"] = hex(gdb.parse_and_eval(get_reg("regs[5]")))
-        data["rsi"] = hex(gdb.parse_and_eval(get_reg("regs[6]")))
-        data["rdi"] = hex(gdb.parse_and_eval(get_reg("regs[7]")))
-        data["r8"] = hex(gdb.parse_and_eval(get_reg("regs[8]")))
-        data["r9"] = hex(gdb.parse_and_eval(get_reg("regs[9]")))
-        data["r10"] = hex(gdb.parse_and_eval(get_reg("regs[10]")))
-        data["r11"] = hex(gdb.parse_and_eval(get_reg("regs[11]")))
-        data["r12"] = hex(gdb.parse_and_eval(get_reg("regs[12]")))
-        data["r13"] = hex(gdb.parse_and_eval(get_reg("regs[13]")))
-        data["r14"] = hex(gdb.parse_and_eval(get_reg("regs[14]")))
-        data["r15"] = hex(gdb.parse_and_eval(get_reg("regs[15]")))
+        data["rax"] = hex(get_reg("regs[0]"))
+        data["rcx"] = hex(get_reg("regs[1]"))
+        data["rdx"] = hex(get_reg("regs[2]"))
+        data["rbx"] = hex(get_reg("regs[3]"))
+        data["rsp"] = hex(get_reg("regs[4]"))
+        data["rbp"] = hex(get_reg("regs[5]"))
+        data["rsi"] = hex(get_reg("regs[6]"))
+        data["rdi"] = hex(get_reg("regs[7]"))
+        data["r8"] = hex(get_reg("regs[8]"))
+        data["r9"] = hex(get_reg("regs[9]"))
+        data["r10"] = hex(get_reg("regs[10]"))
+        data["r11"] = hex(get_reg("regs[11]"))
+        data["r12"] = hex(get_reg("regs[12]"))
+        data["r13"] = hex(get_reg("regs[13]"))
+        data["r14"] = hex(get_reg("regs[14]"))
+        data["r15"] = hex(get_reg("regs[15]"))
 
-        data["rip"] = hex(gdb.parse_and_eval(get_reg("eip")))
-
-        data["rflags"] = hex(gdb.parse_and_eval(get_reg("eflags")))
-
-        data["dr0"] = hex(gdb.parse_and_eval(get_reg("dr[0]")))
-        data["dr1"] = hex(gdb.parse_and_eval(get_reg("dr[1]")))
-        data["dr2"] = hex(gdb.parse_and_eval(get_reg("dr[2]")))
-        data["dr3"] = hex(gdb.parse_and_eval(get_reg("dr[3]")))
-        data["dr6"] = hex(gdb.parse_and_eval(get_reg("dr[6]")))
-        data["dr7"] = hex(gdb.parse_and_eval(get_reg("dr[7]")))
+        data["rip"] = hex(get_reg("eip"))
+        data["rflags"] = hex(get_reg("eflags"))
+        data["dr0"] = hex(get_reg("dr[0]"))
+        data["dr1"] = hex(get_reg("dr[1]"))
+        data["dr2"] = hex(get_reg("dr[2]"))
+        data["dr3"] = hex(get_reg("dr[3]"))
+        data["dr6"] = hex(get_reg("dr[6]"))
+        data["dr7"] = hex(get_reg("dr[7]"))
 
         def update_attr(val, limit):
             # Satisfy wtf sanity checks
@@ -73,128 +73,128 @@ class DumpCPUStateCommand(gdb.Command):
             val = val >> 8
             return val | ((limit & 0xF0000) >> 8)
 
-        limit = gdb.parse_and_eval(get_reg("segs[0].limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("segs[0].flags")), limit)
+        limit = get_reg("segs[0].limit")
+        attr = update_attr(get_reg("segs[0].flags"), limit)
         data["es"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("segs[0].selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("segs[0].base"))),
+            "selector": hex(get_reg("segs[0].selector")),
+            "base": hex(get_reg("segs[0].base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("segs[1].limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("segs[1].flags")), limit)
+        limit = get_reg("segs[1].limit")
+        attr = update_attr(get_reg("segs[1].flags"), limit)
         data["cs"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("segs[1].selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("segs[1].base"))),
+            "selector": hex(get_reg("segs[1].selector")),
+            "base": hex(get_reg("segs[1].base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("segs[2].limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("segs[2].flags")), limit)
+        limit = get_reg("segs[2].limit")
+        attr = update_attr(get_reg("segs[2].flags"), limit)
         data["ss"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("segs[2].selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("segs[2].base"))),
+            "selector": hex(get_reg("segs[2].selector")),
+            "base": hex(get_reg("segs[2].base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("segs[3].limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("segs[3].flags")), limit)
+        limit = get_reg("segs[3].limit")
+        attr = update_attr(get_reg("segs[3].flags"), limit)
         data["ds"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("segs[3].selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("segs[3].base"))),
+            "selector": hex(get_reg("segs[3].selector")),
+            "base": hex(get_reg("segs[3].base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("segs[4].limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("segs[4].flags")), limit)
+        limit = get_reg("segs[4].limit")
+        attr = update_attr(get_reg("segs[4].flags"), limit)
         data["fs"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("segs[4].selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("segs[4].base"))),
+            "selector": hex(get_reg("segs[4].selector")),
+            "base": hex(get_reg("segs[4].base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("segs[5].limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("segs[5].flags")), limit)
+        limit = get_reg("segs[5].limit")
+        attr = update_attr(get_reg("segs[5].flags"), limit)
         data["gs"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("segs[5].selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("segs[5].base"))),
+            "selector": hex(get_reg("segs[5].selector")),
+            "base": hex(get_reg("segs[5].base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("tr.limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("tr.flags")), limit)
+        limit = get_reg("tr.limit")
+        attr = update_attr(get_reg("tr.flags"), limit)
         # https://github.com/awslabs/snapchange/blob/a3db58d2545a34a18fcf3128d403deb0f78b3bba/src/cmdline.rs#L1047
         # Ensure TR.access rights has the 64-bit busy TSS enabled
         attr |= 0xB
         data["tr"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("tr.selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("tr.base"))),
+            "selector": hex(get_reg("tr.selector")),
+            "base": hex(get_reg("tr.base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        limit = gdb.parse_and_eval(get_reg("ldt.limit"))
-        attr = update_attr(gdb.parse_and_eval(get_reg("ldt.flags")), limit)
+        limit = get_reg("ldt.limit")
+        attr = update_attr(get_reg("ldt.flags"), limit)
         data["ldtr"] = {
             "present": True,
-            "selector": hex(gdb.parse_and_eval(get_reg("ldt.selector"))),
-            "base": hex(gdb.parse_and_eval(get_reg("ldt.base"))),
+            "selector": hex(get_reg("ldt.selector")),
+            "base": hex(get_reg("ldt.base")),
             "limit": hex(limit),
             "attr": hex(attr),
         }
 
-        data["tsc"] = hex(gdb.parse_and_eval(get_reg("tsc")))
+        data["tsc"] = hex(get_reg("tsc"))
 
-        data["sysenter_cs"] = hex(gdb.parse_and_eval(get_reg("sysenter_cs")))
-        data["sysenter_esp"] = hex(gdb.parse_and_eval(get_reg("sysenter_esp")))
-        data["sysenter_eip"] = hex(gdb.parse_and_eval(get_reg("sysenter_eip")))
+        data["sysenter_cs"] = hex(get_reg("sysenter_cs"))
+        data["sysenter_esp"] = hex(get_reg("sysenter_esp"))
+        data["sysenter_eip"] = hex(get_reg("sysenter_eip"))
 
-        data["pat"] = hex(gdb.parse_and_eval(get_reg("pat")))
+        data["pat"] = hex(get_reg("pat"))
 
-        data["efer"] = hex(gdb.parse_and_eval(get_reg("efer")))
+        data["efer"] = hex(get_reg("efer"))
 
-        data["star"] = hex(gdb.parse_and_eval(get_reg("star")))
-        data["lstar"] = hex(gdb.parse_and_eval(get_reg("lstar")))
+        data["star"] = hex(get_reg("star"))
+        data["lstar"] = hex(get_reg("lstar"))
 
-        data["cstar"] = hex(gdb.parse_and_eval(get_reg("cstar")))
-        data["fmask"] = hex(gdb.parse_and_eval(get_reg("fmask")))
-        data["kernel_gs_base"] = hex(gdb.parse_and_eval(get_reg("kernelgsbase")))
-        data["tsc_aux"] = hex(gdb.parse_and_eval(get_reg("tsc_aux")))
+        data["cstar"] = hex(get_reg("cstar"))
+        data["fmask"] = hex(get_reg("fmask"))
+        data["kernel_gs_base"] = hex(get_reg("kernelgsbase"))
+        data["tsc_aux"] = hex(get_reg("tsc_aux"))
 
-        data["mxcsr"] = hex(gdb.parse_and_eval(get_reg("mxcsr")))
+        data["mxcsr"] = hex(get_reg("mxcsr"))
 
-        data["cr0"] = hex(gdb.parse_and_eval(get_reg("cr[0]")))
-        data["cr2"] = hex(gdb.parse_and_eval(get_reg("cr[2]")))
-        data["cr3"] = hex(gdb.parse_and_eval(get_reg("cr[3]")))
-        data["cr4"] = hex(gdb.parse_and_eval(get_reg("cr[4]")))
+        data["cr0"] = hex(get_reg("cr[0]"))
+        data["cr2"] = hex(get_reg("cr[2]"))
+        data["cr3"] = hex(get_reg("cr[3]"))
+        data["cr4"] = hex(get_reg("cr[4]"))
         data["cr8"] = "0x0"
 
-        data["xcr0"] = hex(gdb.parse_and_eval(get_reg("xcr0")))
+        data["xcr0"] = hex(get_reg("xcr0"))
 
         data["gdtr"] = {
-            "base": hex(gdb.parse_and_eval(get_reg("gdt.base"))),
-            "limit": hex(gdb.parse_and_eval(get_reg("gdt.limit"))),
+            "base": hex(get_reg("gdt.base")),
+            "limit": hex(get_reg("gdt.limit")),
         }
 
         data["idtr"] = {
-            "base": hex(gdb.parse_and_eval(get_reg("idt.base"))),
-            "limit": hex(gdb.parse_and_eval(get_reg("idt.limit"))),
+            "base": hex(get_reg("idt.base")),
+            "limit": hex(get_reg("idt.limit")),
         }
 
-        data["fpop"] = hex(gdb.parse_and_eval(get_reg("fpop")))
+        data["fpop"] = hex(get_reg("fpop"))
 
         data["apic_base"] = "0xfee00900"
         data["sfmask"] = "0x4700"
