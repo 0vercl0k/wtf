@@ -243,7 +243,7 @@ class FuzzBkpt(gdb.Breakpoint):
 
         gdb_utils.write_to_store(target_syms_dict)
 
-        print("Removing '{REGS_JSON_FILENAME}' file if it exists...")
+        print(f"Removing '{REGS_JSON_FILENAME}' file if it exists...")
         REGS_JSON_FILENAME.unlink(missing_ok=True)
 
         # convert address into format that gdb takes: break *0xFFFF
