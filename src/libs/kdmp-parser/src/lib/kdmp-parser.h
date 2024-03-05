@@ -585,6 +585,8 @@ private:
     uint8_t *Page = nullptr;
     uint64_t MetadataSize = 0;
     uint8_t *Bitmap = nullptr;
+    uint64_t TotalNumberOfPages = 0;
+    uint64_t CurrentPageCount = 0;
 
     switch (Type) {
     case DumpType_t::KernelMemoryDump:
@@ -597,10 +599,11 @@ private:
     }
 
     case DumpType_t::CompleteMemoryDump: {
-      FirstPageOffset = DmpHdr_->u3.RdmpHeader.Hdr.FirstPageOffset;
+      FirstPageOffset = DmpHdr_->u3.FullRdmpHeader.Hdr.FirstPageOffset;
       Page = (uint8_t *)DmpHdr_ + FirstPageOffset;
       MetadataSize = DmpHdr_->u3.FullRdmpHeader.Hdr.MetadataSize;
       Bitmap = DmpHdr_->u3.FullRdmpHeader.Bitmap.data();
+      TotalNumberOfPages = DmpHdr_->u3.FullRdmpHeader.TotalNumberOfPages;
       break;
     }
 
@@ -626,12 +629,32 @@ private:
       uint64_t NumberOfPages;
     };
 
+    // Sanity check
+    if (MetadataSize % sizeof(PfnRange)) {
+      return false;
+    }
+
     for (uint64_t Offset = 0; Offset < MetadataSize;
          Offset += sizeof(PfnRange)) {
+
+      if (Type == DumpType_t::CompleteMemoryDump) {
+        // `CompleteMemoryDump` type seems to be bound by the
+        // `TotalNumberOfPages` field, *not* by `MetadataSize`.
+        if (CurrentPageCount == TotalNumberOfPages) {
+          break;
+        }
+
+        if (CurrentPageCount > TotalNumberOfPages) {
+          return false;
+        }
+      }
+
       const PfnRange &Entry = (PfnRange &)Bitmap[Offset];
       if (!FileMap_.InBounds(&Entry, sizeof(Entry))) {
         return false;
       }
+
+      CurrentPageCount += Entry.NumberOfPages;
 
       const uint64_t Pfn = Entry.PageFileNumber;
       if (!Pfn) {
