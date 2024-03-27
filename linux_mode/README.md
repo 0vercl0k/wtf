@@ -1,34 +1,37 @@
-# WTF: I can fuzz ELF files with this?
+<div align='center'>
+  <h1><code>what the fuzz: Linux mode</code></h1>
+  <p>
+    <strong>Experimental Linux mode by Jason Crowder and Kyle Ossinger from Cisco ASIG</strong>
+  </p>
+  <p>
+    <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
+  </p>
+  <p>
+    <img src='pics/wtf-linux.gif'/>
+  </p>
+</div>
 
-This provides Linux ELF userland snapshotting support based on previous work by
-[Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot)
+## Overview
 
-## Limitations 
+This provides experimental Linux ELF userland snapshotting support based on previous work by [Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot).
 
-### Guest virtual machine RAM is limited to 2 GB
-
-Currently, the snapshotting scripts are unable to create snapshots that are
-readable by `wtf` when the target VM has more than 2 GB of memory.
-
-### Symbolizing
-
-TODO
+<p align='center'>
+<img src='pics/wtf-linux-snapshot.webp'>
+</p>
 
 ## Setting up the environment
 
-Change into the `linux_mode/qemu_snapshot` directory and run `setup.sh`:
+Move into the `linux_mode/qemu_snapshot` directory and run `setup.sh`:
 
 ```console
 user@pc:/wtf/linux_mode/qemu_snapshot$ ./setup.sh
 ```
 
-This script installs all pre-requisite tools, compiles qemu, and builds a target
-virtual machine consisting of a Linux kernel and disk image.
+This script installs all pre-requisite tools, compiles qemu, and builds a target virtual machine consisting of a Linux kernel and disk image.
 
 ## Taking a snapshot
 
-Create a subdirectory in `linux_mode` for your snapshot and create a `bkpt.py`
-file, like [linux_mode/crash_test/bkpt.py](crash_test/bkpt.py):
+Create a subdirectory in `linux_mode` for your snapshot and create a `bkpt.py` file, like [linux_mode/crash_test/bkpt.py](crash_test/bkpt.py):
 
 ```py
 # imports
@@ -203,3 +206,7 @@ Resolved breakpoint 0x5555555551e7 at GPA 0x972c1e7 aka HVA 0x564428d32117
 Dialing to tcp://localhost:31337/..
 #24348 cov: 8 exec/s: 2.4k lastcov: 3.0s crash: 871 timeout: 0 cr3: 0 uptime: 10.0s
 ```
+
+## Symbolizing
+
+The only current way to symbolize and debug your testcases is to use the bochscpu backend and generate a Tenet traces as per [Generating Tenet traces](https://github.com/0vercl0k/wtf?tab=readme-ov-file#generating-tenet-traces).
