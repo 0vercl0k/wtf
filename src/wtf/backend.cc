@@ -191,7 +191,21 @@ uint64_t Backend_t::GetArg(const uint64_t Idx) {
   }
 }
 
-uint64_t Backend_t::GetArg8(const uint64_t Idx) { return GetArg(Idx); }
+uint64_t Backend_t::GetArg8(const uint64_t Idx) {
+  switch (Idx) {
+  case 0:
+    return Rcx();
+  case 1:
+    return Rdx();
+  case 2:
+    return R8();
+  case 3:
+    return R9();
+  default: {
+    return VirtRead8(GetArgAddress(Idx));
+  }
+  }
+}
 
 uint32_t Backend_t::GetArg4(const uint64_t Idx) {
   return uint32_t(GetArg8(Idx));
