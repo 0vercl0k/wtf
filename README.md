@@ -25,7 +25,7 @@ If you would like to read more about its history or how to use it on a real targ
 - [Fuzzing RDPEGFX with "what the fuzz"](https://thalium.github.io/blog/posts/rdpegfx/) by [Colas Le Guernic](https://github.com/clslgrnc), Jérémy Rubert, and Anonymous
 - [A Journey to Network Protocol Fuzzing – Dissecting Microsoft IMAP Client Protocol](https://www.fortinet.com/blog/threat-research/analyzing-microsoft-imap-client-protocol) by [Wayne Chin Yick Low](https://www.fortinet.com/blog/search?author=Wayne+Chin+Yick+Low)
 
-Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project, [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode, and Jason Crowder / Kyle Ossinger from Cisco ASIG for contributing the Linux mode.
+Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project, [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode, [Colas Le Guernic](https://github.com/clslgrnc) / Jérémy Rubert / Anonymousand for the [bochscpu](https://github.com/0vercl0k/wtf/pull/137) edge coverage and  Jason Crowder / Kyle Ossinger from Cisco ASIG for [the Linux mode](https://github.com/0vercl0k/wtf/pull/192).
 
 ## Usage
 

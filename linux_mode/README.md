@@ -7,7 +7,7 @@
     <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
   </p>
   <p>
-    <img src='pics/wtf-linux.gif'/>
+    <img src='../pics/wtf-linux.gif'/>
   </p>
 </div>
 
@@ -16,7 +16,7 @@
 This provides experimental Linux ELF userland snapshotting support based on previous work by [Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot).
 
 <p align='center'>
-<img src='pics/wtf-linux-snapshot.webp'>
+<img src='../pics/wtf-linux-snapshot.webp'>
 </p>
 
 ## Setting up the environment
