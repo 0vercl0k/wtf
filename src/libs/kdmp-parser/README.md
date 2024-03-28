@@ -17,6 +17,8 @@ The library supports loading 64-bit dumps and provides read access to things lik
 Compiled binaries are available in the [releases](https://github.com/0vercl0k/kdmp-parser/releases) section.
 
 Special thanks to:
+- [hugsy](https://github.com/hugsy) for numerous contributions: the new Python bindings, CI improvements, new dump types, etc.,
+- [masthoon](https://github.com/masthoon) for the initial version of the Python bindings,
 - [yrp604](https://github.com/yrp604) for being knowledgeable about the format,
 - the [rekall](https://github.com/google/rekall) project and their [Python implementation](https://github.com/google/rekall/blob/master/rekall-core/rekall/plugins/overlays/windows/crashdump.py) (most of the structures in [kdmp-parser-structs.h](https://github.com/0vercl0k/kdmp-parser/blob/master/src/kdmp-parser/kdmp-parser-structs.h) have been adapted from it).
 
