@@ -66,6 +66,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    # Revert to the below when https://github.com/llvm/llvm-project/issues/84271 is fixed:
+    # sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
     - name: Installing dependencies
       run: |
         sudo apt-get -y update
@@ -84,6 +86,8 @@ jobs:
         chmod u+x ./build-release.sh
         ./build-release.sh
 
+    # Revert to the below when https://github.com/llvm/llvm-project/issues/84271 is fixed:
+    # clang-18 / clang++-18
     - name: Build with clang
       if: matrix.compiler == 'clang'
       env:
