@@ -2,11 +2,6 @@ name: Builds
 
 on: [push, pull_request]
 
-permissions:
-  actions: read
-  contents: read
-  security-events: write
-
 jobs:
   Windows:
     runs-on: windows-2019
@@ -93,6 +88,7 @@ jobs:
         CC: clang-18
         CXX: clang++-18
       run: |
+        sudo apt install -y llvm-18-linker-tools
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
