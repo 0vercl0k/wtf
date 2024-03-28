@@ -70,7 +70,7 @@ jobs:
       run: |
         sudo apt-get -y update
         sudo apt install -y g++-10 ninja-build
-        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" 17
 
     - name: Build with gcc
       if: matrix.compiler == 'gcc'
@@ -88,7 +88,6 @@ jobs:
         CC: clang-18
         CXX: clang++-18
       run: |
-        sudo apt install -y llvm-18-linker-tools
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
