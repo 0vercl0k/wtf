@@ -1,0 +1,11 @@
+gdb.txt
+
+__pycache__/
+
+# Snapshot files
+mem.dmp
+raw
+symbol-store.json
+vm.log
+vm.pid
+regs.json

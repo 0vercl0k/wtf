@@ -2,11 +2,6 @@ name: Builds
 
 on: [push, pull_request]
 
-permissions:
-  actions: read
-  contents: read
-  security-events: write
-
 jobs:
   Windows:
     runs-on: windows-2019
@@ -71,11 +66,15 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    # Revert to the below when https://github.com/llvm/llvm-project/issues/84271 is fixed:
+    # sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
     - name: Installing dependencies
       run: |
         sudo apt-get -y update
         sudo apt install -y g++-10 ninja-build
-        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        curl -O https://apt.llvm.org/llvm.sh
+        chmod u+x ./llvm.sh
+        sudo ./llvm.sh 17
 
     - name: Build with gcc
       if: matrix.compiler == 'gcc'
@@ -87,11 +86,13 @@ jobs:
         chmod u+x ./build-release.sh
         ./build-release.sh
 
+    # Revert to the below when https://github.com/llvm/llvm-project/issues/84271 is fixed:
+    # clang-18 / clang++-18
     - name: Build with clang
       if: matrix.compiler == 'clang'
       env:
-        CC: clang-18
-        CXX: clang++-18
+        CC: clang-17
+        CXX: clang++-17
       run: |
         cd src/build
         chmod u+x ./build-release.sh

@@ -6370,47 +6370,59 @@ class PE(object):
         return cache_adjust_SectionAlignment(val, section_alignment, file_alignment)
 
 # Axel '0vercl0k' Souchet - November 1 2020
+# Jason Crowder - Feburary 2024
 import json
 import pathlib
 import idaapi
 import idautils
 import idc
 
-def main():
-    idaapi.auto_wait()
-    img_base = idaapi.get_imagebase()
-    filepath = pathlib.Path(idc.get_input_file_path())
-    pe = PE(filepath)
-    addrs = set()
-    is_ntos = filepath.name == 'ntoskrnl.exe'
+def get_bbl_rvas():
     for fea in idautils.Functions():
         for b in idaapi.FlowChart(idaapi.get_func(fea)):
             ea = b.start_ea
             is_code = idaapi.is_code(idaapi.get_full_flags(ea))
             rva = ea - img_base
-            sect = pe.get_section_by_rva(rva)
-            discardable = (sect.Characteristics & SECTION_CHARACTERISTICS['IMAGE_SCN_MEM_DISCARDABLE']) != 0
-            # After a bunch of experiment, it seems that ntos.INITKDBG is the section
-            # that patchguard uses to hide some of its tricks. It gets copied somewhere
-            # else at runtime and gets removed from memory. So special-casing it, and ignoring
-            # code residing in this section.
-            initkdbg = is_ntos and sect.Name == b'INITKDBG'
-            if is_code and not discardable and not initkdbg:
-                addrs.add(rva)
+            if is_code:
+                yield rva
 
+def main_lin(filepath):
+    addrs = set(get_bbl_rvas())
+    return addrs, filepath.with_suffix('').name
+
+def main_win(filepath):
+    pe = PE(filepath)
+    addrs = set()
+    is_ntos = filepath.name == 'ntoskrnl.exe'
+    for rva in get_bbl_rvas():
+        sect = pe.get_section_by_rva(rva)
+        discardable = (sect.Characteristics & SECTION_CHARACTERISTICS['IMAGE_SCN_MEM_DISCARDABLE']) != 0
+        # After a bunch of experiment, it seems that ntos.INITKDBG is the section
+        # that patchguard uses to hide some of its tricks. It gets copied somewhere
+        # else at runtime and gets removed from memory. So special-casing it, and ignoring
+        # code residing in this section.
+        initkdbg = is_ntos and sect.Name == b'INITKDBG'
+        if not discardable and not initkdbg:
+            addrs.add(rva)
+
+    name = filepath.with_suffix('').name
+    if is_ntos:
+        name = 'nt'
+
+    return addrs, name
+
+if __name__ == '__main__':
+    idaapi.auto_wait()
+    img_base = idaapi.get_imagebase()
+    filepath = pathlib.Path(idc.get_input_file_path())
+    addrs, name = main_win(filepath) if filepath.suffix == '.exe' else main_lin(filepath)
     cov = {
-        'name': filepath.with_suffix('').name,
+        'name': name,
         'addresses': sorted(addrs)
     }
-
-    if is_ntos:
-        cov['name'] = 'nt'
 
     outfile = filepath.with_suffix('.cov')
     with open(outfile, 'w') as fd:
         json.dump(cov, fd)
 
     print(f'Done, {outfile}')
-
-if __name__ == '__main__':
-    main()

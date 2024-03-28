@@ -151,7 +151,7 @@ bool SetupUsermodeCrashDetectionHooks() {
     return false;
   }
 
-  if (g_Dbg.GetModuleBase("verifier") > 0) {
+  if (g_Dbg->GetModuleBase("verifier") > 0) {
     if (!g_Backend->SetBreakpoint(
             "verifier!VerifierStopMessage", [](Backend_t *Backend) {
               const uint64_t Unique = Backend->Rsp();
