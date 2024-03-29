@@ -1,7 +1,7 @@
 <div align='center'>
   <h1><code>what the fuzz</code></h1>
   <p>
-    <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows and Linux (experimental!).</strong>
+    <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows and Linux user-mode (experimental!).</strong>
   </p>
   <p>
     <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
@@ -25,7 +25,7 @@ If you would like to read more about its history or how to use it on a real targ
 - [Fuzzing RDPEGFX with "what the fuzz"](https://thalium.github.io/blog/posts/rdpegfx/) by [Colas Le Guernic](https://github.com/clslgrnc), Jérémy Rubert, and Anonymous
 - [A Journey to Network Protocol Fuzzing – Dissecting Microsoft IMAP Client Protocol](https://www.fortinet.com/blog/threat-research/analyzing-microsoft-imap-client-protocol) by [Wayne Chin Yick Low](https://www.fortinet.com/blog/search?author=Wayne+Chin+Yick+Low)
 
-Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project, [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode, [Colas Le Guernic](https://github.com/clslgrnc) / Jérémy Rubert / Anonymousand for the [bochscpu](https://github.com/0vercl0k/wtf/pull/137) edge coverage and  Jason Crowder / Kyle Ossinger from Cisco ASIG for [the Linux mode](https://github.com/0vercl0k/wtf/pull/192).
+Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project, [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode, [Markus Gaasedelen](https://github.com/0vercl0k/wtf/pull/12/) for adding Tenet support, [Colas Le Guernic](https://github.com/clslgrnc) / Jérémy Rubert / Anonymousand for implementing [edge coverage for bochscpu](https://github.com/0vercl0k/wtf/pull/137), Jason Crowder / [Kyle Ossinger](https://k0ss.net/) from Cisco ASIG for [the Linux mode](https://github.com/0vercl0k/wtf/pull/192) and all the other contributors 🙏
 
 ## Usage
 

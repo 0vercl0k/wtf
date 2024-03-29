@@ -1,7 +1,7 @@
 <div align='center'>
   <h1><code>what the fuzz: Linux mode</code></h1>
   <p>
-    <strong>Experimental Linux mode by Jason Crowder and Kyle Ossinger from Cisco ASIG</strong>
+    <strong>Experimental user-mode Linux mode by Jason Crowder and [Kyle Ossinger](https://k0ss.net/) from Cisco ASIG</strong>
   </p>
   <p>
     <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
