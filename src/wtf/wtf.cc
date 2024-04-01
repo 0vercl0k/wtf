@@ -80,7 +80,7 @@ int main(int argc, const char *argv[]) {
 
   MasterCmd->add_option("--runs", Opts.Master.Runs, "Runs")
       ->description("Number of mutations done.")
-      ->required();
+      ->default_val(std::numeric_limits<decltype(Opts.Master.Runs)>::max());
 
   MasterCmd
       ->add_option("--max_len", Opts.Master.TestcaseBufferMaxSize,
@@ -400,25 +400,50 @@ int main(int argc, const char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  switch (Opts.Backend) {
 #ifdef WINDOWS
-  if (Opts.Backend == BackendType_t::Whv) {
+  case BackendType_t::Whv: {
     g_Backend = new WhvBackend_t();
+    break;
   }
 #endif
+
 #ifdef LINUX
-  if (Opts.Backend == BackendType_t::Kvm) {
+  case BackendType_t::Kvm: {
     g_Backend = new KvmBackend_t();
+    break;
   }
 #endif
-  if (Opts.Backend == BackendType_t::Bochscpu) {
+
+  case BackendType_t::Bochscpu: {
     g_Backend = new BochscpuBackend_t();
+    break;
   }
+
+  default: {
+    return EXIT_FAILURE;
+  }
+  }
+
+  //
+  // If the target name starts with 'linux', then assume that we won't be able
+  // to have WinDbg operate on the dump file, so let's swap the debugger
+  // instance.
+  //
+
+#ifdef WINDOWS
+  if (Opts.TargetName.starts_with("linux_")) {
+    fmt::print("Target name starts with 'linux_' so turning off the Windows "
+               "debugger..\n");
+    g_Dbg = &g_NoDbg;
+  }
+#endif
 
   //
   // Initialize the debugger instance.
   //
 
-  if (!g_Dbg.Init(Opts.DumpPath, Opts.SymbolFilePath)) {
+  if (!g_Dbg->Init(Opts.DumpPath, Opts.SymbolFilePath)) {
     return EXIT_FAILURE;
   }
 

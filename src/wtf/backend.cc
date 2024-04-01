@@ -237,7 +237,7 @@ bool Backend_t::SaveCrash(const Gva_t ExceptionAddress,
 
 bool Backend_t::SetBreakpoint(const char *Symbol,
                               const BreakpointHandler_t Handler) {
-  const Gva_t Gva = Gva_t(g_Dbg.GetSymbol(Symbol));
+  const Gva_t Gva = Gva_t(g_Dbg->GetSymbol(Symbol));
   if (Gva == Gva_t(0)) {
     fmt::print("Could not set a breakpoint at {}.\n", Symbol);
     return false;
@@ -329,6 +329,11 @@ void Backend_t::R14(const Gva_t Value) { R14(Value.U64()); }
 uint64_t Backend_t::R15() { return GetReg(Registers_t::R15); }
 void Backend_t::R15(const uint64_t Value) { SetReg(Registers_t::R15, Value); }
 void Backend_t::R15(const Gva_t Value) { R15(Value.U64()); }
+
+uint64_t Backend_t::Cr2() { return GetReg(Registers_t::Cr2); }
+void Backend_t::Cr2(const uint64_t Value) { SetReg(Registers_t::Cr2, Value); }
+void Backend_t::Cr2(const Gva_t Value) { Cr2(Value.U64()); }
+
 
 void Backend_t::PrintRegisters() {
   const uint64_t Rax = GetReg(Registers_t::Rax), Rbx = GetReg(Registers_t::Rbx),

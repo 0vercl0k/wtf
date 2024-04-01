@@ -348,7 +348,7 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
     File >> Json;
 
     const std::string &ModuleName = Json["name"].get<std::string>();
-    const uint64_t Base = g_Dbg.GetModuleBase(ModuleName.c_str());
+    const uint64_t Base = g_Dbg->GetModuleBase(ModuleName.c_str());
     if (Base == 0) {
       fmt::print("Failed to find the base of {}\n", ModuleName);
       return std::nullopt;

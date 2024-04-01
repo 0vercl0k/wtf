@@ -1,7 +1,7 @@
 <div align='center'>
   <h1><code>what the fuzz</code></h1>
   <p>
-    <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows.</strong>
+    <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows and Linux user-mode (experimental!).</strong>
   </p>
   <p>
     <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
@@ -13,7 +13,7 @@
 
 ## Overview
 
-**what the fuzz** or **wtf** is a distributed, code-coverage guided, customizable, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows. Execution of the target can be done inside an emulator with [bochscpu](https://github.com/yrp604/bochscpu) (slowest, most precise), inside a Windows VM with the [Windows Hypervisor Platform APIs](https://docs.microsoft.com/en-us/virtualization/api/hypervisor-platform/hypervisor-platform) or inside a Linux VM with the [KVM APIs](https://www.kernel.org/doc/html/latest/virt/kvm/api.html) (fastest).
+**what the fuzz** or **wtf** is a distributed, code-coverage guided, customizable, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows or Linux (**experimental**, see [linux_mode](linux_mode/)). Execution of the target can be done inside an emulator with [bochscpu](https://github.com/yrp604/bochscpu) (slowest, most precise), inside a Windows VM with the [Windows Hypervisor Platform APIs](https://docs.microsoft.com/en-us/virtualization/api/hypervisor-platform/hypervisor-platform) or inside a Linux VM with the [KVM APIs](https://www.kernel.org/doc/html/latest/virt/kvm/api.html) (fastest).
 
 It uncovered memory corruption vulnerabilities in a wide range of softwares: [IDA Pro](https://github.com/0vercl0k/fuzzing-ida75), a popular [AAA game](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/), the [Windows kernel](https://microsoft.fandom.com/wiki/Architecture_of_Windows_NT), the [Microsoft RDP client](https://www.hexacon.fr/slides/Hexacon2022-Fuzzing_RDPEGFX_with_wtf.pdf), [NVIDIA GPU Display driver](https://nvidia.custhelp.com/app/answers/detail/a_id/5383), etc.
 
@@ -24,8 +24,6 @@ If you would like to read more about its history or how to use it on a real targ
 - [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/) by [Markus Gaasedelen](https://twitter.com/gaasedelen)
 - [Fuzzing RDPEGFX with "what the fuzz"](https://thalium.github.io/blog/posts/rdpegfx/) by [Colas Le Guernic](https://github.com/clslgrnc), Jérémy Rubert, and Anonymous
 - [A Journey to Network Protocol Fuzzing – Dissecting Microsoft IMAP Client Protocol](https://www.fortinet.com/blog/threat-research/analyzing-microsoft-imap-client-protocol) by [Wayne Chin Yick Low](https://www.fortinet.com/blog/search?author=Wayne+Chin+Yick+Low)
-
-Special thanks to [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project and [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode.
 
 ## Usage
 
@@ -316,3 +314,17 @@ To build it yourself you need to start a *Visual Studio Developper Command Promp
 ## Authors
 
 * Axel '[0vercl0k](https://twitter.com/0vercl0k)' Souchet
+
+## Contributors
+
+Special thanks to:
+- [@yrp604](https://github.com/yrp604) for providing valuable inputs throughout the project,
+- [@masthoon](https://github.com/masthoon) for suggesting to write a demo targeting [HEVD](https://github.com/hacksysteam/HackSysExtremeVulnerableDriver) secure mode,
+- [Markus Gaasedelen](https://github.com/0vercl0k/wtf/pull/12/) for adding Tenet support,
+- [@y0ny0ns0n](https://github.com/y0ny0ns0n) for contributing the [multi-input fuzzing example](https://github.com/0vercl0k/wtf/pull/67),
+- [Colas Le Guernic](https://github.com/clslgrnc) / Jérémy Rubert / Anonymous for implementing [edge coverage for bochscpu](https://github.com/0vercl0k/wtf/pull/137),
+- [@1ndahous3](https://github.com/1ndahous3) for contributing the [generic ioctl fuzzer module](https://github.com/0vercl0k/wtf/pull/155),
+- Jason Crowder / [Kyle Ossinger](https://k0ss.net/) from Cisco ASIG for [the Linux mode](https://github.com/0vercl0k/wtf/pull/192),
+- and all the other contributors 🙏
+
+[ ![contributors-img](https://contrib.rocks/image?repo=0vercl0k/wtf) ](https://github.com/0vercl0k/wtf/graphs/contributors)
