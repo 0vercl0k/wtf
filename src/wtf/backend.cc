@@ -334,7 +334,6 @@ uint64_t Backend_t::Cr2() { return GetReg(Registers_t::Cr2); }
 void Backend_t::Cr2(const uint64_t Value) { SetReg(Registers_t::Cr2, Value); }
 void Backend_t::Cr2(const Gva_t Value) { Cr2(Value.U64()); }
 
-
 void Backend_t::PrintRegisters() {
   const uint64_t Rax = GetReg(Registers_t::Rax), Rbx = GetReg(Registers_t::Rbx),
                  Rcx = GetReg(Registers_t::Rcx);
