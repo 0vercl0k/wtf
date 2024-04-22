@@ -189,7 +189,7 @@ bool Client_t::SendResult(const SocketFd_t &Fd, const std::string &Testcase,
                           const TestcaseResult_t &TestcaseResult) {
   yas::mem_ostream Os;
   yas::binary_oarchive<decltype(Os), YasFlags> Oa(Os);
-  Oa &Testcase &Coverage &TestcaseResult;
+  Oa & Testcase & Coverage & TestcaseResult;
   const auto &Buf = Os.get_intrusive_buffer();
   if (!Send(Fd, (uint8_t *)Buf.data, Buf.size)) {
     fmt::print("Send failed\n");
@@ -203,7 +203,7 @@ std::string Client_t::DeserializeTestcase(const std::span<uint8_t> Buffer) {
   yas::mem_istream Is(Buffer.data(), Buffer.size_bytes());
   yas::binary_iarchive<decltype(Is), YasFlags> Ia(Is);
   std::string Testcase;
-  Ia &Testcase;
+  Ia & Testcase;
   return Testcase;
 }
 
