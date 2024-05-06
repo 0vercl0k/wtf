@@ -473,8 +473,13 @@ int main(int argc, const char *argv[]) {
     //
 
     if (!g_Dbg->Init(Opts.DumpPath, Opts.SymbolFilePath)) {
+      fmt::print("WARNING: Debugger init failed.\n");
+      #if defined(ERROR_WARN)
+      fmt::print("Above error could be fatal, but continuing anyway.");
+      #else
       return EXIT_FAILURE;
-    }
+      #endif
+   }
 
     //
     // Set an instruction limit to avoid infinite loops, etc.
