@@ -58,7 +58,7 @@ The client nodes run a test-case that has been generated and distributed by the 
 This is how you would start a client node that uses the *bochscpu* backend:
 
 ```text
-..\..\src\build\wtf.exe fuzz --backend=bochscpu --name hevd --limit 10000000
+..\..\src\build\wtf.exe fuzz --name hevd --limit 10000000
 ```
 
 The `fuzz` subcommand is used with the `name` option to specify which fuzzer module needs to be used, `backend` specifies the execution backend and `limit` the maximum number of instruction to execute per testcase (depending on the backend, this option has different meaning).
@@ -74,7 +74,7 @@ If you would like to run a test-case (or a folder filled with test-cases), you c
 This is how you would would run the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0` test-case:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu  --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0
+..\..\src\build\wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0
 ```
 
 <p align='center'>
@@ -88,7 +88,7 @@ To minset a corpus, you need to use a server node and as many client nodes as yo
 This is how you would minset the corpus in `outputs` into the `minset` directory (also highlights how you can override the `inputs` and `outputs` directories):
 
 ```
-..\..\src\build\wtf.exe master --max_len=1028 --runs=0 --target . --inputs=outputs --outputs=minset
+..\..\src\build\wtf.exe master --max_len=1028 --runs=0 --target . --inputs=outputs --outputs=minset --name hevd
 ```
 
 <p align='center'>
@@ -102,23 +102,21 @@ The main mechanism available to instrospect in an execution backend is to genera
 This is how you would generate an execution trace for the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0` test-case:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu  --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=rip
+..\..\src\build\wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=rip
 ```
 
 <p align='center'>
 <img src='pics/trace.gif'>
 </p>
 
-The execution traces aren't symbolized because Linux systems wouldn't be able to do that and that is why I wrote [symbolizer](https://github.com/0vercl0k/symbolizer).
-
-This is how you would symbolize the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.trace` execution trace generated above:
+To symbolize execution traces you should use [symbolizer-rs](https://github.com/0vercl0k/symbolizer). This is how you would symbolize the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.trace` execution trace generated above:
 
 ```
-symbolizer.exe --input crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.trace --crash-dump state\mem.dmp
+symbolizer-rs.exe --trace crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.rip.trace
 ```
 
 <p align='center'>
-<img src='pics/symbolizer.gif'>
+<img src='pics/symbolizer-rs.webp'>
 </p>
 
 ## Generating Tenet traces
@@ -126,9 +124,8 @@ symbolizer.exe --input crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.t
 If you see yourself needing more contextual awareness, the *bochscpu* backend allows you to generate execution traces that can be loaded in the [Tenet](https://github.com/gaasedelen/tenet) trace explorer. In the below, I start from a crash in `memmove` and walk back to find out where the source pointer is coming from (user-mode!):
 
 ```
-..\..\src\build\wtf.exe run --name hevd --state state --backend=bochscpu  --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=tenet
+..\..\src\build\wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=tenet
 ```
-
 
 <p align='center'>
 <img src='pics/tenet.gif'>
@@ -141,7 +138,7 @@ To generate code-coverage traces you can simply use the `run` subcommand with th
 This is how you would generate code-coverage traces for all the files inside the `minset` folder and store them in the `coverage-traces` folder:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --state state --backend=whv --input minset --trace-path=coverage-traces --trace-type=cov
+..\..\src\build\wtf.exe run --name hevd --input minset --trace-path=coverage-traces --trace-type=cov
 ```
 
 <p align='center'>
@@ -153,11 +150,11 @@ Those traces aren't directly loadable into [lighthouse](https://github.com/gaase
 This is how you would symbolize all the files inside the `coverage-traces` folder and write the results into `coverage-traces-symbolized`:
 
 ```
-symbolizer.exe --input coverage-traces --crash-dump state\mem.dmp -o coverage-traces-symbolized --style modoff
+symbolizer-rs.exe --trace coverage-traces -o coverage-traces-symbolized --style modoff
 ```
 
 <p align='center'>
-<img src='pics/symbolizer-ccov.gif'>
+<img src='pics/symbolizer-rs-ccov.webp'>
 </p>
 
 And finally, you can load those up in [lighthouse](https://github.com/gaasedelen/lighthouse):
