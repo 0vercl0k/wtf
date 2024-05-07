@@ -142,7 +142,7 @@ This is how you would generate code-coverage traces for all the files inside the
 ```
 
 <p align='center'>
-<img src='pics/ccov.gif'>
+<img src='pics/ccov.webp'>
 </p>
 
 Those traces aren't directly loadable into [lighthouse](https://github.com/gaasedelen/lighthouse) because they aren't symbolized.
