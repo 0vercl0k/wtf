@@ -160,7 +160,7 @@ symbolizer-rs.exe --trace coverage-traces -o coverage-traces-symbolized --style 
 And finally, you can load those up in [lighthouse](https://github.com/gaasedelen/lighthouse):
 
 <p align='center'>
-<img src='pics/lighthouse.gif'>
+<img src='pics/lighthouse.webp'>
 </p>
 
 Also if you don't care about individual code-coverage, the master maintains a `coverage.cov` file contains the unique aggregated code-coverage that has been exercised. It makes it easy to check on the global code-coverage really quick during a fuzzing job. 
