@@ -7,7 +7,7 @@
     <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg'/>
   </p>
   <p>
-    <img src='pics/wtf.gif'/>
+    <img src='pics/wtf.webp'/>
   </p>
 </div>
 
