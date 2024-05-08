@@ -42,7 +42,7 @@ The server is basically the brain and keeps track of all the state: the  aggrega
 This is how you might choose to launch a server node:
 
 ```text
-(base) c:\work\codes\wtf\targets\hevd>..\..\src\build\wtf.exe master --name --max_len=1028 --runs=10000000 --target . --address tcp://192.168.2.41/
+(base) c:\work\codes\wtf\targets\hevd>..\..\src\build\wtf.exe master --name --max_len=1028 --runs=10000000 --address tcp://192.168.2.41/
 ```
 
 The `max_len` option is used to limit the size of the generated test-case, `runs` is the number of test-cases it will generate, `address` specify where *wtf* needs to be listening on, `target` is a directory with the directory tree we described above (the user can also choose to override those directories with `--input` / `--output` / `--crashes`) and `name` specifies your  fuzzing module name so that the master can invoke your generator function if you have defined one.
@@ -64,7 +64,7 @@ This is how you would start a client node that uses the *bochscpu* backend:
 The `fuzz` subcommand is used with the `name` option to specify which fuzzer module needs to be used, `backend` specifies the execution backend and `limit` the maximum number of instruction to execute per testcase (depending on the backend, this option has different meaning).
 
 <p align='center'>
-<img src='pics/client.gif'>
+<img src='pics/client.webp'>
 </p>
 
 ### Running a test-case
@@ -88,7 +88,7 @@ To minset a corpus, you need to use a server node and as many client nodes as yo
 This is how you would minset the corpus in `outputs` into the `minset` directory (also highlights how you can override the `inputs` and `outputs` directories):
 
 ```
-..\..\src\build\wtf.exe master --name hevd --max_len=1028 --runs=0 --target . --inputs=outputs --outputs=minset
+..\..\src\build\wtf.exe master --name hevd --max_len=1028 --runs=0 --inputs=outputs --outputs=minset
 ```
 
 <p align='center'>
