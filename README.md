@@ -42,7 +42,7 @@ The server is basically the brain and keeps track of all the state: the  aggrega
 This is how you might choose to launch a server node:
 
 ```text
-(base) c:\work\codes\wtf\targets\hevd>..\..\src\build\wtf.exe master --name --max_len=1028 --runs=10000000 --address tcp://192.168.2.41/
+(base) c:\work\codes\wtf\targets\hevd>wtf.exe master --name --max_len=1028 --runs=10000000 --address tcp://192.168.2.41/
 ```
 
 The `max_len` option is used to limit the size of the generated test-case, `runs` is the number of test-cases it will generate, `address` specify where *wtf* needs to be listening on, `target` is a directory with the directory tree we described above (the user can also choose to override those directories with `--input` / `--output` / `--crashes`) and `name` specifies your  fuzzing module name so that the master can invoke your generator function if you have defined one.
@@ -58,7 +58,7 @@ The client nodes run a test-case that has been generated and distributed by the 
 This is how you would start a client node that uses the *bochscpu* backend:
 
 ```text
-..\..\src\build\wtf.exe fuzz --name hevd --limit 10000000
+wtf.exe fuzz --name hevd --limit 10000000
 ```
 
 The `fuzz` subcommand is used with the `name` option to specify which fuzzer module needs to be used, `backend` specifies the execution backend and `limit` the maximum number of instruction to execute per testcase (depending on the backend, this option has different meaning).
@@ -74,7 +74,7 @@ If you would like to run a test-case (or a folder filled with test-cases), you c
 This is how you would would run the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0` test-case:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0
+wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0
 ```
 
 <p align='center'>
@@ -88,11 +88,11 @@ To minset a corpus, you need to use a server node and as many client nodes as yo
 This is how you would minset the corpus in `outputs` into the `minset` directory (also highlights how you can override the `inputs` and `outputs` directories):
 
 ```
-..\..\src\build\wtf.exe master --name hevd --max_len=1028 --runs=0 --inputs=outputs --outputs=minset
+wtf.exe master --name hevd --max_len=1028 --runs=0 --inputs=outputs --outputs=minset
 ```
 
 <p align='center'>
-<img src='pics/minset.gif'>
+<img src='pics/minset.webp'>
 </p>
 
 ### Generating execution traces
@@ -102,7 +102,7 @@ The main mechanism available to instrospect in an execution backend is to genera
 This is how you would generate an execution trace for the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0` test-case:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=rip
+wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=rip
 ```
 
 <p align='center'>
@@ -124,7 +124,7 @@ symbolizer-rs.exe --trace crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x
 If you see yourself needing more contextual awareness, the *bochscpu* backend allows you to generate execution traces that can be loaded in the [Tenet](https://github.com/gaasedelen/tenet) trace explorer. In the below, I start from a crash in `memmove` and walk back to find out where the source pointer is coming from (user-mode!):
 
 ```
-..\..\src\build\wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=tenet
+wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0 --trace-type=tenet
 ```
 
 <p align='center'>
@@ -138,7 +138,7 @@ To generate code-coverage traces you can simply use the `run` subcommand with th
 This is how you would generate code-coverage traces for all the files inside the `minset` folder and store them in the `coverage-traces` folder:
 
 ```
-..\..\src\build\wtf.exe run --name hevd --input minset --trace-path=coverage-traces --trace-type=cov
+wtf.exe run --name hevd --input minset --trace-path=coverage-traces --trace-type=cov
 ```
 
 <p align='center'>
