@@ -35,20 +35,22 @@ The best way to try the features out is to work with the [fuzzer_hevd](src/wtf/f
 - `crashes` is where the crashes gets saved in,
 - `state` is where the memory dump (`mem.dmp`) as well as the CPU state (`regs.json`) and the symbol store are stored in (`symbol-store.json`). The symbol store is a simple JSON file that is used on Linux systems to know where to put breakpoints as there is no support for symbols / dbgeng on those platforms. *wtf* generates this file at runtime everytime you run your target on Windows.
 
+What follows assume that you downloaded the [target-hevd.7z](https://github.com/0vercl0k/wtf/releases) file attached to the latest release, and extracted it in the `targets` directory of your clone of *wtf*. You should have `wtf/targets/hevd` in which you find the `inputs` / `outputs`, etc. directories.
+
 ### Starting a server node
 
 The server is basically the brain and keeps track of all the state: the  aggregated code-coverage, the corpus, it generates and distributes the test-cases to client.
 
-This is how you might choose to launch a server node:
+This is how you might choose to launch a local server node:
 
 ```text
-(base) c:\work\codes\wtf\targets\hevd>wtf.exe master --name --max_len=1028 --runs=10000000 --address tcp://192.168.2.41/
+wtf.exe master --name hevd --max_len=1028 --runs=10000000
 ```
 
 The `max_len` option is used to limit the size of the generated test-case, `runs` is the number of test-cases it will generate, `address` specify where *wtf* needs to be listening on, `target` is a directory with the directory tree we described above (the user can also choose to override those directories with `--input` / `--output` / `--crashes`) and `name` specifies your  fuzzing module name so that the master can invoke your generator function if you have defined one.
 
 <p align='center'>
-<img src='pics/server.gif'>
+<img src='pics/server.webp'>
 </p>
 
 ### Fuzzing nodes
