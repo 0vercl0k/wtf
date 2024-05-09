@@ -78,7 +78,7 @@ wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c000
 ```
 
 <p align='center'>
-<img src='pics/run.gif'>
+<img src='pics/run.webp'>
 </p>
 
 ### Minseting a corpus
