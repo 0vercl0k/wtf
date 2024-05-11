@@ -197,7 +197,7 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
 
     const auto Fptw = Fptw_t::FromAbridged(CpuState.Fptw.Value);
     fmt::print(
-        "Setting @fptw to {:x} as this is an old dump taken with bdump..\n",
+        "Setting @fptw to {:#x} as this is an old dump taken with bdump..\n",
         Fptw.Value);
     CpuState.Fptw = Fptw;
   }

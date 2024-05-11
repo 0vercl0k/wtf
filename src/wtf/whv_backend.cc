@@ -717,7 +717,7 @@ WhvBackend_t::TranslateGva(const Gva_t Gva, const WHV_TRANSLATE_GVA_FLAGS,
   }
 
   TranslationResult.ResultCode = WHvTranslateGvaResultSuccess;
-  const uint64_t PageBase = Pte.PageFrameNumber * 0x1000;
+  const uint64_t PageBase = Pte.PageFrameNumber * 0x1'000;
   Gpa = Gpa_t(PageBase + GuestAddress.Offset);
   return S_OK;
 }
@@ -785,6 +785,34 @@ std::optional<TestcaseResult_t> WhvBackend_t::Run(const uint8_t *Buffer,
   Stop_ = false;
   TestcaseRes_ = Ok_t();
   Coverage_.clear();
+
+  //
+  // Turn on what we need to provide a rip trace.
+  //
+
+  if (TraceType_ == TraceType_t::Rip) {
+    fmt::print("Setting stuff up for rip trace..\n");
+    HRESULT Hr = SetReg64(WHvX64RegisterSfmask, GetReg64(WHvX64RegisterSfmask) &
+                                                    (~RFLAGS_TRAP_FLAG_FLAG));
+    if (FAILED(Hr)) {
+      fmt::print("Fixing sfmask for rip tracing failed\n");
+      std::abort();
+    }
+
+    Hr = SetReg64(WHvX64RegisterRflags,
+                  GetReg64(WHvX64RegisterRflags) | RFLAGS_TRAP_FLAG_FLAG);
+    if (FAILED(Hr)) {
+      fmt::print("Fixing rflags for rip tracing failed\n");
+      std::abort();
+    }
+
+    //
+    // The trap flag triggers after the first instruction so make sure to
+    // include its address in the trace.
+    //
+
+    fmt::print(TraceFile_, "{:#x}\n", GetReg64(WHvX64RegisterRip));
+  }
 
   //
   // Configure a timer that will cancel the VP in case it runs for too long.
@@ -1051,10 +1079,13 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   }
 
   //
-  // Sounds like we need to step-over the instruction after all.
+  // If we get here, it sounds like we need to step-over the instruction after
+  // all.
+  //
   // To do that we need to:
   //   - disarm the breakpoint,
   //   - turn on TF to step over the instruction
+  //
   // We'll take a fault and re-arm the breakpoint once we stepped over the
   // instruction.
   //
@@ -1063,16 +1094,12 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   LastBreakpointGpa_ = Breakpoint.Gpa;
   Ram_.RemoveBreakpoint(Breakpoint.Gpa);
 
-  const uint64_t NewRflags = Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG;
-  Rflags->Reg64 = NewRflags;
-  Hr = SetRegisters(Names, Regs, 2);
-  return Hr;
+  return SetReg64(WHvX64RegisterRflags,
+                  Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
 }
 
 HRESULT
 WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
-  uint64_t Rflags = Exception.VpContext.Rflags;
-
   //
   // We have a pending debug trap exception and we have previously unset a
   // breakpoint. In that case, we need to do the dance to rearm the breakpoint
@@ -1080,6 +1107,27 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   //
 
   if (LastBreakpointGpa_ == Gpa_t(0xffffffffffffffff)) {
+    if (TraceType_ == TraceType_t::Rip) {
+
+      //
+      // OK we got here because we are single stepping through the testcase.
+      //
+
+      WHV_X64_INTERRUPT_STATE_REGISTER InterruptState;
+      InterruptState.AsUINT64 = GetReg64(WHvRegisterInterruptState);
+      InterruptState.InterruptShadow = 0;
+      if (FAILED(
+              SetReg64(WHvRegisterInterruptState, InterruptState.AsUINT64))) {
+        fmt::print("Failed to set WHvRegisterInterruptState\n");
+        std::abort();
+      }
+
+      fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip,
+                 GetReg64(WHvX64RegisterRflags));
+      return SetReg64(WHvX64RegisterRflags,
+                      Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
+    }
+
     fmt::print(
         "Got into OnDebugTrap with LastBreakpointGpa_ = 0xffffffffffffffff");
     std::abort();
@@ -1098,10 +1146,9 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   //
 
   WhvDebugPrint("Turning off RFLAGS.TF\n");
-  Rflags &= ~RFLAGS_TRAP_FLAG_FLAG;
   LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
-
-  return SetReg64(WHvX64RegisterRflags, Rflags);
+  return SetReg64(WHvX64RegisterRflags,
+                  Exception.VpContext.Rflags & (~RFLAGS_TRAP_FLAG_FLAG));
 }
 
 HRESULT
@@ -1128,11 +1175,6 @@ WhvBackend_t::OnExitReasonException(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     SaveCrash(Gva_t(Exception.VpContext.Rip), EXCEPTION_INT_DIVIDE_BY_ZERO);
     return S_OK;
   }
-
-    //
-    // XXX: If one day we get a vmexit for failfast exception, add the below:
-    // SaveCrash(Exception.VpContext.Rip, STATUS_STACK_BUFFER_OVERRUN);
-    //
 
   case WHvX64ExceptionTypePageFault: {
     RunStats_.PageFaults++;
@@ -1324,11 +1366,6 @@ uint8_t *WhvBackend_t::PhysTranslate(const Gpa_t Gpa) const {
 
 bool WhvBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
                                 const TraceType_t TraceType) {
-
-  if (TraceType == TraceType_t::Rip) {
-    fmt::print("Rip traces can be only generated with bochscpu.\n");
-    std::abort();
-  }
 
   //
   // Open the trace file.
