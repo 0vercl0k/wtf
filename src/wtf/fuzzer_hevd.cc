@@ -7,7 +7,7 @@ namespace fs = std::filesystem;
 
 namespace Hevd {
 
-constexpr bool LoggingOn = false;
+constexpr bool LoggingOn = true;
 
 template <typename... Args_t>
 void DebugPrint(const char *Format, const Args_t &...args) {
@@ -59,6 +59,12 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 }
 
 bool Init(const Options_t &Opts, const CpuState_t &) {
+  if (!g_Backend->SetBreakpoint(
+          Gva_t(0x0007ff83e2e6365),
+          [](Backend_t *Backend) { fmt::print("yo!\n"); })) {
+    return false;
+  }
+
   //
   // Stop the test-case once we return back from the call [DeviceIoControl]
   //
