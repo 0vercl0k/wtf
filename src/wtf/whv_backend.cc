@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <fstream>
 
-constexpr bool WhvLoggingOn = false;
+constexpr bool WhvLoggingOn = true;
 
 template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
@@ -1021,6 +1021,7 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   //
 
   if (CoverageBp) {
+    WhvDebugPrint("Handling coverage bp @ {:#x}\n", Rip);
     const HRESULT Hr = OnExitCoverageBp(Exception);
     if (FAILED(Hr)) {
       return Hr;
@@ -1041,6 +1042,7 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // handler.
   //
 
+  WhvDebugPrint("Handling bp @ {:#x}\n", Rip);
   WhvBreakpoint_t &Breakpoint = Breakpoints_.at(Rip);
   Breakpoint.Handler(this);
 
@@ -1071,10 +1073,38 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // stop the testcase, then no need to single-step over the instruction.
   //
 
-  if (NewRip->Reg64 != Rip.U64() ||
-      (PendingEvent->ExceptionEvent.EventPending &&
-       PendingEvent->ExceptionEvent.Vector == WHvX64ExceptionTypePageFault) ||
-      Stop_) {
+  if (Stop_) {
+    WhvDebugPrint("The bp handler asked us to stop so no need to do the "
+                  "step-over dance\n");
+    return Hr;
+  }
+
+  const bool RipChanged = NewRip->Reg64 != Rip.U64();
+  if (RipChanged) {
+    WhvDebugPrint("The bp handler ended up moving @rip from {:#x} to {:#x} so "
+                  "no need to do the step-over dance\n",
+                  Rip, NewRip->Reg64);
+
+    //
+    // If we are single-stepping through the test-case and a handler moved
+    // execution somewhere else, we need to include that location in the trace
+    // file, or we'll miss this instruction (we'll get the one right after it
+    // when TF triggers).
+    //
+
+    if (TraceType_ == TraceType_t::Rip) {
+      fmt::print(TraceFile_, "{:#x}\n", NewRip->Reg64);
+    }
+
+    return Hr;
+  }
+
+  const bool InjectedPf =
+      PendingEvent->ExceptionEvent.EventPending &&
+      PendingEvent->ExceptionEvent.Vector == WHvX64ExceptionTypePageFault;
+  if (InjectedPf) {
+    WhvDebugPrint(
+        "The bp handler injected a #PF so no need to do the step-over dance\n");
     return Hr;
   }
 
@@ -1090,7 +1120,7 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // instruction.
   //
 
-  WhvDebugPrint("Disarming bp and turning on RFLAGS.TF\n");
+  WhvDebugPrint("Disarming bp and turning on RFLAGS.TF (rip={:#x})\n", Rip);
   LastBreakpointGpa_ = Breakpoint.Gpa;
   Ram_.RemoveBreakpoint(Breakpoint.Gpa);
 
@@ -1164,7 +1194,23 @@ WhvBackend_t::OnExitReasonException(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
 
   switch (Exception.VpException.ExceptionType) {
   case WHvX64ExceptionTypeBreakpointTrap: {
-    return OnBreakpointTrap(Exception);
+    const HRESULT Hr = OnBreakpointTrap(Exception);
+    if (FAILED(Hr)) {
+      fmt::print("OnBreakpointTrap failed w/ {:#x}\n", Hr);
+      return Hr;
+    }
+
+    if (TraceType_ != TraceType_t::Rip) {
+      return Hr;
+    }
+
+    //
+    // If we are single stepping through the whole test-case, let's make sure TF
+    // is enabled after the handling of regular / coverage breakpoints.
+    //
+
+    return SetReg64(WHvX64RegisterRflags,
+                    GetReg64(WHvX64RegisterRflags) | RFLAGS_TRAP_FLAG_FLAG);
   }
 
   case WHvX64ExceptionTypeDebugTrapOrFault: {
