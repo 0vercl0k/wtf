@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <fstream>
 
-constexpr bool WhvLoggingOn = true;
+constexpr bool WhvLoggingOn = false;
 
 template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
@@ -1136,49 +1136,63 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // to continue execution.
   //
 
-  if (LastBreakpointGpa_ == Gpa_t(0xffffffffffffffff)) {
-    if (TraceType_ == TraceType_t::Rip) {
+  bool StripTrapFlag = true;
 
-      //
-      // OK we got here because we are single stepping through the testcase.
-      //
+  WhvDebugPrint("Received debug trap @ {:#x}\n", Exception.VpContext.Rip);
 
-      WHV_X64_INTERRUPT_STATE_REGISTER InterruptState;
-      InterruptState.AsUINT64 = GetReg64(WHvRegisterInterruptState);
-      InterruptState.InterruptShadow = 0;
-      if (FAILED(
-              SetReg64(WHvRegisterInterruptState, InterruptState.AsUINT64))) {
-        fmt::print("Failed to set WHvRegisterInterruptState\n");
-        std::abort();
-      }
+  if (TraceType_ == TraceType_t::Rip) {
 
-      fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip,
-                 GetReg64(WHvX64RegisterRflags));
-      return SetReg64(WHvX64RegisterRflags,
-                      Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
+    //
+    // OK we got here because we are single stepping through the testcase.
+    //
+
+    WHV_X64_INTERRUPT_STATE_REGISTER InterruptState;
+    InterruptState.AsUINT64 = GetReg64(WHvRegisterInterruptState);
+    InterruptState.InterruptShadow = 0;
+    const HRESULT Hr =
+        SetReg64(WHvRegisterInterruptState, InterruptState.AsUINT64);
+    if (FAILED(Hr)) {
+      fmt::print("Failed to set WHvRegisterInterruptState\n");
+      return Hr;
     }
 
-    fmt::print(
-        "Got into OnDebugTrap with LastBreakpointGpa_ = 0xffffffffffffffff");
-    std::abort();
+    fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip,
+               GetReg64(WHvX64RegisterRflags));
+
+    StripTrapFlag = false;
+  } else {
+    if (LastBreakpointGpa_ == Gpa_t(0xffffffffffffffff)) {
+      fmt::print(
+          "Got into OnDebugTrap with LastBreakpointGpa_ = 0xffffffffffffffff");
+      std::abort();
+    }
+
+    WhvDebugPrint("Resetting breakpoint @ {:#x}", LastBreakpointGpa_);
+
+    //
+    // Remember if we get there, it is because we hit a breakpoint, turned on
+    // TF in order to step over the instruction, and now we get the chance to
+    // turn it back on.
+    //
+
+    Ram_.AddBreakpoint(LastBreakpointGpa_);
+
+    //
+    // Either strip or turn on TF.
+    //
+
+    LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
   }
 
-  //
-  // Remember if we get there, it is because we hit a breakpoint, turned on
-  // TF in order to step over the instruction, and now we get the chance to
-  // turn it back on.
-  //
+  if (StripTrapFlag) {
+    WhvDebugPrint("Turning off RFLAGS.TF\n");
+    return SetReg64(WHvX64RegisterRflags,
+                    Exception.VpContext.Rflags & (~RFLAGS_TRAP_FLAG_FLAG));
+  }
 
-  Ram_.AddBreakpoint(LastBreakpointGpa_);
-
-  //
-  // Strip TF off Rflags.
-  //
-
-  WhvDebugPrint("Turning off RFLAGS.TF\n");
-  LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+  WhvDebugPrint("Setting RFLAGS.TF\n");
   return SetReg64(WHvX64RegisterRflags,
-                  Exception.VpContext.Rflags & (~RFLAGS_TRAP_FLAG_FLAG));
+                  Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
 }
 
 HRESULT
