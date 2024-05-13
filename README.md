@@ -280,7 +280,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Code-coverage via software breakpoints,
 - ❌ Demand-paging so start-up is slow (as it needs to load the full crash-dump in memory),
 - ✔ Timeout is implemented with a timer,
-- ✔ Only code-coverage traces are supported,
+- ✅ Full execution traces are supported,
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
 - ✔ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
 
@@ -288,7 +288,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Code-coverage via software breakpoints,
 - ✅ Demand-paging is supported via UFDD,
 - ✔ Timeout is implemented with a timer. ✅ If the hardware supports PMU virtualization, it is used to generate a [PMI](https://forum.osdev.org/viewtopic.php?f=1&t=27040) after X retired instructions (`MSR_IA32_FIXED_CTR0`),
-- ✔ Only code-coverage traces are supported,
+- ✅ Full execution traces are supported,
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
 - ✅ Fastest for long executions (~500m - 1.5 billion instructions; ~100x faster than *bochscpu*, ~10x faster than *whv* when I was fuzzing IDA).
 

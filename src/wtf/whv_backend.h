@@ -10,9 +10,8 @@
 #include <WinHvPlatform.h>
 #include <cstdint>
 #include <fmt/format.h>
+#include <optional>
 #include <string>
-
-#define WHvX64ExceptionTypeFailFast (0x29)
 
 //
 // This is the run stats for the WHV backend.
@@ -152,7 +151,7 @@ class WhvBackend_t : public Backend_t {
   // This is the GPA of the last breakpoint we disabled.
   //
 
-  Gpa_t LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+  std::optional<Gpa_t> LastBreakpointGpa_;
 
   //
   // This is the RAM.

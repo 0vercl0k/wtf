@@ -787,11 +787,15 @@ std::optional<TestcaseResult_t> WhvBackend_t::Run(const uint8_t *Buffer,
   Coverage_.clear();
 
   //
-  // Turn on what we need to provide a rip trace.
+  // Turn on what we need to provide a rip trace:
+  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
+  //   instructions. This allows us to single-step through those.
+  //   - Turn on the TF.
+  //   - Make sure to log the first address as we'll only receive an event AFTER
+  //   that instruction.
   //
 
   if (TraceType_ == TraceType_t::Rip) {
-    fmt::print("Setting stuff up for rip trace..\n");
     HRESULT Hr = SetReg64(WHvX64RegisterSfmask, GetReg64(WHvX64RegisterSfmask) &
                                                     (~RFLAGS_TRAP_FLAG_FLAG));
     if (FAILED(Hr)) {
@@ -1136,8 +1140,6 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // to continue execution.
   //
 
-  bool StripTrapFlag = true;
-
   WhvDebugPrint("Received debug trap @ {:#x}\n", Exception.VpContext.Rip);
 
   if (TraceType_ == TraceType_t::Rip) {
@@ -1156,18 +1158,14 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
       return Hr;
     }
 
-    fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip,
-               GetReg64(WHvX64RegisterRflags));
-
-    StripTrapFlag = false;
+    fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip);
   } else {
-    if (LastBreakpointGpa_ == Gpa_t(0xffffffffffffffff)) {
-      fmt::print(
-          "Got into OnDebugTrap with LastBreakpointGpa_ = 0xffffffffffffffff");
-      std::abort();
+    if (!LastBreakpointGpa_) {
+      fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none");
+      return E_FAIL;
     }
 
-    WhvDebugPrint("Resetting breakpoint @ {:#x}", LastBreakpointGpa_);
+    WhvDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
 
     //
     // Remember if we get there, it is because we hit a breakpoint, turned on
@@ -1175,24 +1173,23 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     // turn it back on.
     //
 
-    Ram_.AddBreakpoint(LastBreakpointGpa_);
-
-    //
-    // Either strip or turn on TF.
-    //
-
-    LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+    Ram_.AddBreakpoint(*LastBreakpointGpa_);
+    LastBreakpointGpa_.reset();
   }
 
-  if (StripTrapFlag) {
-    WhvDebugPrint("Turning off RFLAGS.TF\n");
+  //
+  // Either strip off or turn on TF.
+  //
+
+  if (TraceType_ == TraceType_t::Rip) {
+    WhvDebugPrint("Setting RFLAGS.TF\n");
     return SetReg64(WHvX64RegisterRflags,
-                    Exception.VpContext.Rflags & (~RFLAGS_TRAP_FLAG_FLAG));
-  }
+                    Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
 
-  WhvDebugPrint("Setting RFLAGS.TF\n");
-  return SetReg64(WHvX64RegisterRflags,
-                  Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
+  } else {
+    WhvDebugPrint("Turning off RFLAGS.TF\n");
+    return S_OK;
+  }
 }
 
 HRESULT
