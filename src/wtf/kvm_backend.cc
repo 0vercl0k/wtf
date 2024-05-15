@@ -1254,6 +1254,10 @@ bool KvmBackend_t::OnExitCoverageBp(const Gva_t Rip) {
   const Gpa_t Gpa = CovBreakpoints_.at(Rip);
   Ram_.RemoveBreakpoint(Gpa);
 
+  if (TraceType_ == TraceType_t::UniqueRip) {
+    fmt::print(TraceFile_, "{:#x}\n", Rip);
+  }
+
   CovBreakpoints_.erase(Rip);
   Coverage_.emplace(Rip);
   return true;
