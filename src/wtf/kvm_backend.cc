@@ -396,43 +396,45 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
   // on the vector 0xfe (hal!HalPerfInterrupt).
   //
 
-  union ApicLVTRegister_t {
-    struct {
-      uint32_t Vector : 8;
-      uint32_t DeliveryMode : 3;
-      uint32_t Reserved : 1;
-      uint32_t DeliveryStatus : 1;
-      uint32_t Reserved2 : 3;
-      uint32_t Mask : 1;
-      uint32_t Reserved3 : 15;
+  if (PmuAvailable_) {
+    union ApicLVTRegister_t {
+      struct {
+        uint32_t Vector : 8;
+        uint32_t DeliveryMode : 3;
+        uint32_t Reserved : 1;
+        uint32_t DeliveryStatus : 1;
+        uint32_t Reserved2 : 3;
+        uint32_t Mask : 1;
+        uint32_t Reserved3 : 15;
+      };
+      uint32_t Flags;
+      ApicLVTRegister_t() : Flags(0) {}
     };
-    uint32_t Flags;
-    ApicLVTRegister_t() : Flags(0) {}
-  };
-  ApicLVTRegister_t ApicLVTPerfMonCountersRegister;
+    ApicLVTRegister_t ApicLVTPerfMonCountersRegister;
 
-  ApicLVTPerfMonCountersRegister.DeliveryMode = APIC_MODE_FIXED;
-  ApicLVTPerfMonCountersRegister.Vector = 0xFE;
-  *(uint32_t *)(Lapic_.regs + APIC_LVTPC) =
-      ApicLVTPerfMonCountersRegister.Flags;
+    ApicLVTPerfMonCountersRegister.DeliveryMode = APIC_MODE_FIXED;
+    ApicLVTPerfMonCountersRegister.Vector = 0xFE;
+    *(uint32_t *)(Lapic_.regs + APIC_LVTPC) =
+        ApicLVTPerfMonCountersRegister.Flags;
 
-  //
-  // XXX: Supposedely turn on the local APIC? I'm not entirely sure why it is
-  // needed.
-  //
+    //
+    // XXX: Supposedely turn on the local APIC? I'm not entirely sure why it is
+    // needed.
+    //
 
-  union ApicSpuriousInterruptVectorRegister_t {
-    struct {
-      uint32_t Vector : 8;
-      uint32_t ApicEnabled : 1;
-    };
-    uint32_t Flags;
-    ApicSpuriousInterruptVectorRegister_t() : Flags(0) {}
-  } ApicSpuriousInterruptVectorRegister;
+    union ApicSpuriousInterruptVectorRegister_t {
+      struct {
+        uint32_t Vector : 8;
+        uint32_t ApicEnabled : 1;
+      };
+      uint32_t Flags;
+      ApicSpuriousInterruptVectorRegister_t() : Flags(0) {}
+    } ApicSpuriousInterruptVectorRegister;
 
-  ApicSpuriousInterruptVectorRegister.ApicEnabled = 1;
-  *(uint32_t *)(Lapic_.regs + APIC_SPIV) =
-      ApicSpuriousInterruptVectorRegister.Flags;
+    ApicSpuriousInterruptVectorRegister.ApicEnabled = 1;
+    *(uint32_t *)(Lapic_.regs + APIC_SPIV) =
+        ApicSpuriousInterruptVectorRegister.Flags;
+  }
 
   //
   // Configure the VM.
@@ -530,10 +532,11 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
 }
 
 //
-// A good start to debug KVM_SET_REGS issues is to start by: __kvm_set_msr /
-// vmx_set_msr For PMU MSRS: hand-off happens in kvm_set_msr_common;
-// intel_is_valid_msr / intel_pmu_set_msr / intel_pmu_get_msr (intel_pmu_ops /
-// pmu_intel.c)
+// A good start to debug KVM_SET_REGS issues is to start by: `__kvm_set_msr` /
+// `vmx_set_msr`.
+// For PMU MSRS: hand-off happens in `kvm_set_msr_common`;
+// `intel_is_valid_msr` / `intel_pmu_set_msr` / `intel_pmu_get_msr`
+// (`intel_pmu_ops` / `pmu_intel.c`)
 //
 
 bool KvmBackend_t::LoadMsrs(const CpuState_t &CpuState) {
@@ -1403,16 +1406,6 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
       //
       // OK we got here because we are single stepping through the testcase.
       //
-
-      // WHV_X64_INTERRUPT_STATE_REGISTER InterruptState;
-      // InterruptState.AsUINT64 = GetReg64(WHvRegisterInterruptState);
-      // InterruptState.InterruptShadow = 0;
-      // const HRESULT Hr =
-      //     SetReg64(WHvRegisterInterruptState, InterruptState.AsUINT64);
-      // if (FAILED(Hr)) {
-      //   fmt::print("Failed to set WHvRegisterInterruptState\n");
-      //   return Hr;
-      // }
 
       fmt::print(TraceFile_, "{:#x}\n", Rip);
     } else {
