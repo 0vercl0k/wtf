@@ -799,13 +799,26 @@ bool KvmBackend_t::SetRegs(const struct kvm_regs &Regs) {
   return true;
 }
 
-bool KvmBackend_t::SetDregs(struct kvm_guest_debug &Dregs) {
-  if (ioctl(Vp_, KVM_SET_GUEST_DEBUG, &Dregs) < 0) {
+bool KvmBackend_t::SetDreg(struct kvm_guest_debug &Dreg) {
+  if (ioctl(Vp_, KVM_SET_GUEST_DEBUG, &Dreg) < 0) {
     perror("KVM_SET_GUEST_DEBUG failed");
     return false;
   }
 
   return true;
+}
+
+bool KvmBackend_t::SetTrapFlag() {
+  auto &Events = Run_->s.regs.events;
+  KvmDebugPrint("Turning on RFLAGS.TF\n");
+
+  memset(&Events.interrupt, 0, sizeof(Events.interrupt));
+  Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
+
+  struct kvm_guest_debug Dreg = {0};
+  Dreg.control =
+      KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP;
+  return SetDreg(Dreg);
 }
 
 bool KvmBackend_t::LoadRegs(const CpuState_t &CpuState) {
@@ -933,14 +946,7 @@ bool KvmBackend_t::LoadDebugRegs(const CpuState_t &CpuState) {
 #define KVM_GUESTDBG_USE_SW_BP 0x00010000
 
   Dregs.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
-  Dregs.arch.debugreg[0] = CpuState.Dr0;
-  Dregs.arch.debugreg[1] = CpuState.Dr1;
-  Dregs.arch.debugreg[2] = CpuState.Dr2;
-  Dregs.arch.debugreg[3] = CpuState.Dr3;
-  Dregs.arch.debugreg[6] = CpuState.Dr6;
-  Dregs.arch.debugreg[7] = CpuState.Dr7;
-
-  if (!SetDregs(Dregs)) {
+  if (!SetDreg(Dregs)) {
     return false;
   }
 
@@ -1245,17 +1251,13 @@ bool KvmBackend_t::OnExitCoverageBp(const Gva_t Rip) {
   const Gpa_t Gpa = CovBreakpoints_.at(Rip);
   Ram_.RemoveBreakpoint(Gpa);
 
-  if (TraceFile_) {
-    fmt::print(TraceFile_, "{:#x}\n", Rip);
-  }
-
   CovBreakpoints_.erase(Rip);
   Coverage_.emplace(Rip);
   return true;
 }
 
 bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
-  const Gva_t Rip = Gva_t(Debug.pc);
+  const auto Rip = Gva_t(Debug.pc);
 
   if (Debug.exception == 3) {
 
@@ -1277,6 +1279,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     //
 
     if (CoverageBp) {
+      KvmDebugPrint("Handling coverage bp @ {:#x}\n", Rip);
       if (!OnExitCoverageBp(Rip)) {
         return false;
       }
@@ -1294,6 +1297,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     // Well this was also a normal breakpoint..
     //
 
+    KvmDebugPrint("Handling bp @ {:#x}\n", Rip);
     KvmBreakpoint_t &Breakpoint = Breakpoints_.at(Rip);
     Breakpoint.Handler(this);
 
@@ -1313,9 +1317,70 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     // stop the testcase, then no need to single step over the instruction.
     //
 
+    if (Stop_) {
+      KvmDebugPrint("The bp handler asked us to stop so no need to do the "
+                    "step-over dance\n");
+      return true;
+    }
+
+    const bool RipChanged = Run_->s.regs.regs.rip != Rip.U64();
+    if (RipChanged) {
+      KvmDebugPrint(
+          "The bp handler ended up moving @rip from {:#x} to {:#x} so "
+          "no need to do the step-over dance\n",
+          Rip, Run_->s.regs.regs.rip);
+
+      //
+      // If we are single-stepping through the test-case and a handler moved
+      // execution somewhere else, we need to include that location in the
+      // trace file, or we'll miss this instruction (we'll get the one right
+      // after it when TF triggers).
+      //
+
+      if (TraceType_ == TraceType_t::Rip) {
+
+        //
+        // Force flush the GPRs into the VCPU. This is needed to have
+        // `KVM_GUESTDBG_SINGLESTEP` works properly. When we call `SetTrapFlag`
+        // / `KVM_SET_GUEST_DEBUG`, we end up in
+        // `kvm_arch_vcpu_ioctl_set_guest_debug`.
+        //
+        // The way `KVM_GUESTDBG_SINGLESTEP` works is that it'll grab the
+        // current @rip and keep track of it in the `vcpu`:
+        //
+        // ```
+        // int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
+        //					struct kvm_guest_debug *dbg)
+        // {
+        // ...
+        // 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP)
+        //     vcpu->arch.singlestep_rip = kvm_get_linear_rip(vcpu);
+        // ...
+        // ```
+        SetRegs(Run_->s.regs.regs);
+
+        //
+        // We just flushed the GPRs to the vcpu, no need to do that again when
+        // reentering.
+        //
+
+        Run_->kvm_dirty_regs &= ~KVM_SYNC_X86_REGS;
+
+        if (!SetTrapFlag()) {
+          return false;
+        }
+
+        fmt::print(TraceFile_, "{:#x}\n", Run_->s.regs.regs.rip);
+      }
+
+      return true;
+    }
+
     const auto &Exception = Run_->s.regs.events.exception;
     const bool InjectedPf = Exception.injected == 1 && Exception.nr == PfVector;
-    if (Run_->s.regs.regs.rip != Rip.U64() || InjectedPf || Stop_) {
+    if (InjectedPf) {
+      KvmDebugPrint("The bp handler injected a #PF so no need to do the "
+                    "step-over dance\n");
       return true;
     }
 
@@ -1325,45 +1390,58 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     // fault.
     //
 
-    KvmDebugPrint("Disarming bp and turning on RFLAGS.TF\n");
+    KvmDebugPrint("Disarming bp and turning on RFLAGS.TF (rip={:#x})\n", Rip);
     LastBreakpointGpa_ = Breakpoint.Gpa;
 
     Ram_.RemoveBreakpoint(Breakpoint.Gpa);
+    return SetTrapFlag();
+  } else if (Debug.exception == 1) {
+    KvmDebugPrint("Received debug trap @ {:#x}\n", Rip);
 
-    struct kvm_guest_debug Dregs;
-    Dregs.control =
-        KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP;
-    if (!SetDregs(Dregs)) {
-      return false;
+    if (TraceType_ == TraceType_t::Rip) {
+
+      //
+      // OK we got here because we are single stepping through the testcase.
+      //
+
+      // WHV_X64_INTERRUPT_STATE_REGISTER InterruptState;
+      // InterruptState.AsUINT64 = GetReg64(WHvRegisterInterruptState);
+      // InterruptState.InterruptShadow = 0;
+      // const HRESULT Hr =
+      //     SetReg64(WHvRegisterInterruptState, InterruptState.AsUINT64);
+      // if (FAILED(Hr)) {
+      //   fmt::print("Failed to set WHvRegisterInterruptState\n");
+      //   return Hr;
+      // }
+
+      fmt::print(TraceFile_, "{:#x}\n", Rip);
+    } else {
+      if (!LastBreakpointGpa_) {
+        fmt::print("Got into OnExitDebug with LastBreakpointGpa_ = "
+                   "none");
+        return false;
+      }
+
+      KvmDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
+
+      //
+      // Remember if we get there, it is because we hit a breakpoint, turned on
+      // TF in order to step over the instruction, and now we get the chance to
+      // turn it back on.
+      //
+
+      Ram_.AddBreakpoint(*LastBreakpointGpa_);
+      LastBreakpointGpa_.reset();
     }
 
-    return true;
-  }
-
-  if (Debug.exception == 1) {
-
-    //
-    // If we got a TF, then let's re-enable all our of breakpoints. Remember if
-    // we get there, it is because we hit a breakpoint, turned on TF in order to
-    // step over the instruction, and now we get the chance to turn back on the
-    // breakpoint.
-    //
-
-    Ram_.AddBreakpoint(LastBreakpointGpa_);
-    LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
-
-    //
-    // Strip TF off Rflags.
-    //
-
-    struct kvm_guest_debug Dregs;
-    Dregs.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
-    if (!SetDregs(Dregs)) {
-      return false;
+    if (TraceType_ == TraceType_t::Rip) {
+      return SetTrapFlag();
     }
 
     KvmDebugPrint("Turning off RFLAGS.TF\n");
     return true;
+  } else {
+    std::abort();
   }
 
   return true;
@@ -1456,6 +1534,35 @@ std::optional<TestcaseResult_t> KvmBackend_t::Run(const uint8_t *Buffer,
   TestcaseRes_ = Ok_t();
   Coverage_.clear();
   Run_->immediate_exit = 0;
+
+  //
+  // Turn on what we need to provide a rip trace:
+  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
+  //   instructions. This allows us to single-step through those.
+  //   - Turn on the TF.
+  //   - Make sure to log the first address as we'll only receive an event AFTER
+  //   that instruction.
+  //
+
+  if (TraceType_ == TraceType_t::Rip) {
+    if (!SetMsr(MSR_IA32_SFMASK,
+                GetMsr(MSR_IA32_SFMASK) & (~RFLAGS_TRAP_FLAG_FLAG))) {
+      perror("SetMsr");
+      return {};
+    }
+
+    if (!SetTrapFlag()) {
+      perror("SetTrapFlag");
+      return {};
+    }
+
+    //
+    // The trap flag triggers after the first instruction so make sure to
+    // include its address in the trace.
+    //
+
+    fmt::print(TraceFile_, "{:#x}\n", GetReg(Registers_t::Rip));
+  }
 
   while (!Stop_) {
 
@@ -1864,10 +1971,6 @@ void KvmBackend_t::PrintRunStats() { RunStats_.Print(); }
 
 bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
                                 const TraceType_t TraceType) {
-  if (TraceType == TraceType_t::Rip) {
-    fmt::print("Rip traces are not supported by kvm.\n");
-    return false;
-  }
 
   //
   // Open the trace file.
@@ -1878,6 +1981,7 @@ bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
     return false;
   }
 
+  TraceType_ = TraceType;
   return true;
 }
 
@@ -2031,14 +2135,14 @@ bool KvmBackend_t::PageFaultsMemoryIfNeeded(const Gva_t Gva,
   }
 
   KvmDebugPrint("Inserting page fault for GVA {:#x}\n", PageToFault);
-  Run_->s.regs.sregs.cr2 = PageToFault.U64();
+  SetReg(Registers_t::Cr2, PageToFault.U64());
 
   Run_->s.regs.events.exception = {.injected = 1,
                                    .nr = PfVector,
                                    .has_error_code = 1,
                                    .error_code = ErrorWrite | ErrorUser};
 
-  Run_->kvm_dirty_regs |= KVM_SYNC_X86_SREGS | KVM_SYNC_X86_EVENTS;
+  Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
   return true;
 }
 

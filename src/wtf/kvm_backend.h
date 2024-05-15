@@ -9,6 +9,7 @@
 #include <array>
 #include <linux/kvm.h>
 #include <memory>
+#include <optional>
 #include <signal.h>
 #include <thread>
 
@@ -287,7 +288,7 @@ private:
 
   std::array<KvmMemoryRegion_t, 2> MemoryRegions_;
 
-  Gpa_t LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+  std::optional<Gpa_t> LastBreakpointGpa_;
 
 public:
   //
