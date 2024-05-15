@@ -490,6 +490,10 @@ private:
 
   bool LoadDebugRegs(const CpuState_t &CpuState);
 
+  //
+  // Turn on trap flag.
+  //
+
   bool SetTrapFlag();
 
   //
