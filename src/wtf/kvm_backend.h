@@ -247,6 +247,12 @@ private:
   uint64_t Limit_ = 0;
 
   //
+  // This is the trace type.
+  //
+
+  TraceType_t TraceType_ = TraceType_t::NoTrace;
+
+  //
   // This is the trace file if we are tracing the current test case.
   //
 
@@ -484,11 +490,13 @@ private:
 
   bool LoadDebugRegs(const CpuState_t &CpuState);
 
+  bool SetTrapFlag();
+
   //
   // Set the kvm_guest_debug.
   //
 
-  bool SetDregs(struct kvm_guest_debug &Dregs);
+  bool SetDreg(struct kvm_guest_debug &Dreg);
 
   //
   // Load the FPU state into the VP.
