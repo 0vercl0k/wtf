@@ -1327,6 +1327,15 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     if (Stop_) {
       KvmDebugPrint("The bp handler asked us to stop so no need to do the "
                     "step-over dance\n");
+
+      //
+      // Don't forget to log the last instruction in the trace.
+      //
+
+      if (TraceType_ == TraceType_t::Rip) {
+        fmt::print(TraceFile_, "{:#x}\n", Run_->s.regs.regs.rip);
+      }
+
       return true;
     }
 
