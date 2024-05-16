@@ -192,6 +192,8 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   // kd> ub fffff805`3b8287c4 l1
   // nt!ExGenRandom+0xe0:
   // fffff805`3b8287c0 480fc7f2        rdrand  rdx
+  //
+
   const Gva_t ExGenRandom = Gva_t(g_Dbg->GetSymbol("nt!ExGenRandom") + 0xe0 + 4);
   if (g_Backend->VirtRead4(ExGenRandom - Gva_t(4)) != 0xf2c70f48) {
     fmt::print("It seems that nt!ExGenRandom's code has changed, update the "
@@ -237,6 +239,19 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
         Backend->Stop(Cr3Change_t());
       })) {
     fmt::print("Failed to SetBreakpoint SwapContext\n");
+    return false;
+  }
+
+
+  //
+  // Catch the PMI interrupt used for timeouts when PMU is available.
+  //
+
+  if (!g_Backend->SetBreakpoint("hal!HalpPerfInterrupt",
+                                [](Backend_t *Backend) {
+                                  DebugPrint("Got PMI!\n");
+                                  Backend->Stop(Timedout_t());
+                                })) {
     return false;
   }
 
