@@ -20,20 +20,6 @@ void CrashDetectionPrint(const char *Format, const Args_t &...args) {
 bool SetupUsermodeCrashDetectionHooks() {
 
   //
-  // This is to catch the PMI interrupt if performance counters are used to
-  // bound execution.
-  //
-
-  if (!g_Backend->SetBreakpoint("hal!HalpPerfInterrupt",
-                                [](Backend_t *Backend) {
-                                  CrashDetectionPrint("Perf interrupt\n");
-                                  Backend->Stop(Timedout_t());
-                                })) {
-    fmt::print(
-        "Failed to set breakpoint on HalpPerfInterrupt, but ignoring..\n");
-  }
-
-  //
   // Avoid the fuzzer to spin out of control if we mess-up real bad.
   //
 

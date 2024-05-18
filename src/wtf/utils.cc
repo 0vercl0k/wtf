@@ -484,3 +484,38 @@ ExceptionCodeToStr(const uint32_t ExceptionCode) {
   }
   return "UNKNOWN";
 }
+
+[[nodiscard]] bool BreakOnIDTEntries(Backend_t &Backend, const CpuState_t &CpuState) {
+  struct IdtEntry {
+    uint16_t Low;
+    uint16_t Selector;
+    uint8_t Ist;
+    uint8_t Attributes;
+    uint16_t Middle;
+    uint32_t High;
+    uint32_t Reserved;
+
+    IdtEntry() { memset(this, 0, sizeof(*this)); }
+
+    Gva_t Handler() const {
+      return Gva_t(uint64_t(High) << 32 | uint64_t(Middle) << 16 |
+                   uint64_t(Low));
+    }
+  };
+
+  for (size_t Idx = 0; Idx < 256; Idx++) {
+    const auto Address = Gva_t(CpuState.Idtr.Base + (Idx * sizeof(IdtEntry)));
+    IdtEntry Entry;
+    if (!Backend.VirtReadStruct<IdtEntry>(Address, &Entry)) {
+      return false;
+    }
+
+    if (!Backend.SetBreakpoint(Entry.Handler(), [](Backend_t *Backend) {
+          Backend->TrapFlag(true);
+        })) {
+      return false;
+    }
+  }
+
+  return true;
+}

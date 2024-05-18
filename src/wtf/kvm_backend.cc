@@ -811,19 +811,6 @@ bool KvmBackend_t::SetDreg(struct kvm_guest_debug &Dreg) {
   return true;
 }
 
-bool KvmBackend_t::SetTrapFlag() {
-  auto &Events = Run_->s.regs.events;
-  KvmDebugPrint("Turning on RFLAGS.TF\n");
-
-  memset(&Events.interrupt, 0, sizeof(Events.interrupt));
-  Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
-
-  struct kvm_guest_debug Dreg = {0};
-  Dreg.control =
-      KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP;
-  return SetDreg(Dreg);
-}
-
 bool KvmBackend_t::LoadRegs(const CpuState_t &CpuState) {
   //
   // Set the GPRs.
@@ -1357,8 +1344,8 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
 
         //
         // Force flush the GPRs into the VCPU. This is needed to have
-        // `KVM_GUESTDBG_SINGLESTEP` works properly. When we call `SetTrapFlag`
-        // / `KVM_SET_GUEST_DEBUG`, we end up in
+        // `KVM_GUESTDBG_SINGLESTEP` works properly. When we call
+        // `TrapFlag(true)` / `KVM_SET_GUEST_DEBUG`, we end up in
         // `kvm_arch_vcpu_ioctl_set_guest_debug`.
         //
         // The way `KVM_GUESTDBG_SINGLESTEP` works is that it'll grab the
@@ -1382,7 +1369,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
 
         Run_->kvm_dirty_regs &= ~KVM_SYNC_X86_REGS;
 
-        if (!SetTrapFlag()) {
+        if (!TrapFlag(true)) {
           return false;
         }
 
@@ -1410,7 +1397,8 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     LastBreakpointGpa_ = Breakpoint.Gpa;
 
     Ram_.RemoveBreakpoint(Breakpoint.Gpa);
-    return SetTrapFlag();
+    TrapFlag(true);
+    return true;
   } else if (Debug.exception == 1) {
     KvmDebugPrint("Received debug trap @ {:#x}\n", Rip);
 
@@ -1441,7 +1429,8 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     }
 
     if (TraceType_ == TraceType_t::Rip) {
-      return SetTrapFlag();
+      TrapFlag(true);
+      return true;
     }
 
     KvmDebugPrint("Turning off RFLAGS.TF\n");
@@ -1541,26 +1530,7 @@ std::optional<TestcaseResult_t> KvmBackend_t::Run(const uint8_t *Buffer,
   Coverage_.clear();
   Run_->immediate_exit = 0;
 
-  //
-  // Turn on what we need to provide a rip trace:
-  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
-  //   instructions. This allows us to single-step through those.
-  //   - Turn on the TF.
-  //   - Make sure to log the first address as we'll only receive an event AFTER
-  //   that instruction.
-  //
-
   if (TraceType_ == TraceType_t::Rip) {
-    if (!SetMsr(MSR_IA32_SFMASK,
-                GetMsr(MSR_IA32_SFMASK) & (~RFLAGS_TRAP_FLAG_FLAG))) {
-      perror("SetMsr");
-      return {};
-    }
-
-    if (!SetTrapFlag()) {
-      perror("SetTrapFlag");
-      return {};
-    }
 
     //
     // The trap flag triggers after the first instruction so make sure to
@@ -1757,7 +1727,7 @@ void KvmBackend_t::Stop(const TestcaseResult_t &Res) {
 
 void KvmBackend_t::SetLimit(const uint64_t Limit) { Limit_ = Limit; }
 
-uint64_t KvmBackend_t::GetReg(const Registers_t Reg) {
+uint64_t KvmBackend_t::GetReg(const Registers_t Reg) const {
   switch (Reg) {
   case Registers_t::Rax: {
     return Run_->s.regs.regs.rax;
@@ -1989,6 +1959,27 @@ bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
 
   TraceType_ = TraceType;
   return true;
+}
+
+bool KvmBackend_t::EnableSingleStep(CpuState_t &CpuState) {
+  //
+  // Turn on what we need to provide a rip trace:
+  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
+  //   instructions. This allows us to single-step through those.
+  //   - Turn on the TF.
+  //   - Make sure to log the first address as we'll only receive an event AFTER
+  //   that instruction.
+  //
+
+  CpuState.Sfmask &= ~RFLAGS_TRAP_FLAG_FLAG;
+  CpuState.Rflags |= RFLAGS_TRAP_FLAG_FLAG;
+
+  //
+  // Set a breakpoint on every IDT entries to be able to trace through
+  // interrupts/exceptions.
+  //
+
+  return BreakOnIDTEntries(*this, CpuState);
 }
 
 bool KvmBackend_t::SetBreakpoint(const Gva_t Gva,
@@ -2471,4 +2462,25 @@ void KvmBackend_t::StaticSignalAlarm(int, siginfo_t *, void *) {
   KvmBackend->SignalAlarm();
 }
 
+void KvmBackend_t::TrapFlag(const bool Arm) {
+  KvmDebugPrint("Turning on RFLAGS.TF\n");
+
+  struct kvm_guest_debug Dreg = {0};
+  Dreg.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
+
+  if (Arm) {
+    Dreg.control |= KVM_GUESTDBG_SINGLESTEP;
+  }
+
+  memset(&Events.interrupt, 0, sizeof(Events.interrupt));
+  Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
+
+  if (!SetDreg(Dreg)) {
+    std::abort();
+  }
+}
+
+[[nodiscard]] bool KvmBackend_t::TrapFlag() const {
+  return (GetReg64(WHvX64RegisterRflags) & RFLAGS_TRAP_FLAG_FLAG) != 0;
+}
 #endif

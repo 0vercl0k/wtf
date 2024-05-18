@@ -220,7 +220,7 @@ public:
   // Registers.
   //
 
-  uint64_t GetReg(const Registers_t Reg) override;
+  uint64_t GetReg(const Registers_t Reg) const override;
   uint64_t SetReg(const Registers_t Reg, const uint64_t Value) override;
 
   //

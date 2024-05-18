@@ -154,6 +154,12 @@ class WhvBackend_t : public Backend_t {
   std::optional<Gpa_t> LastBreakpointGpa_;
 
   //
+  //
+  //
+
+  std::optional<uint64_t> LastTF_;
+
+  //
   // This is the RAM.
   //
 
@@ -256,7 +262,7 @@ public:
   // Registers.
   //
 
-  uint64_t GetReg(const Registers_t Reg) override;
+  uint64_t GetReg(const Registers_t Reg) const override;
   uint64_t SetReg(const Registers_t Reg, const uint64_t Value) override;
 
   //
@@ -277,6 +283,8 @@ public:
 
   bool SetTraceFile(const fs::path &TestcaseTracePath,
                     const TraceType_t TraceType) override;
+
+  bool EnableSingleStep(CpuState_t &CpuState) override;
 
   //
   // Breakpoints.

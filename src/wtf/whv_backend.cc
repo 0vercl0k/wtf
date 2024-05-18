@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <fstream>
 
-constexpr bool WhvLoggingOn = false;
+constexpr bool WhvLoggingOn = true;
 
 template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
@@ -786,29 +786,7 @@ std::optional<TestcaseResult_t> WhvBackend_t::Run(const uint8_t *Buffer,
   TestcaseRes_ = Ok_t();
   Coverage_.clear();
 
-  //
-  // Turn on what we need to provide a rip trace:
-  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
-  //   instructions. This allows us to single-step through those.
-  //   - Turn on the TF.
-  //   - Make sure to log the first address as we'll only receive an event AFTER
-  //   that instruction.
-  //
-
   if (TraceType_ == TraceType_t::Rip) {
-    HRESULT Hr = SetReg64(WHvX64RegisterSfmask, GetReg64(WHvX64RegisterSfmask) &
-                                                    (~RFLAGS_TRAP_FLAG_FLAG));
-    if (FAILED(Hr)) {
-      fmt::print("Fixing sfmask for rip tracing failed\n");
-      std::abort();
-    }
-
-    Hr = SetReg64(WHvX64RegisterRflags,
-                  GetReg64(WHvX64RegisterRflags) | RFLAGS_TRAP_FLAG_FLAG);
-    if (FAILED(Hr)) {
-      fmt::print("Fixing rflags for rip tracing failed\n");
-      std::abort();
-    }
 
     //
     // The trap flag triggers after the first instruction so make sure to
@@ -1041,6 +1019,8 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     return S_OK;
   }
 
+  fmt::print(TraceFile_, "{:#x}\n", Rip);
+
   //
   // Well this was also a normal breakpoint.. so we need to invoke the
   // handler.
@@ -1182,7 +1162,7 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   //
 
   if (TraceType_ == TraceType_t::Rip) {
-    WhvDebugPrint("Setting RFLAGS.TF\n");
+    WhvDebugPrint("Turning on RFLAGS.TF\n");
     return SetReg64(WHvX64RegisterRflags,
                     Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
 
@@ -1220,8 +1200,9 @@ WhvBackend_t::OnExitReasonException(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     // is enabled after the handling of regular / coverage breakpoints.
     //
 
-    return SetReg64(WHvX64RegisterRflags,
-                    GetReg64(WHvX64RegisterRflags) | RFLAGS_TRAP_FLAG_FLAG);
+    WhvDebugPrint("Turning on RFLAGS.TF\n");
+    TrapFlag(true);
+    return S_OK;
   }
 
   case WHvX64ExceptionTypeDebugTrapOrFault: {
@@ -1229,6 +1210,10 @@ WhvBackend_t::OnExitReasonException(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   }
 
   case WHvX64ExceptionTypeDivideErrorFault: {
+    if (TraceType_ == TraceType_t::Rip) {
+      fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip);
+    }
+
     SaveCrash(Gva_t(Exception.VpContext.Rip), EXCEPTION_INT_DIVIDE_BY_ZERO);
     return S_OK;
   }
@@ -1437,7 +1422,27 @@ bool WhvBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
   return true;
 }
 
-uint64_t WhvBackend_t::GetReg(const Registers_t Reg) {
+bool WhvBackend_t::EnableSingleStep(CpuState_t &CpuState) {
+
+  //
+  // Turn on what we need to provide a rip trace:
+  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
+  //   instructions. This allows us to single-step through those.
+  //   - Turn on the TF.
+  //
+
+  CpuState.Sfmask &= ~RFLAGS_TRAP_FLAG_FLAG;
+  CpuState.Rflags |= RFLAGS_TRAP_FLAG_FLAG;
+
+  //
+  // Set a breakpoint on every IDT entries to be able to trace through
+  // interrupts/exceptions.
+  //
+
+  return BreakOnIDTEntries(*this, CpuState);
+}
+
+uint64_t WhvBackend_t::GetReg(const Registers_t Reg) const {
   if (!RegisterMapping.contains(Reg)) {
     fmt::print("There is no mapping for register {:#x}.\n", Reg);
     __debugbreak();

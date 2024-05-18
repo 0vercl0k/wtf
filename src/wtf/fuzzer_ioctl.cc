@@ -242,19 +242,6 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
     return false;
   }
 
-
-  //
-  // Catch the PMI interrupt used for timeouts when PMU is available.
-  //
-
-  if (!g_Backend->SetBreakpoint("hal!HalpPerfInterrupt",
-                                [](Backend_t *Backend) {
-                                  DebugPrint("Got PMI!\n");
-                                  Backend->Stop(Timedout_t());
-                                })) {
-    return false;
-  }
-
   return true;
 }
 

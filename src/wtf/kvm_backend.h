@@ -345,7 +345,7 @@ public:
   // Registers.
   //
 
-  uint64_t GetReg(const Registers_t Reg) override;
+  uint64_t GetReg(const Registers_t Reg) const override;
   uint64_t SetReg(const Registers_t Reg, const uint64_t Value) override;
 
   //
@@ -366,6 +366,8 @@ public:
 
   bool SetTraceFile(const fs::path &TestcaseTracePath,
                     const TraceType_t TraceType) override;
+
+  bool EnableSingleStep(CpuState_t &CpuState) override;
 
   //
   // Breakpoints.
@@ -410,6 +412,10 @@ public:
   const tsl::robin_set<Gva_t> &LastNewCoverage() const override;
 
   bool RevokeLastNewCoverage() override;
+
+  void TrapFlag(const bool Arm) override;
+
+  [[nodiscard]] bool TrapFlag() const override;
 
 private:
   //
@@ -489,12 +495,6 @@ private:
   //
 
   bool LoadDebugRegs(const CpuState_t &CpuState);
-
-  //
-  // Turn on trap flag.
-  //
-
-  bool SetTrapFlag();
 
   //
   // Set the kvm_guest_debug.

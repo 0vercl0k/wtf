@@ -501,6 +501,17 @@ int main(int argc, const char *argv[]) {
     }
 
     //
+    // Turn on single step before we load any state in the backend as single
+    // stepping might require to take over a few registers.
+    //
+
+    if (Wtf.got_subcommand("run") && Opts.Run.TraceType == TraceType_t::Rip) {
+      if (!g_Backend->EnableSingleStep(CpuState)) {
+        return EXIT_FAILURE;
+      }
+    }
+
+    //
     // We now have the real starting state we want to start with, so we make
     // sure it gets set in the backend and to do that we call the Restore
     // function. This ensures we start from a clean state.

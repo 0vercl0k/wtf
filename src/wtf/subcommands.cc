@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 namespace chrono = std::chrono;
 
 int RunSubcommand(const Options_t &Opts, const Target_t &Target,
-                  const CpuState_t &CpuState) {
+                  CpuState_t &CpuState) {
   const RunOptions_t &RunOpts = Opts.Run;
   std::vector<fs::path> Testcases;
 

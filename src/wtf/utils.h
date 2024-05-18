@@ -260,3 +260,6 @@ SaveFile(const fs::path &Path, const uint8_t *Buffer, const size_t BufferSize);
 //
 
 [[nodiscard]] std::string_view ExceptionCodeToStr(const uint32_t ExceptionCode);
+
+[[nodiscard]] bool BreakOnIDTEntries(Backend_t &Backend,
+                                     const CpuState_t &CpuState);

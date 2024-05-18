@@ -13,6 +13,8 @@ bool Backend_t::SetTraceFile(const fs::path &, const TraceType_t) {
   return true;
 }
 
+[[nodiscard]] bool Backend_t::EnableSingleStep(CpuState_t &) { return true; }
+
 bool Backend_t::PhysWrite(const Gpa_t Gpa, const uint8_t *Buffer,
                           const uint64_t BufferSize, const bool Dirty) {
   uint8_t *Dst = PhysTranslate(Gpa);
@@ -262,75 +264,96 @@ bool Backend_t::SetCrashBreakpoint(const char *Symbol) {
   return SetBreakpoint(Symbol, CrashBreakpointHandler);
 }
 
-uint64_t Backend_t::Rsp() { return GetReg(Registers_t::Rsp); }
+void Backend_t::TrapFlag(const bool Arm) {
+  uint64_t NewValue = Rflags();
+  if (Arm) {
+    NewValue |= RFLAGS_TRAP_FLAG_FLAG;
+  } else {
+    NewValue &= ~RFLAGS_TRAP_FLAG_FLAG;
+  }
+
+  Rflags(NewValue);
+}
+
+[[nodiscard]] bool Backend_t::TrapFlag() const {
+  return (Rflags() & RFLAGS_TRAP_FLAG_FLAG) != 0;
+}
+
+uint64_t Backend_t::Rflags() const { return GetReg(Registers_t::Rflags); }
+void Backend_t::Rflags(const uint64_t Value) {
+  SetReg(Registers_t::Rflags, Value);
+}
+void Backend_t::Rflags(const Gva_t Value) { Rflags(Value.U64()); }
+
+uint64_t Backend_t::Rsp() const { return GetReg(Registers_t::Rsp); }
 void Backend_t::Rsp(const uint64_t Value) { SetReg(Registers_t::Rsp, Value); }
 void Backend_t::Rsp(const Gva_t Value) { Rsp(Value.U64()); }
 
-uint64_t Backend_t::Rbp() { return GetReg(Registers_t::Rbp); }
+uint64_t Backend_t::Rbp() const { return GetReg(Registers_t::Rbp); }
 void Backend_t::Rbp(const uint64_t Value) { SetReg(Registers_t::Rbp, Value); }
 void Backend_t::Rbp(const Gva_t Value) { Rbp(Value.U64()); }
 
-uint64_t Backend_t::Rip() { return GetReg(Registers_t::Rip); }
+uint64_t Backend_t::Rip() const { return GetReg(Registers_t::Rip); }
 void Backend_t::Rip(const uint64_t Value) { SetReg(Registers_t::Rip, Value); }
 void Backend_t::Rip(const Gva_t Value) { Rip(Value.U64()); }
 
-uint64_t Backend_t::Rax() { return GetReg(Registers_t::Rax); }
+uint64_t Backend_t::Rax() const { return GetReg(Registers_t::Rax); }
 void Backend_t::Rax(const uint64_t Value) { SetReg(Registers_t::Rax, Value); }
 void Backend_t::Rax(const Gva_t Value) { Rax(Value.U64()); }
 
-uint64_t Backend_t::Rbx() { return GetReg(Registers_t::Rbx); }
+uint64_t Backend_t::Rbx() const { return GetReg(Registers_t::Rbx); }
 void Backend_t::Rbx(const uint64_t Value) { SetReg(Registers_t::Rbx, Value); }
 void Backend_t::Rbx(const Gva_t Value) { Rbx(Value.U64()); }
 
-uint64_t Backend_t::Rcx() { return GetReg(Registers_t::Rcx); }
+uint64_t Backend_t::Rcx() const { return GetReg(Registers_t::Rcx); }
 void Backend_t::Rcx(const uint64_t Value) { SetReg(Registers_t::Rcx, Value); }
 void Backend_t::Rcx(const Gva_t Value) { Rcx(Value.U64()); }
 
-uint64_t Backend_t::Rdx() { return GetReg(Registers_t::Rdx); }
+uint64_t Backend_t::Rdx() const { return GetReg(Registers_t::Rdx); }
 void Backend_t::Rdx(const uint64_t Value) { SetReg(Registers_t::Rdx, Value); }
 void Backend_t::Rdx(const Gva_t Value) { Rdx(Value.U64()); }
 
-uint64_t Backend_t::Rsi() { return GetReg(Registers_t::Rsi); }
+uint64_t Backend_t::Rsi() const { return GetReg(Registers_t::Rsi); }
 void Backend_t::Rsi(const uint64_t Value) { SetReg(Registers_t::Rsi, Value); }
 void Backend_t::Rsi(const Gva_t Value) { Rsi(Value.U64()); }
 
-uint64_t Backend_t::Rdi() { return GetReg(Registers_t::Rdi); }
+uint64_t Backend_t::Rdi() const { return GetReg(Registers_t::Rdi); }
 void Backend_t::Rdi(const uint64_t Value) { SetReg(Registers_t::Rdi, Value); }
 void Backend_t::Rdi(const Gva_t Value) { Rdi(Value.U64()); }
 
-uint64_t Backend_t::R8() { return GetReg(Registers_t::R8); }
+uint64_t Backend_t::R8() const { return GetReg(Registers_t::R8); }
 void Backend_t::R8(const uint64_t Value) { SetReg(Registers_t::R8, Value); }
 void Backend_t::R8(const Gva_t Value) { R8(Value.U64()); }
 
-uint64_t Backend_t::R9() { return GetReg(Registers_t::R9); }
+uint64_t Backend_t::R9() const { return GetReg(Registers_t::R9); }
 void Backend_t::R9(const uint64_t Value) { SetReg(Registers_t::R9, Value); }
 void Backend_t::R9(const Gva_t Value) { R9(Value.U64()); }
 
-uint64_t Backend_t::R10() { return GetReg(Registers_t::R10); }
+uint64_t Backend_t::R10() const { return GetReg(Registers_t::R10); }
 void Backend_t::R10(const uint64_t Value) { SetReg(Registers_t::R10, Value); }
 void Backend_t::R10(const Gva_t Value) { R10(Value.U64()); }
 
-uint64_t Backend_t::R11() { return GetReg(Registers_t::R11); }
+uint64_t Backend_t::R11() const { return GetReg(Registers_t::R11); }
 void Backend_t::R11(const uint64_t Value) { SetReg(Registers_t::R11, Value); }
 void Backend_t::R11(const Gva_t Value) { R11(Value.U64()); }
 
-uint64_t Backend_t::R12() { return GetReg(Registers_t::R12); }
+uint64_t Backend_t::R12() const { return GetReg(Registers_t::R12); }
 void Backend_t::R12(const uint64_t Value) { SetReg(Registers_t::R12, Value); }
 void Backend_t::R12(const Gva_t Value) { R12(Value.U64()); }
 
-uint64_t Backend_t::R13() { return GetReg(Registers_t::R13); }
+uint64_t Backend_t::R13() const { return GetReg(Registers_t::R13); }
 void Backend_t::R13(const uint64_t Value) { SetReg(Registers_t::R13, Value); }
 void Backend_t::R13(const Gva_t Value) { R13(Value.U64()); }
 
-uint64_t Backend_t::R14() { return GetReg(Registers_t::R14); }
+uint64_t Backend_t::R14() const { return GetReg(Registers_t::R14); }
 void Backend_t::R14(const uint64_t Value) { SetReg(Registers_t::R14, Value); }
 void Backend_t::R14(const Gva_t Value) { R14(Value.U64()); }
 
-uint64_t Backend_t::R15() { return GetReg(Registers_t::R15); }
+uint64_t Backend_t::R15() const { return GetReg(Registers_t::R15); }
 void Backend_t::R15(const uint64_t Value) { SetReg(Registers_t::R15, Value); }
 void Backend_t::R15(const Gva_t Value) { R15(Value.U64()); }
 
-uint64_t Backend_t::Cr2() { return GetReg(Registers_t::Cr2); }
+uint64_t Backend_t::Cr2() const { return GetReg(Registers_t::Cr2); }
 void Backend_t::Cr2(const uint64_t Value) { SetReg(Registers_t::Cr2, Value); }
 void Backend_t::Cr2(const Gva_t Value) { Cr2(Value.U64()); }
 

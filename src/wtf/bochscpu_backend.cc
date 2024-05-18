@@ -1121,7 +1121,7 @@ void BochscpuBackend_t::LoadState(const CpuState_t &State) {
   bochscpu_cpu_set_state(Cpu_, &Bochs);
 }
 
-uint64_t BochscpuBackend_t::GetReg(const Registers_t Reg) {
+uint64_t BochscpuBackend_t::GetReg(const Registers_t Reg) const {
   using BochscpuGetReg_t = uint64_t (*)(bochscpu_cpu_t);
   static const std::unordered_map<Registers_t, BochscpuGetReg_t>
       RegisterMappingGetters = {{Registers_t::Rax, bochscpu_cpu_rax},

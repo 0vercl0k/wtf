@@ -14,7 +14,7 @@ int MasterSubcommand(const Options_t &Opts, const Target_t &Target);
 //
 
 int RunSubcommand(const Options_t &Opts, const Target_t &Target,
-                  const CpuState_t &CpuState);
+                  CpuState_t &CpuState);
 
 //
 // Handles the 'fuzz' subcommand.
