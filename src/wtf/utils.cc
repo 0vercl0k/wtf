@@ -485,7 +485,9 @@ ExceptionCodeToStr(const uint32_t ExceptionCode) {
   return "UNKNOWN";
 }
 
-[[nodiscard]] bool BreakOnIDTEntries(Backend_t &Backend, const CpuState_t &CpuState) {
+[[nodiscard]] std::optional<Gva_t>
+ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
+                    const size_t Vector) {
   struct IdtEntry {
     uint16_t Low;
     uint16_t Selector;
@@ -503,16 +505,26 @@ ExceptionCodeToStr(const uint32_t ExceptionCode) {
     }
   };
 
+  const auto Address = Gva_t(CpuState.Idtr.Base + (Vector * sizeof(IdtEntry)));
+  IdtEntry Entry;
+  if (!Backend.VirtReadStruct<IdtEntry>(Address, &Entry)) {
+    return {};
+  }
+
+  return Entry.Handler();
+}
+
+[[nodiscard]] bool BreakOnIDTEntries(Backend_t &Backend,
+                                     const CpuState_t &CpuState) {
   for (size_t Idx = 0; Idx < 256; Idx++) {
-    const auto Address = Gva_t(CpuState.Idtr.Base + (Idx * sizeof(IdtEntry)));
-    IdtEntry Entry;
-    if (!Backend.VirtReadStruct<IdtEntry>(Address, &Entry)) {
+    const auto Handler = ReadIDTEntryHandler(Backend, CpuState, Idx);
+    if (!Handler) {
+      fmt::print("ReadIDTEntryHandler failed\n");
       return false;
     }
 
-    if (!Backend.SetBreakpoint(Entry.Handler(), [](Backend_t *Backend) {
-          Backend->TrapFlag(true);
-        })) {
+    if (!Backend.SetBreakpoint(
+            *Handler, [](Backend_t *Backend) { Backend->TrapFlag(true); })) {
       return false;
     }
   }
