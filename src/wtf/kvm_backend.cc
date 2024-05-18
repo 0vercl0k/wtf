@@ -1369,10 +1369,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
 
         Run_->kvm_dirty_regs &= ~KVM_SYNC_X86_REGS;
 
-        if (!TrapFlag(true)) {
-          return false;
-        }
-
+        TrapFlag(true);
         fmt::print(TraceFile_, "{:#x}\n", Run_->s.regs.regs.rip);
       }
 
@@ -2472,7 +2469,8 @@ void KvmBackend_t::TrapFlag(const bool Arm) {
     Dreg.control |= KVM_GUESTDBG_SINGLESTEP;
   }
 
-  memset(&Events.interrupt, 0, sizeof(Events.interrupt));
+  memset(&Run_->s.regs.events.interrupt, 0,
+         sizeof(Run_->s.regs.events.interrupt));
   Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
 
   if (!SetDreg(Dreg)) {
