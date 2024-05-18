@@ -18,7 +18,6 @@
 //
 
 struct WhvRunStats_t {
-  uint64_t PageFaults = 0;
   uint64_t Dirty = 0;
   uint64_t Vmexits = 0;
 
@@ -30,12 +29,10 @@ public:
     const uint64_t DirtyMemoryMb = Dirty / Page::Size;
     fmt::print("Dirty pages: {} bytes, {} pages, {} MB\n", DirtyMemoryBytes,
                Dirty, DirtyMemoryMb);
-    fmt::print("Page-faults: {}\n", PageFaults);
     fmt::print("    VMExits: {}\n", Vmexits);
   }
 
   void Reset() {
-    PageFaults = 0;
     Dirty = 0;
     Vmexits = 0;
   }
@@ -157,7 +154,7 @@ class WhvBackend_t : public Backend_t {
   //
   //
 
-  std::optional<uint64_t> LastTF_;
+  uint64_t LastTF_ = 0;
 
   //
   // This is the RAM.

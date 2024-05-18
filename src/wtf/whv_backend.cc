@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <fstream>
 
-constexpr bool WhvLoggingOn = true;
+constexpr bool WhvLoggingOn = false;
 
 template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
@@ -149,21 +149,7 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeDivideErrorFault;
   ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeDebugTrapOrFault;
   ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeBreakpointTrap;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeOverflowTrap;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeBoundRangeFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeInvalidOpcodeFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeDeviceNotAvailableFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeDoubleFaultAbort;
-  ExceptionExitBitmap |= 1ULL
-                         << WHvX64ExceptionTypeInvalidTaskStateSegmentFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeSegmentNotPresentFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeStackFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeGeneralProtectionFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypePageFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeFloatingPointErrorFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeAlignmentCheckFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeMachineCheckAbort;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeSimdFloatingPointFault;
+
   //
   // XXX: Enable if we can get a vmexit for failfast exception in the future?
   //
@@ -1019,7 +1005,19 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     return S_OK;
   }
 
-  fmt::print(TraceFile_, "{:#x}\n", Rip);
+  //
+  // This is to make sure we don't log the address twice. The scenario where
+  // this could happen is if you have a memory access that triggers some kind of
+  // exception like a page fault. Although we have turned TF on, the bit gets
+  // stripped off by the CPU. But because we set breakpoint on IDT handlers, we
+  // do get notified. In that case, we will log this RIP. But if we were tracing
+  // code that didn't get interrupted, then we already log their RIP when we
+  // received the trap flag for this instruction.
+  //
+
+  if (LastTF_ != Rip.U64()) {
+    fmt::print(TraceFile_, "{:#x}\n", Rip);
+  }
 
   //
   // Well this was also a normal breakpoint.. so we need to invoke the
@@ -1138,13 +1136,25 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
       return Hr;
     }
 
+    LastTF_ = Exception.VpContext.Rip;
     fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip);
-  } else {
-    if (!LastBreakpointGpa_) {
-      fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none");
-      return E_FAIL;
-    }
+  }
 
+  //
+  // If we are not actively single stepping everywhere, we should only get to
+  // that point with a breakpoint to reset. Otherwise something is really wrong.
+  //
+
+  if (TraceType_ != TraceType_t::Rip && !LastBreakpointGpa_) {
+    fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none");
+    return E_FAIL;
+  }
+
+  //
+  // If we got there because we have a breakpoint to reset, then let's do that.
+  //
+
+  if (LastBreakpointGpa_) {
     WhvDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
 
     //
@@ -1165,7 +1175,6 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     WhvDebugPrint("Turning on RFLAGS.TF\n");
     return SetReg64(WHvX64RegisterRflags,
                     Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
-
   } else {
     WhvDebugPrint("Turning off RFLAGS.TF\n");
     return S_OK;
@@ -1218,30 +1227,10 @@ WhvBackend_t::OnExitReasonException(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
     return S_OK;
   }
 
-  case WHvX64ExceptionTypePageFault: {
-    RunStats_.PageFaults++;
-    [[fallthrough]];
-  }
-
   default: {
-    WhvDebugPrint(
-        "Received a {:#x} exception, letting the guest figure it out..\n",
-        Exception.VpException.ExceptionType);
-
-    //
-    // If we haven't handled the fault, let's reinject it into the guest.
-    //
-
-    WHV_REGISTER_VALUE_t Reg;
-    Reg->ExceptionEvent.EventPending = 1;
-    Reg->ExceptionEvent.EventType = WHvX64PendingEventException;
-    Reg->ExceptionEvent.DeliverErrorCode = 1;
-    Reg->ExceptionEvent.Vector = Exception.VpException.ExceptionType;
-    Reg->ExceptionEvent.ErrorCode = Exception.VpException.ErrorCode;
-    Reg->ExceptionEvent.ExceptionParameter =
-        Exception.VpException.ExceptionParameter;
-
-    return SetRegister(WHvRegisterPendingEvent, &Reg);
+    fmt::print("Received an unexpected {:#x} exception, bailing..\n",
+               Exception.VpException.ExceptionType);
+    return E_FAIL;
   }
   }
 }
