@@ -23,6 +23,14 @@
 #define BITS_TO_LONGS(nr) DIV_ROUND_UP(nr, BITS_PER_TYPE(long))
 
 //
+// kd> !idt fe
+// Dumping IDT: fffff8047375b000
+// fe:	fffff8046f1bf830 hal!HalpPerfInterrupt (KINTERRUPT fffff8046fb20af0)
+//
+
+constexpr size_t PerfInterruptVector = 0xfe;
+
+//
 // This is the run stats for the KVM backend.
 //
 
@@ -294,7 +302,25 @@ private:
 
   std::array<KvmMemoryRegion_t, 2> MemoryRegions_;
 
+  //
+  // This is the GPA of the last breakpoint we disabled.
+  //
+
   std::optional<Gpa_t> LastBreakpointGpa_;
+
+  //
+  // This the address of where last we handled a trap flag fault. This is used
+  // when we are single-stepping to not double log a RIP values when triggered
+  // from a breakpoint.
+  //
+  // We basically log RIP values when handling the trap flag. So if we are
+  // handling a breakpoint and we didn't handle a trap flag at this location the
+  // last time, it means we somehow got there without the trap flag involved
+  // (could be an interruption for example), so we need to log the value in
+  // those cases.
+  //
+
+  uint64_t LastTF_ = 0;
 
 public:
   //

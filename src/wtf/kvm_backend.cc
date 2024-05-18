@@ -413,7 +413,7 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
     ApicLVTRegister_t ApicLVTPerfMonCountersRegister;
 
     ApicLVTPerfMonCountersRegister.DeliveryMode = APIC_MODE_FIXED;
-    ApicLVTPerfMonCountersRegister.Vector = 0xFE;
+    ApicLVTPerfMonCountersRegister.Vector = PerfInterruptVector;
     *(uint32_t *)(Lapic_.regs + APIC_LVTPC) =
         ApicLVTPerfMonCountersRegister.Flags;
 
@@ -526,6 +526,28 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
   if (!SetCoverageBps()) {
     fmt::print("Failed to SetCoverageBps\n");
     return false;
+  }
+
+  //
+  // If PMU is available, we need to set a breakpoint on the IDT handler that
+  // will handle the PMI.
+  //
+
+  if (PmuAvailable_) {
+    const auto PerfInterrupt =
+        ReadIDTEntryHandler(*this, CpuState, PerfInterruptVector);
+    if (!PerfInterrupt) {
+      fmt::print("Failed to read IDT[0xfe]\n");
+      return false;
+    }
+
+    if (!SetBreakpoint(*PerfInterrupt, [](Backend_t *Backend) {
+          KvmDebugPrint("Hit PMI!\n");
+          Backend->Stop(Timedout_t());
+        })) {
+      fmt::print("Failed to set breakpoint on PMI handler\n");
+      return false;
+    }
   }
 
   return true;
@@ -1288,6 +1310,20 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     }
 
     //
+    // This is to make sure we don't log the address twice. The scenario where
+    // this could happen is if you have a memory access that triggers some kind
+    // of exception like a page fault. Although we have turned TF on, the bit
+    // gets stripped off by the CPU. But because we set breakpoint on IDT
+    // handlers, we do get notified. In that case, we will log this RIP. But if
+    // we were tracing code that didn't get interrupted, then we already log
+    // their RIP when we received the trap flag for this instruction.
+    //
+
+    if (TraceType_ == TraceType_t::Rip && LastTF_ != Rip.U64()) {
+      fmt::print(TraceFile_, "{:#x}\n", Rip);
+    }
+
+    //
     // Well this was also a normal breakpoint..
     //
 
@@ -1314,15 +1350,6 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     if (Stop_) {
       KvmDebugPrint("The bp handler asked us to stop so no need to do the "
                     "step-over dance\n");
-
-      //
-      // Don't forget to log the last instruction in the trace.
-      //
-
-      if (TraceType_ == TraceType_t::Rip) {
-        fmt::print(TraceFile_, "{:#x}\n", Run_->s.regs.regs.rip);
-      }
-
       return true;
     }
 
@@ -1406,13 +1433,26 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
       //
 
       fmt::print(TraceFile_, "{:#x}\n", Rip);
-    } else {
-      if (!LastBreakpointGpa_) {
-        fmt::print("Got into OnExitDebug with LastBreakpointGpa_ = "
-                   "none");
-        return false;
-      }
+      LastTF_ = Rip.U64();
+    }
 
+    //
+    // If we are not actively single stepping everywhere, we should only get to
+    // that point with a breakpoint to reset. Otherwise something is really
+    // wrong.
+    //
+
+    if (TraceType_ != TraceType_t::Rip && !LastBreakpointGpa_) {
+      fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none");
+      return false;
+    }
+
+    //
+    // If we got there because we have a breakpoint to reset, then let's do
+    // that.
+    //
+
+    if (LastBreakpointGpa_) {
       KvmDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
 
       //
@@ -1427,10 +1467,10 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
 
     if (TraceType_ == TraceType_t::Rip) {
       TrapFlag(true);
-      return true;
+    } else {
+      KvmDebugPrint("Turning off RFLAGS.TF\n");
     }
 
-    KvmDebugPrint("Turning off RFLAGS.TF\n");
     return true;
   } else {
     std::abort();
@@ -1535,6 +1575,7 @@ std::optional<TestcaseResult_t> KvmBackend_t::Run(const uint8_t *Buffer,
     //
 
     fmt::print(TraceFile_, "{:#x}\n", GetReg(Registers_t::Rip));
+    TrapFlag(true);
   }
 
   while (!Stop_) {
@@ -1969,14 +2010,46 @@ bool KvmBackend_t::EnableSingleStep(CpuState_t &CpuState) {
   //
 
   CpuState.Sfmask &= ~RFLAGS_TRAP_FLAG_FLAG;
-  CpuState.Rflags |= RFLAGS_TRAP_FLAG_FLAG;
+  for (uint64_t Idx = 0; Idx < Msrs_->nmsrs; Idx++) {
+    auto &Entry = Msrs_->entries[Idx];
+    if (Entry.index != MSR_IA32_SFMASK) {
+      continue;
+    }
+
+    Entry.data &= ~RFLAGS_TRAP_FLAG_FLAG;
+  }
 
   //
   // Set a breakpoint on every IDT entries to be able to trace through
   // interrupts/exceptions.
   //
 
-  return BreakOnIDTEntries(*this, CpuState);
+  for (size_t Idx = 0; Idx < 256; Idx++) {
+
+    //
+    // If we are single stepping and we are using the PMU to stop testcases, it
+    // means we have set breakpoint on the 0xfe vector already. As a result,
+    // let's skip it.
+    //
+
+    if (PmuAvailable_ && Idx == PerfInterruptVector) {
+      continue;
+    }
+
+    const auto Handler = ReadIDTEntryHandler(*this, CpuState, Idx);
+    if (!Handler) {
+      fmt::print("ReadIDTEntryHandler failed\n");
+      return false;
+    }
+
+    if (!SetBreakpoint(*Handler,
+                       [](Backend_t *Backend) { Backend->TrapFlag(true); })) {
+      fmt::print("Failed to set breakpoint on IDT[{}]", Idx);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool KvmBackend_t::SetBreakpoint(const Gva_t Gva,

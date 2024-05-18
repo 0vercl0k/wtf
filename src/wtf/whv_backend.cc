@@ -1015,7 +1015,7 @@ WhvBackend_t::OnBreakpointTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // received the trap flag for this instruction.
   //
 
-  if (LastTF_ != Rip.U64()) {
+  if (TraceType_ == TraceType_t::Rip && LastTF_ != Rip.U64()) {
     fmt::print(TraceFile_, "{:#x}\n", Rip);
   }
 

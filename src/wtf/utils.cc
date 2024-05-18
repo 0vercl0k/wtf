@@ -525,6 +525,7 @@ ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
 
     if (!Backend.SetBreakpoint(
             *Handler, [](Backend_t *Backend) { Backend->TrapFlag(true); })) {
+      fmt::print("Failed to set breakpoint on IDT[{}]\n", Idx);
       return false;
     }
   }

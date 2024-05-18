@@ -151,7 +151,15 @@ class WhvBackend_t : public Backend_t {
   std::optional<Gpa_t> LastBreakpointGpa_;
 
   //
+  // This the address of where last we handled a trap flag fault. This is used
+  // when we are single-stepping to not double log a RIP values when triggered
+  // from a breakpoint.
   //
+  // We basically log RIP values when handling the trap flag. So if we are
+  // handling a breakpoint and we didn't handle a trap flag at this location the
+  // last time, it means we somehow got there without the trap flag involved
+  // (could be an interruption for example), so we need to log the value in
+  // those cases.
   //
 
   uint64_t LastTF_ = 0;
