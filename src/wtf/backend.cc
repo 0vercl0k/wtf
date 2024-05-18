@@ -275,10 +275,6 @@ void Backend_t::TrapFlag(const bool Arm) {
   Rflags(NewValue);
 }
 
-[[nodiscard]] bool Backend_t::TrapFlag() const {
-  return (Rflags() & RFLAGS_TRAP_FLAG_FLAG) != 0;
-}
-
 uint64_t Backend_t::Rflags() const { return GetReg(Registers_t::Rflags); }
 void Backend_t::Rflags(const uint64_t Value) {
   SetReg(Registers_t::Rflags, Value);

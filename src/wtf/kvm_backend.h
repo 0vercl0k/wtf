@@ -415,8 +415,6 @@ public:
 
   void TrapFlag(const bool Arm) override;
 
-  [[nodiscard]] bool TrapFlag() const override;
-
 private:
   //
   // Load the CPU state into the VP.

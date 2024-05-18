@@ -520,7 +520,6 @@ public:
   //
 
   virtual void TrapFlag(const bool Arm);
-  [[nodiscard]] virtual bool TrapFlag() const;
 
   [[nodiscard]] uint64_t Rflags() const;
   void Rflags(const uint64_t Value);

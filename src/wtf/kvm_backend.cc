@@ -2478,7 +2478,4 @@ void KvmBackend_t::TrapFlag(const bool Arm) {
   }
 }
 
-[[nodiscard]] bool KvmBackend_t::TrapFlag() const {
-  return (GetReg64(WHvX64RegisterRflags) & RFLAGS_TRAP_FLAG_FLAG) != 0;
-}
 #endif
