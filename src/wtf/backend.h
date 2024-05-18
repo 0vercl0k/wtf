@@ -228,7 +228,7 @@ public:
   // Enable single-stepping.
   //
 
-  virtual [[nodiscard]] bool EnableSingleStep(CpuState_t &CpuState);
+  virtual bool EnableSingleStep(CpuState_t &CpuState);
 
   //
   // Breakpoints.
