@@ -99,7 +99,7 @@ wtf.exe master --name hevd --max_len=1028 --runs=0 --inputs=outputs --outputs=mi
 
 ### Generating execution traces
 
-The main mechanism available to instrospect in an execution backend is to generate an execution trace. *bochscpu* is the only backend that has the ability to generate a complete execution traces so it is best to use for debugging purposes. The other backends only generate execution traces used to measure code-coverage (address of the first instruction in a basic block).
+The main mechanism available to instrospect in an execution backend is to generate an execution trace. *bochscpu* is the fastest backend to do that, because exiting VMX mode is very expensive on the other backends.
 
 This is how you would generate an execution trace for the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0` test-case:
 
@@ -280,7 +280,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Code-coverage via software breakpoints,
 - ❌ Demand-paging so start-up is slow (as it needs to load the full crash-dump in memory),
 - ✔ Timeout is implemented with a timer,
-- ✅ Full execution traces are supported,
+- ✅ Full execution traces are supported but are slow (exiting VMX is costly),
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
 - ✔ Speed seems to be ok for long executions (lots of bottleneck in whv though; ~10x slower than WHV when I was fuzzing IDA).
 
@@ -288,7 +288,7 @@ In this section I briefly mention various differences between the execution back
 - ✔ Code-coverage via software breakpoints,
 - ✅ Demand-paging is supported via UFDD,
 - ✔ Timeout is implemented with a timer. ✅ If the hardware supports PMU virtualization, it is used to generate a [PMI](https://forum.osdev.org/viewtopic.php?f=1&t=27040) after X retired instructions (`MSR_IA32_FIXED_CTR0`),
-- ✅ Full execution traces are supported,
+- ✅ Full execution traces are supported but are slow (exiting VMX is costly),
 - ✔ Deterministic if handling source of non determinism manually (for example, patching `nt!ExGenRamdom` that uses `rdrand`),
 - ✅ Fastest for long executions (~500m - 1.5 billion instructions; ~100x faster than *bochscpu*, ~10x faster than *whv* when I was fuzzing IDA).
 
