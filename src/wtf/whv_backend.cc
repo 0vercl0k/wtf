@@ -214,9 +214,11 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   // we are simply fuzzing.
   //
 
-  if (!SetCoverageBps()) {
-    fmt::print("Failed to SetCoverageBps\n");
-    return false;
+  if (Opts.Run.TraceType != TraceType_t::Rip) {
+    if (!SetCoverageBps()) {
+      fmt::print("Failed to SetCoverageBps\n");
+      return false;
+    }
   }
 
   //
@@ -1428,7 +1430,12 @@ bool WhvBackend_t::EnableSingleStep(CpuState_t &CpuState) {
   // interrupts/exceptions.
   //
 
-  return BreakOnIDTEntries(*this, CpuState);
+  if (!BreakOnIDTEntries(*this, CpuState)) {
+    fmt::print("Failed to BreakOnIDTEntries\n");
+    return false;
+  }
+
+  return true;
 }
 
 uint64_t WhvBackend_t::GetReg(const Registers_t Reg) const {

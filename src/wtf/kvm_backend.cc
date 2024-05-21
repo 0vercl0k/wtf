@@ -519,13 +519,15 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
   }
 
   //
-  // Set the coverage breakpoints. Note that we
-  // need to do that after having set-up demand paging.
+  // Set the coverage breakpoints if we aren't in single step mode.
+  // Note that we need to do that after having set-up demand paging.
   //
 
-  if (!SetCoverageBps()) {
-    fmt::print("Failed to SetCoverageBps\n");
-    return false;
+  if (Opts.Run.TraceType != TraceType_t::Rip) {
+    if (!SetCoverageBps()) {
+      fmt::print("Failed to SetCoverageBps\n");
+      return false;
+    }
   }
 
   //
@@ -2000,6 +2002,7 @@ bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
 }
 
 bool KvmBackend_t::EnableSingleStep(CpuState_t &CpuState) {
+
   //
   // Turn on what we need to provide a rip trace:
   //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
