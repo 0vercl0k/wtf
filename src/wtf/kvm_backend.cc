@@ -1495,6 +1495,9 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
         // }
         // ```
         //
+        // Also see below for history on that behavior:
+        // https://github.com/torvalds/linux/commit/94fe45da48f921d01d8ff02a0ad54ee9c326d7f0
+        //
 
         SetRegs(Run_->s.regs.regs);
 
