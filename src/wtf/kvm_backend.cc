@@ -324,6 +324,8 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
     return false;
   }
 
+  Run_->kvm_valid_regs = SyncRegs;
+
   //
   // Ensure we have the capabilities we need:
   //   - KVM_CAP_MANUAL_DIRTY_LOG_PROTECT2,
@@ -955,10 +957,6 @@ bool KvmBackend_t::LoadDebugRegs(const CpuState_t &CpuState) {
   struct kvm_guest_debug Dregs;
   memset(&Dregs, 0, sizeof(Dregs));
 
-#define KVM_GUESTDBG_ENABLE 0x00000001
-#define KVM_GUESTDBG_SINGLESTEP 0x00000002
-#define KVM_GUESTDBG_USE_SW_BP 0x00010000
-
   Dregs.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
   if (!SetDreg(Dregs)) {
     return false;
@@ -1372,13 +1370,15 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
       if (TraceType_ == TraceType_t::Rip) {
 
         //
-        // Force flush the GPRs into the VCPU. This is needed to have
-        // `KVM_GUESTDBG_SINGLESTEP` works properly. When we call
-        // `TrapFlag(true)` / `KVM_SET_GUEST_DEBUG`, we end up in
-        // `kvm_arch_vcpu_ioctl_set_guest_debug`.
+        // Force flush the GPRs into the VCPU. Basically, this is needed to have
+        // `KVM_GUESTDBG_SINGLESTEP` works as we expect.
         //
-        // The way `KVM_GUESTDBG_SINGLESTEP` works is that it'll grab the
-        // current @rip and keep track of it in the `vcpu`:
+        // If you want the long answer and know why this matters here it is.
+        // When `KVM_SET_GUEST_DEBUG` is called,
+        // `kvm_arch_vcpu_ioctl_set_guest_debug` is called. That function
+        // basically captures the `@rip` value of the virtual cpu (not from the
+        // Run shared memory section) into the `singlestep_rip` variable like so
+        // (and also turn on the trap flag):
         //
         // ```
         // int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
@@ -1389,6 +1389,113 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
         //     vcpu->arch.singlestep_rip = kvm_get_linear_rip(vcpu);
         // ...
         // ```
+        //
+        // But as it grabs it off the virtual cpu, the new `@rip` value that the
+        // user sets in its breakpoint isn't the one saved in `singlestep_rip`.
+        // That's the first part of the answer.
+        //
+        // The second part of the answer is related to how
+        // `KVM_GUESTDBG_SINGLESTEP works. Basically, it uses the trap flag.
+        // Now, let's imagine we are reentering VMX mode.
+        // `@rip` has been updated by the user in its breakpoint callback, so
+        // the `KVM_SYNC_X86_REGS` bit is set in the `run->kvm_dirty_regs`
+        // bitfield so KVM needs to grab the GPRs from the run into the virtual
+        // cpu. If you want to follow along, this happens in
+        // `kvm_arch_vcpu_ioctl_run`.
+        //
+        // ```
+        // int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
+        // {
+        // ....
+        // 	if (kvm_run->kvm_dirty_regs) {
+        // 		r = sync_regs(vcpu);
+        // ...
+        // }
+        // ```
+        //
+        // The way `@rflags` is synchronized is a bit special. It uses
+        // `kvm_set_rflags` / `__kvm_set_rflags` to basically inject the trap
+        // flag if `KVM_GUESTDBG_SINGLESTEP` was set AND if the `@rip` from the
+        // virtual cpu matches the one that was captured in `singlestep_rip` (so
+        // we end up not taking the code path that sets the trap flag):
+        //
+        // ```
+        // void kvm_set_rflags(struct kvm_vcpu *vcpu, unsigned long rflags)
+        // {
+        // 	__kvm_set_rflags(vcpu, rflags);
+        // 	kvm_make_request(KVM_REQ_EVENT, vcpu);
+        // }
+        //
+        // static void __kvm_set_rflags(struct kvm_vcpu *vcpu, unsigned long
+        // rflags)
+        // {
+        // 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP &&
+        // 	    kvm_is_linear_rip(vcpu, vcpu->arch.singlestep_rip))
+        //  		rflags |= X86_EFLAGS_TF;
+        // static_call(kvm_x86_set_rflags)(vcpu, rflags);
+        // }
+        // ```
+        //
+        // The thing is, the 'new' `@rip` was also synchronized into the virtual
+        // cpu right before the trap flag (see `__set_regs`):
+        //
+        // ```
+        // static void __set_regs(struct kvm_vcpu *vcpu, struct kvm_regs *regs)
+        // {
+        // ...
+        // 	kvm_rip_write(vcpu, regs->rip);
+        // 	kvm_set_rflags(vcpu, regs->rflags | X86_EFLAGS_FIXED);
+        // ...
+        // }
+        // ```
+        //
+        // Do you see the issue? Well, if not let's walk through this scenario.
+        //
+        // We are generating a RIP trace, and the user set-up a breakpoint to
+        // NOP a function call; they basically simulate a return from one of
+        // those breakpoint so we land in that block of code. We still want to
+        // single step through the rest of the execution so we turn on single
+        // stepping which leads to KVM capturing the `@rip` value from the
+        // virtual cpu; it's basically the address of the function the
+        // breakpoint was set on. Let's say that address is `0xdead`.
+        //
+        // We are done handling this case, so we reenter VMX. Because the user
+        // simulated a return from the function, it changed the value of `@rip`
+        // (let's say it changed it to `0xbeef`) which triggers an update in the
+        // run and also triggered the bit `KVM_SYNC_X86_REGS` on
+        // `kvm_dirty_regs`. KVM sees it has registers to synchronize from the
+        // run into the virtual cpu, so it loads them one by one until
+        // `@rflags`.
+        //
+        // For `@rflags` it sets the trap flag into the virtual cpu, ONLY if the
+        // currently loaded `@rip` in the virtual cpu (which is `0xbeef` and not
+        // `0xdead`) matches the value in `singlestep_rip` (which is `0xdead`).
+        // Because those two addresses don't match, trap flag isn't injected in
+        // the
+        // `@rflags` that is synchronized and we completely loose control over
+        // the execution.
+        //
+        // Phew you made it all the way through the explanation :o! Sorry if I
+        // made it confusing.
+        //
+        // So how do we fix it? We flush the GPRs ourselves before setting
+        // `KVM_GUESTDBG_SINGLESTEP`. So the correct '@rip' value is captured in
+        // `singlestep_rip`, so when the GPRs are synchronized into the virtual
+        // cpu when reentering VMX, the code path that injects the trap flag in
+        // `__kvm_set_rflags` is hit:
+        //
+        // ```
+        // static void __kvm_set_rflags(struct kvm_vcpu *vcpu, unsigned long
+        // rflags)
+        // {
+        // 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP &&
+        // 	    kvm_is_linear_rip(vcpu, vcpu->arch.singlestep_rip)) <-- true
+        // 		rflags |= X86_EFLAGS_TF;
+        // ...
+        // }
+        // ```
+        //
+
         SetRegs(Run_->s.regs.regs);
 
         //
@@ -2544,10 +2651,6 @@ void KvmBackend_t::TrapFlag(const bool Arm) {
   if (Arm) {
     Dreg.control |= KVM_GUESTDBG_SINGLESTEP;
   }
-
-  memset(&Run_->s.regs.events.interrupt, 0,
-         sizeof(Run_->s.regs.events.interrupt));
-  Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
 
   if (!SetDreg(Dreg)) {
     std::abort();
