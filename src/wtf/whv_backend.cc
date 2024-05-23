@@ -705,7 +705,7 @@ WhvBackend_t::TranslateGva(const Gva_t Gva, const WHV_TRANSLATE_GVA_FLAGS,
   }
 
   TranslationResult.ResultCode = WHvTranslateGvaResultSuccess;
-  const uint64_t PageBase = Pte.PageFrameNumber * 0x1'000;
+  const uint64_t PageBase = Pte.PageFrameNumber * Page::Size;
   Gpa = Gpa_t(PageBase + GuestAddress.Offset);
   return S_OK;
 }

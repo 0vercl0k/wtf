@@ -2277,7 +2277,7 @@ bool KvmBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
     return false;
   }
 
-  const uint64_t PageBase = Pte.PageFrameNumber * 0x1000;
+  const uint64_t PageBase = Pte.PageFrameNumber * Page::Size;
   Gpa = Gpa_t(PageBase + GuestAddress.Offset);
   return true;
 }
