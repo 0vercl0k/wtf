@@ -2158,8 +2158,10 @@ bool KvmBackend_t::EnableSingleStep(CpuState_t &CpuState) {
       return false;
     }
 
-    if (!SetBreakpoint(*Handler,
-                       [](Backend_t *Backend) { Backend->TrapFlag(true); })) {
+    if (!SetBreakpoint(*Handler, [](Backend_t *Backend) {
+          KvmDebugPrint("Hit IDT breakpoint, turning on TF\n");
+          Backend->TrapFlag(true);
+        })) {
       fmt::print("Failed to set breakpoint on IDT[{}]", Idx);
       return false;
     }

@@ -513,22 +513,3 @@ ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
 
   return Entry.Handler();
 }
-
-[[nodiscard]] bool BreakOnIDTEntries(Backend_t &Backend,
-                                     const CpuState_t &CpuState) {
-  for (size_t Idx = 0; Idx < 256; Idx++) {
-    const auto Handler = ReadIDTEntryHandler(Backend, CpuState, Idx);
-    if (!Handler) {
-      fmt::print("ReadIDTEntryHandler failed\n");
-      return false;
-    }
-
-    if (!Backend.SetBreakpoint(
-            *Handler, [](Backend_t *Backend) { Backend->TrapFlag(true); })) {
-      fmt::print("Failed to set breakpoint on IDT[{}]\n", Idx);
-      return false;
-    }
-  }
-
-  return true;
-}

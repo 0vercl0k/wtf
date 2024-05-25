@@ -1430,9 +1430,20 @@ bool WhvBackend_t::EnableSingleStep(CpuState_t &CpuState) {
   // interrupts/exceptions.
   //
 
-  if (!BreakOnIDTEntries(*this, CpuState)) {
-    fmt::print("Failed to BreakOnIDTEntries\n");
-    return false;
+  for (size_t Idx = 0; Idx < 256; Idx++) {
+    const auto Handler = ReadIDTEntryHandler(*this, CpuState, Idx);
+    if (!Handler) {
+      fmt::print("ReadIDTEntryHandler failed\n");
+      return false;
+    }
+
+    if (!SetBreakpoint(*Handler, [](Backend_t *Backend) {
+          WhvDebugPrint("Hit IDT breakpoint, turning on TF\n");
+          Backend->TrapFlag(true);
+        })) {
+      fmt::print("Failed to set breakpoint on IDT[{}]", Idx);
+      return false;
+    }
   }
 
   return true;
