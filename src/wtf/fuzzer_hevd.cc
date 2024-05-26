@@ -59,6 +59,7 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 }
 
 bool Init(const Options_t &Opts, const CpuState_t &) {
+
   //
   // Stop the test-case once we return back from the call [DeviceIoControl]
   //
@@ -93,7 +94,10 @@ bool Init(const Options_t &Opts, const CpuState_t &) {
   // kd> ub fffff805`3b8287c4 l1
   // nt!ExGenRandom+0xe0:
   // fffff805`3b8287c0 480fc7f2        rdrand  rdx
-  const Gva_t ExGenRandom = Gva_t(g_Dbg->GetSymbol("nt!ExGenRandom") + 0xe0 + 4);
+  //
+
+  const Gva_t ExGenRandom =
+      Gva_t(g_Dbg->GetSymbol("nt!ExGenRandom") + 0xe0 + 4);
   if (g_Backend->VirtRead4(ExGenRandom - Gva_t(4)) != 0xf2c70f48) {
     fmt::print("It seems that nt!ExGenRandom's code has changed, update the "
                "offset!\n");

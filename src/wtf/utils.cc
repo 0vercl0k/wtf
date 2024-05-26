@@ -197,7 +197,7 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
 
     const auto Fptw = Fptw_t::FromAbridged(CpuState.Fptw.Value);
     fmt::print(
-        "Setting @fptw to {:x} as this is an old dump taken with bdump..\n",
+        "Setting @fptw to {:#x} as this is an old dump taken with bdump..\n",
         Fptw.Value);
     CpuState.Fptw = Fptw;
   }
@@ -483,4 +483,33 @@ ExceptionCodeToStr(const uint32_t ExceptionCode) {
     return "EXCEPTION_ACCESS_VIOLATION_EXECUTE";
   }
   return "UNKNOWN";
+}
+
+[[nodiscard]] std::optional<Gva_t>
+ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
+                    const size_t Vector) {
+  struct IdtEntry {
+    uint16_t Low;
+    uint16_t Selector;
+    uint8_t Ist;
+    uint8_t Attributes;
+    uint16_t Middle;
+    uint32_t High;
+    uint32_t Reserved;
+
+    IdtEntry() { memset(this, 0, sizeof(*this)); }
+
+    Gva_t Handler() const {
+      return Gva_t(uint64_t(High) << 32 | uint64_t(Middle) << 16 |
+                   uint64_t(Low));
+    }
+  };
+
+  const auto Address = Gva_t(CpuState.Idtr.Base + (Vector * sizeof(IdtEntry)));
+  IdtEntry Entry;
+  if (!Backend.VirtReadStruct<IdtEntry>(Address, &Entry)) {
+    return {};
+  }
+
+  return Entry.Handler();
 }

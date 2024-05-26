@@ -13,7 +13,7 @@ struct Page {
   // Page size.
   //
 
-  static constexpr uint64_t Size = 0x1000;
+  static constexpr uint64_t Size = 0x1'000;
 };
 
 //

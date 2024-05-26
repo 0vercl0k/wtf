@@ -10,16 +10,14 @@
 #include <WinHvPlatform.h>
 #include <cstdint>
 #include <fmt/format.h>
+#include <optional>
 #include <string>
-
-#define WHvX64ExceptionTypeFailFast (0x29)
 
 //
 // This is the run stats for the WHV backend.
 //
 
 struct WhvRunStats_t {
-  uint64_t PageFaults = 0;
   uint64_t Dirty = 0;
   uint64_t Vmexits = 0;
 
@@ -31,12 +29,10 @@ public:
     const uint64_t DirtyMemoryMb = Dirty / Page::Size;
     fmt::print("Dirty pages: {} bytes, {} pages, {} MB\n", DirtyMemoryBytes,
                Dirty, DirtyMemoryMb);
-    fmt::print("Page-faults: {}\n", PageFaults);
     fmt::print("    VMExits: {}\n", Vmexits);
   }
 
   void Reset() {
-    PageFaults = 0;
     Dirty = 0;
     Vmexits = 0;
   }
@@ -152,7 +148,21 @@ class WhvBackend_t : public Backend_t {
   // This is the GPA of the last breakpoint we disabled.
   //
 
-  Gpa_t LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+  std::optional<Gpa_t> LastBreakpointGpa_;
+
+  //
+  // This the address of where last we handled a trap flag fault. This is used
+  // when we are single-stepping to not double log a RIP values when triggered
+  // from a breakpoint.
+  //
+  // We basically log RIP values when handling the trap flag. So if we are
+  // handling a breakpoint and we didn't handle a trap flag at this location the
+  // last time, it means we somehow got there without the trap flag involved
+  // (could be an interruption for example), so we need to log the value in
+  // those cases.
+  //
+
+  uint64_t LastTF_ = 0;
 
   //
   // This is the RAM.
@@ -257,7 +267,7 @@ public:
   // Registers.
   //
 
-  uint64_t GetReg(const Registers_t Reg) override;
+  uint64_t GetReg(const Registers_t Reg) const override;
   uint64_t SetReg(const Registers_t Reg, const uint64_t Value) override;
 
   //
@@ -278,6 +288,8 @@ public:
 
   bool SetTraceFile(const fs::path &TestcaseTracePath,
                     const TraceType_t TraceType) override;
+
+  bool EnableSingleStep(CpuState_t &CpuState) override;
 
   //
   // Breakpoints.

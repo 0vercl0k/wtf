@@ -9,6 +9,7 @@
 #include <array>
 #include <linux/kvm.h>
 #include <memory>
+#include <optional>
 #include <signal.h>
 #include <thread>
 
@@ -20,6 +21,14 @@
 #define BITS_PER_BYTE 8
 #define BITS_PER_TYPE(type) (sizeof(type) * BITS_PER_BYTE)
 #define BITS_TO_LONGS(nr) DIV_ROUND_UP(nr, BITS_PER_TYPE(long))
+
+//
+// kd> !idt fe
+// Dumping IDT: fffff8047375b000
+// fe:	fffff8046f1bf830 hal!HalpPerfInterrupt (KINTERRUPT fffff8046fb20af0)
+//
+
+constexpr size_t PerfInterruptVector = 0xfe;
 
 //
 // This is the run stats for the KVM backend.
@@ -246,6 +255,12 @@ private:
   uint64_t Limit_ = 0;
 
   //
+  // This is the trace type.
+  //
+
+  TraceType_t TraceType_ = TraceType_t::NoTrace;
+
+  //
   // This is the trace file if we are tracing the current test case.
   //
 
@@ -287,7 +302,25 @@ private:
 
   std::array<KvmMemoryRegion_t, 2> MemoryRegions_;
 
-  Gpa_t LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+  //
+  // This is the GPA of the last breakpoint we disabled.
+  //
+
+  std::optional<Gpa_t> LastBreakpointGpa_;
+
+  //
+  // This the address of where last we handled a trap flag fault. This is used
+  // when we are single-stepping to not double log a RIP values when triggered
+  // from a breakpoint.
+  //
+  // We basically log RIP values when handling the trap flag. So if we are
+  // handling a breakpoint and we didn't handle a trap flag at this location the
+  // last time, it means we somehow got there without the trap flag involved
+  // (could be an interruption for example), so we need to log the value in
+  // those cases.
+  //
+
+  uint64_t LastTF_ = 0;
 
 public:
   //
@@ -338,7 +371,7 @@ public:
   // Registers.
   //
 
-  uint64_t GetReg(const Registers_t Reg) override;
+  uint64_t GetReg(const Registers_t Reg) const override;
   uint64_t SetReg(const Registers_t Reg, const uint64_t Value) override;
 
   //
@@ -359,6 +392,8 @@ public:
 
   bool SetTraceFile(const fs::path &TestcaseTracePath,
                     const TraceType_t TraceType) override;
+
+  bool EnableSingleStep(CpuState_t &CpuState) override;
 
   //
   // Breakpoints.
@@ -403,6 +438,8 @@ public:
   const tsl::robin_set<Gva_t> &LastNewCoverage() const override;
 
   bool RevokeLastNewCoverage() override;
+
+  void TrapFlag(const bool Arm) override;
 
 private:
   //
@@ -487,7 +524,7 @@ private:
   // Set the kvm_guest_debug.
   //
 
-  bool SetDregs(struct kvm_guest_debug &Dregs);
+  bool SetDreg(struct kvm_guest_debug &Dreg);
 
   //
   // Load the FPU state into the VP.

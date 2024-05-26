@@ -260,3 +260,11 @@ SaveFile(const fs::path &Path, const uint8_t *Buffer, const size_t BufferSize);
 //
 
 [[nodiscard]] std::string_view ExceptionCodeToStr(const uint32_t ExceptionCode);
+
+//
+// Read the IDT[Vector] handler.
+//
+
+[[nodiscard]] std::optional<Gva_t>
+ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
+                    const size_t Vector);

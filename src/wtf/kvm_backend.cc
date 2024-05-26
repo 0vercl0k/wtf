@@ -324,6 +324,8 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
     return false;
   }
 
+  Run_->kvm_valid_regs = SyncRegs;
+
   //
   // Ensure we have the capabilities we need:
   //   - KVM_CAP_MANUAL_DIRTY_LOG_PROTECT2,
@@ -396,43 +398,45 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
   // on the vector 0xfe (hal!HalPerfInterrupt).
   //
 
-  union ApicLVTRegister_t {
-    struct {
-      uint32_t Vector : 8;
-      uint32_t DeliveryMode : 3;
-      uint32_t Reserved : 1;
-      uint32_t DeliveryStatus : 1;
-      uint32_t Reserved2 : 3;
-      uint32_t Mask : 1;
-      uint32_t Reserved3 : 15;
+  if (PmuAvailable_) {
+    union ApicLVTRegister_t {
+      struct {
+        uint32_t Vector : 8;
+        uint32_t DeliveryMode : 3;
+        uint32_t Reserved : 1;
+        uint32_t DeliveryStatus : 1;
+        uint32_t Reserved2 : 3;
+        uint32_t Mask : 1;
+        uint32_t Reserved3 : 15;
+      };
+      uint32_t Flags;
+      ApicLVTRegister_t() : Flags(0) {}
     };
-    uint32_t Flags;
-    ApicLVTRegister_t() : Flags(0) {}
-  };
-  ApicLVTRegister_t ApicLVTPerfMonCountersRegister;
+    ApicLVTRegister_t ApicLVTPerfMonCountersRegister;
 
-  ApicLVTPerfMonCountersRegister.DeliveryMode = APIC_MODE_FIXED;
-  ApicLVTPerfMonCountersRegister.Vector = 0xFE;
-  *(uint32_t *)(Lapic_.regs + APIC_LVTPC) =
-      ApicLVTPerfMonCountersRegister.Flags;
+    ApicLVTPerfMonCountersRegister.DeliveryMode = APIC_MODE_FIXED;
+    ApicLVTPerfMonCountersRegister.Vector = PerfInterruptVector;
+    *(uint32_t *)(Lapic_.regs + APIC_LVTPC) =
+        ApicLVTPerfMonCountersRegister.Flags;
 
-  //
-  // XXX: Supposedely turn on the local APIC? I'm not entirely sure why it is
-  // needed.
-  //
+    //
+    // XXX: Supposedely turn on the local APIC? I'm not entirely sure why it is
+    // needed.
+    //
 
-  union ApicSpuriousInterruptVectorRegister_t {
-    struct {
-      uint32_t Vector : 8;
-      uint32_t ApicEnabled : 1;
-    };
-    uint32_t Flags;
-    ApicSpuriousInterruptVectorRegister_t() : Flags(0) {}
-  } ApicSpuriousInterruptVectorRegister;
+    union ApicSpuriousInterruptVectorRegister_t {
+      struct {
+        uint32_t Vector : 8;
+        uint32_t ApicEnabled : 1;
+      };
+      uint32_t Flags;
+      ApicSpuriousInterruptVectorRegister_t() : Flags(0) {}
+    } ApicSpuriousInterruptVectorRegister;
 
-  ApicSpuriousInterruptVectorRegister.ApicEnabled = 1;
-  *(uint32_t *)(Lapic_.regs + APIC_SPIV) =
-      ApicSpuriousInterruptVectorRegister.Flags;
+    ApicSpuriousInterruptVectorRegister.ApicEnabled = 1;
+    *(uint32_t *)(Lapic_.regs + APIC_SPIV) =
+        ApicSpuriousInterruptVectorRegister.Flags;
+  }
 
   //
   // Configure the VM.
@@ -517,23 +521,48 @@ bool KvmBackend_t::Initialize(const Options_t &Opts,
   }
 
   //
-  // Set the coverage breakpoints. Note that we
-  // need to do that after having set-up demand paging.
+  // Set the coverage breakpoints if we aren't in single step mode.
+  // Note that we need to do that after having set-up demand paging.
   //
 
-  if (!SetCoverageBps()) {
-    fmt::print("Failed to SetCoverageBps\n");
-    return false;
+  if (Opts.Run.TraceType != TraceType_t::Rip) {
+    if (!SetCoverageBps()) {
+      fmt::print("Failed to SetCoverageBps\n");
+      return false;
+    }
+  }
+
+  //
+  // If PMU is available, we need to set a breakpoint on the IDT handler that
+  // will handle the PMI.
+  //
+
+  if (PmuAvailable_) {
+    const auto PerfInterrupt =
+        ReadIDTEntryHandler(*this, CpuState, PerfInterruptVector);
+    if (!PerfInterrupt) {
+      fmt::print("Failed to read IDT[0xfe]\n");
+      return false;
+    }
+
+    if (!SetBreakpoint(*PerfInterrupt, [](Backend_t *Backend) {
+          KvmDebugPrint("Hit PMI!\n");
+          Backend->Stop(Timedout_t());
+        })) {
+      fmt::print("Failed to set breakpoint on PMI handler\n");
+      return false;
+    }
   }
 
   return true;
 }
 
 //
-// A good start to debug KVM_SET_REGS issues is to start by: __kvm_set_msr /
-// vmx_set_msr For PMU MSRS: hand-off happens in kvm_set_msr_common;
-// intel_is_valid_msr / intel_pmu_set_msr / intel_pmu_get_msr (intel_pmu_ops /
-// pmu_intel.c)
+// A good start to debug KVM_SET_REGS issues is to start by: `__kvm_set_msr` /
+// `vmx_set_msr`.
+// For PMU MSRS: hand-off happens in `kvm_set_msr_common`;
+// `intel_is_valid_msr` / `intel_pmu_set_msr` / `intel_pmu_get_msr`
+// (`intel_pmu_ops` / `pmu_intel.c`)
 //
 
 bool KvmBackend_t::LoadMsrs(const CpuState_t &CpuState) {
@@ -799,8 +828,8 @@ bool KvmBackend_t::SetRegs(const struct kvm_regs &Regs) {
   return true;
 }
 
-bool KvmBackend_t::SetDregs(struct kvm_guest_debug &Dregs) {
-  if (ioctl(Vp_, KVM_SET_GUEST_DEBUG, &Dregs) < 0) {
+bool KvmBackend_t::SetDreg(struct kvm_guest_debug &Dreg) {
+  if (ioctl(Vp_, KVM_SET_GUEST_DEBUG, &Dreg) < 0) {
     perror("KVM_SET_GUEST_DEBUG failed");
     return false;
   }
@@ -928,19 +957,8 @@ bool KvmBackend_t::LoadDebugRegs(const CpuState_t &CpuState) {
   struct kvm_guest_debug Dregs;
   memset(&Dregs, 0, sizeof(Dregs));
 
-#define KVM_GUESTDBG_ENABLE 0x00000001
-#define KVM_GUESTDBG_SINGLESTEP 0x00000002
-#define KVM_GUESTDBG_USE_SW_BP 0x00010000
-
   Dregs.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
-  Dregs.arch.debugreg[0] = CpuState.Dr0;
-  Dregs.arch.debugreg[1] = CpuState.Dr1;
-  Dregs.arch.debugreg[2] = CpuState.Dr2;
-  Dregs.arch.debugreg[3] = CpuState.Dr3;
-  Dregs.arch.debugreg[6] = CpuState.Dr6;
-  Dregs.arch.debugreg[7] = CpuState.Dr7;
-
-  if (!SetDregs(Dregs)) {
+  if (!SetDreg(Dregs)) {
     return false;
   }
 
@@ -1245,7 +1263,7 @@ bool KvmBackend_t::OnExitCoverageBp(const Gva_t Rip) {
   const Gpa_t Gpa = CovBreakpoints_.at(Rip);
   Ram_.RemoveBreakpoint(Gpa);
 
-  if (TraceFile_) {
+  if (TraceType_ == TraceType_t::UniqueRip) {
     fmt::print(TraceFile_, "{:#x}\n", Rip);
   }
 
@@ -1255,7 +1273,7 @@ bool KvmBackend_t::OnExitCoverageBp(const Gva_t Rip) {
 }
 
 bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
-  const Gva_t Rip = Gva_t(Debug.pc);
+  const auto Rip = Gva_t(Debug.pc);
 
   if (Debug.exception == 3) {
 
@@ -1277,6 +1295,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     //
 
     if (CoverageBp) {
+      KvmDebugPrint("Handling coverage bp @ {:#x}\n", Rip);
       if (!OnExitCoverageBp(Rip)) {
         return false;
       }
@@ -1291,9 +1310,24 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     }
 
     //
+    // This is to make sure we don't log the address twice. The scenario where
+    // this could happen is if you have a memory access that triggers some kind
+    // of exception like a page fault. Although we have turned TF on, the bit
+    // gets stripped off by the CPU. But because we set breakpoint on IDT
+    // handlers, we do get notified. In that case, we will log this RIP. But if
+    // we were tracing code that didn't get interrupted, then we already log
+    // their RIP when we received the trap flag for this instruction.
+    //
+
+    if (TraceType_ == TraceType_t::Rip && LastTF_ != Rip.U64()) {
+      fmt::print(TraceFile_, "{:#x}\n", Rip);
+    }
+
+    //
     // Well this was also a normal breakpoint..
     //
 
+    KvmDebugPrint("Handling bp @ {:#x}\n", Rip);
     KvmBreakpoint_t &Breakpoint = Breakpoints_.at(Rip);
     Breakpoint.Handler(this);
 
@@ -1313,9 +1347,182 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     // stop the testcase, then no need to single step over the instruction.
     //
 
+    if (Stop_) {
+      KvmDebugPrint("The bp handler asked us to stop so no need to do the "
+                    "step-over dance\n");
+      return true;
+    }
+
+    const bool RipChanged = Run_->s.regs.regs.rip != Rip.U64();
+    if (RipChanged) {
+      KvmDebugPrint(
+          "The bp handler ended up moving @rip from {:#x} to {:#x} so "
+          "no need to do the step-over dance\n",
+          Rip, Run_->s.regs.regs.rip);
+
+      //
+      // If we are single-stepping through the test-case and a handler moved
+      // execution somewhere else, we need to include that location in the
+      // trace file, or we'll miss this instruction (we'll get the one right
+      // after it when TF triggers).
+      //
+
+      if (TraceType_ == TraceType_t::Rip) {
+
+        //
+        // Force flush the GPRs into the VCPU. Basically, this is needed to have
+        // `KVM_GUESTDBG_SINGLESTEP` works as we expect.
+        //
+        // If you want the long answer and know why this matters here it is.
+        // When `KVM_SET_GUEST_DEBUG` is called,
+        // `kvm_arch_vcpu_ioctl_set_guest_debug` is called. That function
+        // basically captures the `@rip` value of the virtual cpu (not from the
+        // Run shared memory section) into the `singlestep_rip` variable like so
+        // (and also turn on the trap flag):
+        //
+        // ```
+        // int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
+        //					struct kvm_guest_debug *dbg)
+        // {
+        // ...
+        // 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP)
+        //     vcpu->arch.singlestep_rip = kvm_get_linear_rip(vcpu);
+        // ...
+        // ```
+        //
+        // But as it grabs it off the virtual cpu, the new `@rip` value that the
+        // user sets in its breakpoint isn't the one saved in `singlestep_rip`.
+        // That's the first part of the answer.
+        //
+        // The second part of the answer is related to how
+        // `KVM_GUESTDBG_SINGLESTEP works. Basically, it uses the trap flag.
+        // Now, let's imagine we are reentering VMX mode.
+        // `@rip` has been updated by the user in its breakpoint callback, so
+        // the `KVM_SYNC_X86_REGS` bit is set in the `run->kvm_dirty_regs`
+        // bitfield so KVM needs to grab the GPRs from the run into the virtual
+        // cpu. If you want to follow along, this happens in
+        // `kvm_arch_vcpu_ioctl_run`.
+        //
+        // ```
+        // int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
+        // {
+        // ....
+        // 	if (kvm_run->kvm_dirty_regs) {
+        // 		r = sync_regs(vcpu);
+        // ...
+        // }
+        // ```
+        //
+        // The way `@rflags` is synchronized is a bit special. It uses
+        // `kvm_set_rflags` / `__kvm_set_rflags` to basically inject the trap
+        // flag if `KVM_GUESTDBG_SINGLESTEP` was set AND if the `@rip` from the
+        // virtual cpu matches the one that was captured in `singlestep_rip` (so
+        // we end up not taking the code path that sets the trap flag):
+        //
+        // ```
+        // void kvm_set_rflags(struct kvm_vcpu *vcpu, unsigned long rflags)
+        // {
+        // 	__kvm_set_rflags(vcpu, rflags);
+        // 	kvm_make_request(KVM_REQ_EVENT, vcpu);
+        // }
+        //
+        // static void __kvm_set_rflags(struct kvm_vcpu *vcpu, unsigned long
+        // rflags)
+        // {
+        // 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP &&
+        // 	    kvm_is_linear_rip(vcpu, vcpu->arch.singlestep_rip))
+        //  		rflags |= X86_EFLAGS_TF;
+        // static_call(kvm_x86_set_rflags)(vcpu, rflags);
+        // }
+        // ```
+        //
+        // The thing is, the 'new' `@rip` was also synchronized into the virtual
+        // cpu right before the trap flag (see `__set_regs`):
+        //
+        // ```
+        // static void __set_regs(struct kvm_vcpu *vcpu, struct kvm_regs *regs)
+        // {
+        // ...
+        // 	kvm_rip_write(vcpu, regs->rip);
+        // 	kvm_set_rflags(vcpu, regs->rflags | X86_EFLAGS_FIXED);
+        // ...
+        // }
+        // ```
+        //
+        // Do you see the issue? Well, if not let's walk through this scenario.
+        //
+        // We are generating a RIP trace, and the user set-up a breakpoint to
+        // NOP a function call; they basically simulate a return from one of
+        // those breakpoint so we land in that block of code. We still want to
+        // single step through the rest of the execution so we turn on single
+        // stepping which leads to KVM capturing the `@rip` value from the
+        // virtual cpu; it's basically the address of the function the
+        // breakpoint was set on. Let's say that address is `0xdead`.
+        //
+        // We are done handling this case, so we reenter VMX. Because the user
+        // simulated a return from the function, it changed the value of `@rip`
+        // (let's say it changed it to `0xbeef`) which triggers an update in the
+        // run and also triggered the bit `KVM_SYNC_X86_REGS` on
+        // `kvm_dirty_regs`. KVM sees it has registers to synchronize from the
+        // run into the virtual cpu, so it loads them one by one until
+        // `@rflags`.
+        //
+        // For `@rflags` it sets the trap flag into the virtual cpu, ONLY if the
+        // currently loaded `@rip` in the virtual cpu (which is `0xbeef` and not
+        // `0xdead`) matches the value in `singlestep_rip` (which is `0xdead`).
+        // Because those two addresses don't match, trap flag isn't injected in
+        // the
+        // `@rflags` that is synchronized and we completely loose control over
+        // the execution.
+        //
+        // Phew you made it all the way through the explanation :o! Sorry if I
+        // made it confusing.
+        //
+        // So how do we fix it? We flush the GPRs ourselves before setting
+        // `KVM_GUESTDBG_SINGLESTEP`. So the correct '@rip' value is captured in
+        // `singlestep_rip`, so when the GPRs are synchronized into the virtual
+        // cpu when reentering VMX, the code path that injects the trap flag in
+        // `__kvm_set_rflags` is hit:
+        //
+        // ```
+        // static void __kvm_set_rflags(struct kvm_vcpu *vcpu, unsigned long
+        // rflags)
+        // {
+        // 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP &&
+        // 	    kvm_is_linear_rip(vcpu, vcpu->arch.singlestep_rip)) <-- true
+        // 		rflags |= X86_EFLAGS_TF;
+        // ...
+        // }
+        // ```
+        //
+        // Also see below for history on that behavior:
+        // https://github.com/torvalds/linux/commit/94fe45da48f921d01d8ff02a0ad54ee9c326d7f0
+        //
+
+        if (!SetRegs(Run_->s.regs.regs)) {
+          fmt::print("Failed to flush regs before turning on TF\n");
+          return false;
+        }
+
+        //
+        // We just flushed the GPRs to the vcpu, no need to do that again when
+        // reentering.
+        //
+
+        Run_->kvm_dirty_regs &= ~KVM_SYNC_X86_REGS;
+
+        TrapFlag(true);
+        fmt::print(TraceFile_, "{:#x}\n", Run_->s.regs.regs.rip);
+      }
+
+      return true;
+    }
+
     const auto &Exception = Run_->s.regs.events.exception;
     const bool InjectedPf = Exception.injected == 1 && Exception.nr == PfVector;
-    if (Run_->s.regs.regs.rip != Rip.U64() || InjectedPf || Stop_) {
+    if (InjectedPf) {
+      KvmDebugPrint("The bp handler injected a #PF so no need to do the "
+                    "step-over dance\n");
       return true;
     }
 
@@ -1325,45 +1532,63 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     // fault.
     //
 
-    KvmDebugPrint("Disarming bp and turning on RFLAGS.TF\n");
+    KvmDebugPrint("Disarming bp and turning on RFLAGS.TF (rip={:#x})\n", Rip);
     LastBreakpointGpa_ = Breakpoint.Gpa;
 
     Ram_.RemoveBreakpoint(Breakpoint.Gpa);
+    TrapFlag(true);
+    return true;
+  } else if (Debug.exception == 1) {
+    KvmDebugPrint("Received debug trap @ {:#x}\n", Rip);
 
-    struct kvm_guest_debug Dregs;
-    Dregs.control =
-        KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE | KVM_GUESTDBG_SINGLESTEP;
-    if (!SetDregs(Dregs)) {
+    if (TraceType_ == TraceType_t::Rip) {
+
+      //
+      // OK we got here because we are single stepping through the testcase.
+      //
+
+      fmt::print(TraceFile_, "{:#x}\n", Rip);
+      LastTF_ = Rip.U64();
+    }
+
+    //
+    // If we are not actively single stepping everywhere, we should only get to
+    // that point with a breakpoint to reset. Otherwise something is really
+    // wrong.
+    //
+
+    if (TraceType_ != TraceType_t::Rip && !LastBreakpointGpa_) {
+      fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none");
       return false;
     }
 
-    return true;
-  }
-
-  if (Debug.exception == 1) {
-
     //
-    // If we got a TF, then let's re-enable all our of breakpoints. Remember if
-    // we get there, it is because we hit a breakpoint, turned on TF in order to
-    // step over the instruction, and now we get the chance to turn back on the
-    // breakpoint.
+    // If we got there because we have a breakpoint to reset, then let's do
+    // that.
     //
 
-    Ram_.AddBreakpoint(LastBreakpointGpa_);
-    LastBreakpointGpa_ = Gpa_t(0xffffffffffffffff);
+    if (LastBreakpointGpa_) {
+      KvmDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
 
-    //
-    // Strip TF off Rflags.
-    //
+      //
+      // Remember if we get there, it is because we hit a breakpoint, turned on
+      // TF in order to step over the instruction, and now we get the chance to
+      // turn it back on.
+      //
 
-    struct kvm_guest_debug Dregs;
-    Dregs.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
-    if (!SetDregs(Dregs)) {
-      return false;
+      Ram_.AddBreakpoint(*LastBreakpointGpa_);
+      LastBreakpointGpa_.reset();
     }
 
-    KvmDebugPrint("Turning off RFLAGS.TF\n");
+    if (TraceType_ == TraceType_t::Rip) {
+      TrapFlag(true);
+    } else {
+      KvmDebugPrint("Turning off RFLAGS.TF\n");
+    }
+
     return true;
+  } else {
+    std::abort();
   }
 
   return true;
@@ -1456,6 +1681,17 @@ std::optional<TestcaseResult_t> KvmBackend_t::Run(const uint8_t *Buffer,
   TestcaseRes_ = Ok_t();
   Coverage_.clear();
   Run_->immediate_exit = 0;
+
+  if (TraceType_ == TraceType_t::Rip) {
+
+    //
+    // The trap flag triggers after the first instruction so make sure to
+    // include its address in the trace.
+    //
+
+    fmt::print(TraceFile_, "{:#x}\n", GetReg(Registers_t::Rip));
+    TrapFlag(true);
+  }
 
   while (!Stop_) {
 
@@ -1644,7 +1880,7 @@ void KvmBackend_t::Stop(const TestcaseResult_t &Res) {
 
 void KvmBackend_t::SetLimit(const uint64_t Limit) { Limit_ = Limit; }
 
-uint64_t KvmBackend_t::GetReg(const Registers_t Reg) {
+uint64_t KvmBackend_t::GetReg(const Registers_t Reg) const {
   switch (Reg) {
   case Registers_t::Rax: {
     return Run_->s.regs.regs.rax;
@@ -1864,10 +2100,6 @@ void KvmBackend_t::PrintRunStats() { RunStats_.Print(); }
 
 bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
                                 const TraceType_t TraceType) {
-  if (TraceType == TraceType_t::Rip) {
-    fmt::print("Rip traces are not supported by kvm.\n");
-    return false;
-  }
 
   //
   // Open the trace file.
@@ -1876,6 +2108,63 @@ bool KvmBackend_t::SetTraceFile(const fs::path &TestcaseTracePath,
   TraceFile_ = fopen(TestcaseTracePath.string().c_str(), "w");
   if (TraceFile_ == nullptr) {
     return false;
+  }
+
+  TraceType_ = TraceType;
+  return true;
+}
+
+bool KvmBackend_t::EnableSingleStep(CpuState_t &CpuState) {
+
+  //
+  // Turn on what we need to provide a rip trace:
+  //   - Make sure SFMASK has the TF bit to 0 to not strip it on 'SYSCALL'
+  //   instructions. This allows us to single-step through those.
+  //   - Turn on the TF.
+  //   - Make sure to log the first address as we'll only receive an event AFTER
+  //   that instruction.
+  //
+
+  CpuState.Sfmask &= ~RFLAGS_TRAP_FLAG_FLAG;
+  for (uint64_t Idx = 0; Idx < Msrs_->nmsrs; Idx++) {
+    auto &Entry = Msrs_->entries[Idx];
+    if (Entry.index != MSR_IA32_SFMASK) {
+      continue;
+    }
+
+    Entry.data &= ~RFLAGS_TRAP_FLAG_FLAG;
+  }
+
+  //
+  // Set a breakpoint on every IDT entries to be able to trace through
+  // interrupts/exceptions.
+  //
+
+  for (size_t Idx = 0; Idx < 256; Idx++) {
+
+    //
+    // If we are single stepping and we are using the PMU to stop testcases, it
+    // means we have set breakpoint on the 0xfe vector already. As a result,
+    // let's skip it.
+    //
+
+    if (PmuAvailable_ && Idx == PerfInterruptVector) {
+      continue;
+    }
+
+    const auto Handler = ReadIDTEntryHandler(*this, CpuState, Idx);
+    if (!Handler) {
+      fmt::print("ReadIDTEntryHandler failed\n");
+      return false;
+    }
+
+    if (!SetBreakpoint(*Handler, [](Backend_t *Backend) {
+          KvmDebugPrint("Hit IDT breakpoint, turning on TF\n");
+          Backend->TrapFlag(true);
+        })) {
+      fmt::print("Failed to set breakpoint on IDT[{}]", Idx);
+      return false;
+    }
   }
 
   return true;
@@ -1993,7 +2282,7 @@ bool KvmBackend_t::VirtTranslate(const Gva_t Gva, Gpa_t &Gpa,
     return false;
   }
 
-  const uint64_t PageBase = Pte.PageFrameNumber * 0x1000;
+  const uint64_t PageBase = Pte.PageFrameNumber * Page::Size;
   Gpa = Gpa_t(PageBase + GuestAddress.Offset);
   return true;
 }
@@ -2031,14 +2320,14 @@ bool KvmBackend_t::PageFaultsMemoryIfNeeded(const Gva_t Gva,
   }
 
   KvmDebugPrint("Inserting page fault for GVA {:#x}\n", PageToFault);
-  Run_->s.regs.sregs.cr2 = PageToFault.U64();
+  SetReg(Registers_t::Cr2, PageToFault.U64());
 
   Run_->s.regs.events.exception = {.injected = 1,
                                    .nr = PfVector,
                                    .has_error_code = 1,
                                    .error_code = ErrorWrite | ErrorUser};
 
-  Run_->kvm_dirty_regs |= KVM_SYNC_X86_SREGS | KVM_SYNC_X86_EVENTS;
+  Run_->kvm_dirty_regs |= KVM_SYNC_X86_EVENTS;
   return true;
 }
 
@@ -2359,6 +2648,21 @@ void KvmBackend_t::StaticUffdThreadMain(KvmBackend_t *Ptr) {
 void KvmBackend_t::StaticSignalAlarm(int, siginfo_t *, void *) {
   KvmBackend_t *KvmBackend = reinterpret_cast<KvmBackend_t *>(g_Backend);
   KvmBackend->SignalAlarm();
+}
+
+void KvmBackend_t::TrapFlag(const bool Arm) {
+  KvmDebugPrint("Turning on RFLAGS.TF\n");
+
+  struct kvm_guest_debug Dreg = {0};
+  Dreg.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
+
+  if (Arm) {
+    Dreg.control |= KVM_GUESTDBG_SINGLESTEP;
+  }
+
+  if (!SetDreg(Dreg)) {
+    std::abort();
+  }
 }
 
 #endif

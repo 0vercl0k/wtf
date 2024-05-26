@@ -202,7 +202,7 @@ public:
   // Registers.
   //
 
-  virtual uint64_t GetReg(const Registers_t Reg) = 0;
+  virtual uint64_t GetReg(const Registers_t Reg) const = 0;
   virtual uint64_t SetReg(const Registers_t Reg, const uint64_t Value) = 0;
 
   //
@@ -223,6 +223,12 @@ public:
 
   virtual bool SetTraceFile(const fs::path &TestcaseTracePath,
                             const TraceType_t TraceType);
+
+  //
+  // Enable single-stepping.
+  //
+
+  virtual bool EnableSingleStep(CpuState_t &CpuState);
 
   //
   // Breakpoints.
@@ -513,75 +519,81 @@ public:
   // Shortcuts to grab / set some registers.
   //
 
-  [[nodiscard]] uint64_t Rsp();
+  virtual void TrapFlag(const bool Arm);
+
+  [[nodiscard]] uint64_t Rflags() const;
+  void Rflags(const uint64_t Value);
+  void Rflags(const Gva_t Value);
+
+  [[nodiscard]] uint64_t Rsp() const;
   void Rsp(const uint64_t Value);
   void Rsp(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rbp();
+  [[nodiscard]] uint64_t Rbp() const;
   void Rbp(const uint64_t Value);
   void Rbp(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rip();
+  [[nodiscard]] uint64_t Rip() const;
   void Rip(const uint64_t Value);
   void Rip(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rax();
+  [[nodiscard]] uint64_t Rax() const;
   void Rax(const uint64_t Value);
   void Rax(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rbx();
+  [[nodiscard]] uint64_t Rbx() const;
   void Rbx(const uint64_t Value);
   void Rbx(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rcx();
+  [[nodiscard]] uint64_t Rcx() const;
   void Rcx(const uint64_t Value);
   void Rcx(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rdx();
+  [[nodiscard]] uint64_t Rdx() const;
   void Rdx(const uint64_t Value);
   void Rdx(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rsi();
+  [[nodiscard]] uint64_t Rsi() const;
   void Rsi(const uint64_t Value);
   void Rsi(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Rdi();
+  [[nodiscard]] uint64_t Rdi() const;
   void Rdi(const uint64_t Value);
   void Rdi(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R8();
+  [[nodiscard]] uint64_t R8() const;
   void R8(const uint64_t Value);
   void R8(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R9();
+  [[nodiscard]] uint64_t R9() const;
   void R9(const uint64_t Value);
   void R9(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R10();
+  [[nodiscard]] uint64_t R10() const;
   void R10(const uint64_t Value);
   void R10(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R11();
+  [[nodiscard]] uint64_t R11() const;
   void R11(const uint64_t Value);
   void R11(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R12();
+  [[nodiscard]] uint64_t R12() const;
   void R12(const uint64_t Value);
   void R12(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R13();
+  [[nodiscard]] uint64_t R13() const;
   void R13(const uint64_t Value);
   void R13(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R14();
+  [[nodiscard]] uint64_t R14() const;
   void R14(const uint64_t Value);
   void R14(const Gva_t Value);
 
-  [[nodiscard]] uint64_t R15();
+  [[nodiscard]] uint64_t R15() const;
   void R15(const uint64_t Value);
   void R15(const Gva_t Value);
 
-  [[nodiscard]] uint64_t Cr2();
+  [[nodiscard]] uint64_t Cr2() const;
   void Cr2(const uint64_t Value);
   void Cr2(const Gva_t Value);
 

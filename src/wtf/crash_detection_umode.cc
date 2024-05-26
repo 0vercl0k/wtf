@@ -20,20 +20,6 @@ void CrashDetectionPrint(const char *Format, const Args_t &...args) {
 bool SetupUsermodeCrashDetectionHooks() {
 
   //
-  // This is to catch the PMI interrupt if performance counters are used to
-  // bound execution.
-  //
-
-  if (!g_Backend->SetBreakpoint("hal!HalpPerfInterrupt",
-                                [](Backend_t *Backend) {
-                                  CrashDetectionPrint("Perf interrupt\n");
-                                  Backend->Stop(Timedout_t());
-                                })) {
-    fmt::print(
-        "Failed to set breakpoint on HalpPerfInterrupt, but ignoring..\n");
-  }
-
-  //
   // Avoid the fuzzer to spin out of control if we mess-up real bad.
   //
 
@@ -130,16 +116,22 @@ bool SetupUsermodeCrashDetectionHooks() {
 
   //
   // As we can't set-up the exception bitmap so that we receive a vmexit on
-  // failfast exceptions, we instead set a breakpoint to the function handling
-  // the interruption.
+  // failfast exceptions, we instead set a breakpoint to one of the handling
+  // function.
+  //
+  // We do not set a breakpoint directly on the IDT handler because the
+  // single-step feature itself will set a breakpoint on that location.
   //
   // kd> !idt 0x29
   // Dumping IDT: fffff8053f15b000
   // 29:	fffff8053b9ccb80 nt!KiRaiseSecurityCheckFailure
   //
+  // To not interfere with that we simply pick another location. the
+  // interruption.
+  //
 
   if (!g_Backend->SetBreakpoint(
-          "nt!KiRaiseSecurityCheckFailure", [](Backend_t *Backend) {
+          "nt!KiFastFailDispatch", [](Backend_t *Backend) {
             const Gva_t Rsp = Gva_t(Backend->Rsp());
             const Gva_t ExceptionAddress = Backend->VirtReadGva(Rsp);
             CrashDetectionPrint(

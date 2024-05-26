@@ -137,7 +137,7 @@ int main(int argc, const char *argv[]) {
     }
 
     //
-    // If a trace path was specified but no trace type, then defaults it to:
+    // If a trace path was specified but no trace type, then defaults it to
     //   - 'rip' for the bxcpu backend
     //   - 'uniquerip' for the other ones
     //
@@ -201,13 +201,6 @@ int main(int argc, const char *argv[]) {
                         "'{}'. You need to generate it from Windows.",
                         Opts.Fuzz.TargetPath.string()),
             EXIT_FAILURE);
-      }
-
-      if (Opts.Run.TraceType == TraceType_t::Rip &&
-          Opts.Backend != BackendType_t::Bochscpu) {
-        throw CLI::ParseError("Only the bochscpu backend can be used to "
-                              "generate rip traces on Linux.",
-                              EXIT_FAILURE);
       }
 #endif
     });
@@ -505,6 +498,17 @@ int main(int argc, const char *argv[]) {
     if (!SanitizeCpuState(CpuState)) {
       fmt::print("SanitizeCpuState failed, no take off today.\n");
       return EXIT_FAILURE;
+    }
+
+    //
+    // Turn on single step before we load any state in the backend as single
+    // stepping might require to take over a few registers.
+    //
+
+    if (Wtf.got_subcommand("run") && Opts.Run.TraceType == TraceType_t::Rip) {
+      if (!g_Backend->EnableSingleStep(CpuState)) {
+        return EXIT_FAILURE;
+      }
     }
 
     //
