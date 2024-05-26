@@ -16,6 +16,11 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/CLI11/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/fmt/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/yas/include)
 
+option(ERROR_WARN "Relax error handling , for loading vmware snapshots" OFF)
+if (ERROR_WARN)
+  add_definitions(-DERROR_WARN)
+endif()
+
 file(
     GLOB_RECURSE
     wtf_srcfiles
