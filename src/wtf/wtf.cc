@@ -159,6 +159,8 @@ int main(int argc, const char *argv[]) {
         Opts.Run.TraceType = TraceType_t::UniqueRip;
         break;
       }
+      default:
+        break;
       }
       }
 
