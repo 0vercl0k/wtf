@@ -1,3 +1,4 @@
+#!/bin/bash
 $PWD/QEMU/build/qemu-system-x86_64 \
         -m 4G \
         -smp 1 \
@@ -11,4 +12,4 @@ $PWD/QEMU/build/qemu-system-x86_64 \
         -pidfile vm.pid \
         2>&1 | tee vm.log
 
-# machine type=q35,accel=kvm,dump-guest-core=on 
+# machine type=q35,accel=kvm,dump-guest-core=on

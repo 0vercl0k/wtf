@@ -1,3 +1,4 @@
+#!/bin/bash
 # Axel '0vercl0k' Souchet - May 2 2020
 # Build / configure bxcpu-ffi
 pushd .

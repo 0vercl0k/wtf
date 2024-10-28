@@ -1,3 +1,4 @@
+#!/bin/bash
 # Axel '0vercl0k' Souchet - July 9 2020
 # adduser over --disabled-password
 sudo apt update

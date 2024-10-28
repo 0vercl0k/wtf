@@ -1,16 +1,19 @@
-name: Builds
+name: Build
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   Windows:
-    runs-on: windows-2019
+    runs-on: windows-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        generator: ['ninja', 'msvc']
+        generator: [ 'ninja', 'msvc' ]
 
-    name: Windows latest / ${{ matrix.generator }}
+    name: windows-latest / ${{ matrix.generator }}
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -22,24 +25,23 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Build with Ninja/cl
+      shell: cmd
+      working-directory: src/build
       if: matrix.generator == 'ninja'
-      run: |
-        cd src\build
-        .\build-release.bat
+      run: build-release.bat
 
     - name: Build with msvc
+      shell: cmd
+      working-directory: src/build
       if: matrix.generator == 'msvc'
-      run: |
-        cd src\build
-        .\build-release-msvc.bat
+      run: build-release-msvc.bat
 
     - name: Copy dbghelp/symsrv
       if: matrix.generator == 'ninja'
       run: |
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgeng.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgcore.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
+        foreach ($file in "dbghelp", "dbgeng", "dbgcore", "symsrv") {
+            Copy-Item -Path "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\$file.dll" -Destination "src\build"
+        }
 
     - name: Upload artifacts
       if: matrix.generator == 'ninja'
@@ -54,47 +56,42 @@ jobs:
           src/build/dbgcore.dll
           src/build/symsrv.dll
 
-  Linux:
+  linux:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        compiler: ['clang', 'gcc']
+        compiler: [ 'clang', 'gcc' ]
 
-    name: Ubuntu latest / ${{ matrix.compiler }}
+    name: ubuntu-latest / ${{ matrix.compiler }}
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
     - name: Installing dependencies
       run: |
-        sudo apt-get -y update
-        sudo apt install -y g++-10 ninja-build
+        sudo apt-get update
+        sudo apt-get install -y g++-10 ninja-build
         sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
     - name: Build with gcc
+      working-directory: src/build
       if: matrix.compiler == 'gcc'
       env:
         CC: gcc-10
         CXX: g++-10
-      run: |
-        cd src/build
-        chmod u+x ./build-release.sh
-        ./build-release.sh
+      run: ./build-release.sh
 
     - name: Build with clang
+      working-directory: src/build
       if: matrix.compiler == 'clang'
       env:
         CC: clang-18
         CXX: clang++-18
-      run: |
-        cd src/build
-        chmod u+x ./build-release.sh
-        ./build-release.sh
+      run: ./build-release.sh
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: bin-lin64-${{ matrix.compiler }}.Release
-        path: |
-          src/build/wtf
+        name: bin-linux-amd64-${{ matrix.compiler }}.Release
+        path: src/build/wtf
