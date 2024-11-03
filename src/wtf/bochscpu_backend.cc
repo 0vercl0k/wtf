@@ -1317,8 +1317,15 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
     //
 
     std::string HexString;
+    HexString.reserve(AccessInfo.Len * 2);
+    const char HexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                              '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
     for (size_t Idx = 0; Idx < AccessInfo.Len; Idx++) {
-      HexString = fmt::format("{}{:02X}", HexString, Buffer[Idx]);
+      char Hex[3];
+      Hex[0] = HexDigits[(Buffer[Idx] >> 4) & 0xf];
+      Hex[1] = HexDigits[(Buffer[Idx] >> 0) & 0xf];
+      Hex[2] = 0;
+      HexString.append(Hex);
     }
 
     //
