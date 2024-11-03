@@ -130,7 +130,7 @@ class BochscpuBackend_t : public Backend_t {
     //
 
     std::vector<BochscpuMemAccess_t> MemAccesses_;
-  } Tenet_;
+  } mutable Tenet_;
 
   //
   // The hooks we define onto the Cpu.
@@ -267,6 +267,9 @@ public:
   const tsl::robin_set<Gva_t> &LastNewCoverage() const override;
 
   bool RevokeLastNewCoverage() override;
+
+  void TrackTenetMemoryAccess(const uint64_t VirtualAddress, const uint64_t Len,
+                              const uint32_t MemAccess) const override;
 
   //
   // Hooks.
