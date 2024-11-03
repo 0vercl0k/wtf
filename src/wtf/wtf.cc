@@ -151,7 +151,7 @@ int main(int argc, const char *argv[]) {
         break;
       }
 
-      case BackendType_t::Whv: {
+      case BackendType_t::Whv:
       case BackendType_t::Kvm: {
         Opts.Run.TraceType = TraceType_t::UniqueRip;
         break;
