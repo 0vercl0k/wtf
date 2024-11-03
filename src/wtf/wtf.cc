@@ -150,12 +150,9 @@ int main(int argc, const char *argv[]) {
         Opts.Run.TraceType = TraceType_t::Rip;
         break;
       }
-#ifdef WINDOWS
+
       case BackendType_t::Whv: {
-#endif
-#ifdef LINUX
       case BackendType_t::Kvm: {
-#endif
         Opts.Run.TraceType = TraceType_t::UniqueRip;
         break;
       }
