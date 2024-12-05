@@ -49,6 +49,7 @@ bool Backend_t::VirtRead(const Gva_t Gva, uint8_t *Buffer,
     const uint64_t Size2Read = std::min(Size, BytesReadable);
     const uint8_t *Hva = PhysTranslate(Gpa);
     memcpy(Buffer, Hva, Size2Read);
+    TrackTenetMemoryAccess(CurrentGva.U64(), Size2Read, BOCHSCPU_HOOK_MEM_READ);
     Size -= Size2Read;
     CurrentGva += Gva_t(Size2Read);
     Buffer += Size2Read;
@@ -111,6 +112,8 @@ bool Backend_t::VirtWrite(const Gva_t Gva, const uint8_t *Buffer,
     const uint64_t Size2Write = std::min(Size, BytesWriteable);
     uint8_t *Hva = PhysTranslate(Gpa);
     memcpy(Hva, Buffer, Size2Write);
+    TrackTenetMemoryAccess(CurrentGva.U64(), Size2Write,
+                           BOCHSCPU_HOOK_MEM_WRITE);
     Size -= Size2Write;
     CurrentGva += Gva_t(Size2Write);
     Buffer += Size2Write;

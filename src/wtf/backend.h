@@ -610,6 +610,14 @@ public:
   virtual bool RevokeLastNewCoverage() = 0;
 
   //
+  // Track a memory access to be able to generate a Tenet trace.
+  //
+
+  virtual void TrackTenetMemoryAccess(const uint64_t VirtualAddress,
+                                      const uint64_t Len,
+                                      const uint32_t MemAccess) const {}
+
+  //
   // Print the registers.
   //
 

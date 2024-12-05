@@ -370,7 +370,6 @@ BochscpuBackend_t::Run(const uint8_t *Buffer, const uint64_t BufferSize) {
   // Reset Tenet state.
   //
 
-  Tenet_.MemAccesses_.clear();
   Tenet_.PastFirstInstruction_ = false;
 
   //
@@ -547,6 +546,18 @@ __declspec(safebuffers)
   }
 }
 
+void BochscpuBackend_t::TrackTenetMemoryAccess(const uint64_t VirtualAddress,
+                                               const uint64_t Len,
+                                               const uint32_t MemAccess) const {
+  //
+  // Log explicit details about the memory access if taking a full-trace.
+  //
+
+  if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
+    Tenet_.MemAccesses_.emplace_back(VirtualAddress, Len, MemAccess);
+  }
+}
+
 void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
                                       uint64_t VirtualAddress,
                                       uint64_t PhysicalAddress, uintptr_t Len,
@@ -570,9 +581,7 @@ void BochscpuBackend_t::LinAccessHook(/*void *Context, */ uint32_t,
   // Log explicit details about the memory access if taking a full-trace.
   //
 
-  if (TraceFile_ && TraceType_ == TraceType_t::Tenet) {
-    Tenet_.MemAccesses_.emplace_back(VirtualAddress, Len, MemAccess);
-  }
+  TrackTenetMemoryAccess(VirtualAddress, Len, MemAccess);
 
   //
   // If this is not a write access, we don't care to go further.
@@ -1202,7 +1211,6 @@ MemAccessToTenetLabel(const uint32_t MemAccess) {
 
   case BOCHSCPU_HOOK_MEM_WRITE: {
     return "mw";
-    break;
   }
 
   default: {
@@ -1271,29 +1279,53 @@ void BochscpuBackend_t::DumpTenetDelta(const bool Force) {
     //
     // Fetch the memory that was read or written by the last executed
     // instruction. The largest load that can happen today is an AVX512
-    // load which is 64 bytes long.
+    // load which is 64 bytes long... unless the access is coming from a user
+    // calling `VirtWrite*` in which case the access size can be of arbitrary
+    // size.
+    //
+    // What we'll do is only allocate a heap buffer if the `AccessInfo.Len` is
+    // larger than the static buffer below; this should avoid allocating /
+    // deallocating every time we get here.
     //
 
-    std::array<uint8_t, 64> Buffer;
-    if (AccessInfo.Len > Buffer.size()) {
-      fmt::print("A memory access was bigger than {} bytes, aborting\n",
-                 AccessInfo.Len);
-      std::abort();
+    std::array<uint8_t, 64> StaticBuffer;
+    std::vector<uint8_t> DynamicBuffer;
+    uint8_t *Buffer = nullptr;
+    if (AccessInfo.Len <= StaticBuffer.size()) {
+      Buffer = StaticBuffer.data();
+    } else {
+      DynamicBuffer.resize(AccessInfo.Len);
+      Buffer = DynamicBuffer.data();
     }
 
-    if (!VirtRead(AccessInfo.VirtualAddress, Buffer.data(), AccessInfo.Len)) {
+    //
+    // Avoid reentrance by disabling tenet.
+    //
+
+    TraceType_ = TraceType_t::Rip;
+
+    if (!VirtRead(AccessInfo.VirtualAddress, Buffer, AccessInfo.Len)) {
       fmt::print("VirtRead at {:#x} failed, aborting\n",
                  AccessInfo.VirtualAddress);
       std::abort();
     }
+
+    TraceType_ = TraceType_t::Tenet;
 
     //
     // Convert the raw memory bytes to a human-readable hex string.
     //
 
     std::string HexString;
+    HexString.reserve(AccessInfo.Len * 2);
+    const char HexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                              '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
     for (size_t Idx = 0; Idx < AccessInfo.Len; Idx++) {
-      HexString = fmt::format("{}{:02X}", HexString, Buffer[Idx]);
+      char Hex[3];
+      Hex[0] = HexDigits[(Buffer[Idx] >> 4) & 0xf];
+      Hex[1] = HexDigits[(Buffer[Idx] >> 0) & 0xf];
+      Hex[2] = 0;
+      HexString.append(Hex);
     }
 
     //
