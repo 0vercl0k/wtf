@@ -382,15 +382,11 @@ public:
     //
 
     const char *FileCoverageName = "aggregate.cov";
-    if (fs::exists(FileCoverageName)) {
-      fmt::print("Please remove / save the {} file to continue\n",
-                 FileCoverageName);
-      return EXIT_FAILURE;
-    }
-
-    FileCoverage_ = fopen(FileCoverageName, "a");
+    FileCoverage_ = fopen(FileCoverageName, "wx");
     if (FileCoverage_ == nullptr) {
-      fmt::print("Failed to open {}\n", FileCoverageName);
+      fmt::print(
+          "Failed to open {}, please save or remove the file to continue\n",
+          FileCoverageName);
       return EXIT_FAILURE;
     }
 
@@ -849,8 +845,17 @@ private:
 
       const size_t SizeBefore = Coverage_.size();
       for (const auto &Gva : Coverage) {
+
+        //
+        // If we receive a non canonical value from a client, those are 'edges'
+        // so they're not 'real' RIP values which means we don't want them in
+        // the `aggregate.cov` file.
+        //
+
+        const auto HighBits = Gva.U64() >> 48;
+        const bool Canonical = HighBits == 0xffff || HighBits == 0;
         const auto &[_, NewCoverage] = Coverage_.emplace(Gva);
-        if (NewCoverage) {
+        if (NewCoverage && Canonical) {
           fmt::print(FileCoverage_, "{:#x}\n", Gva.U64());
         }
       }
