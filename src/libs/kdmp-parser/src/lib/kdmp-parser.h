@@ -80,46 +80,49 @@ public:
     //
 
     if (!ParseDmpHeader()) {
-      printf("ParseDmpHeader failed.\n");
-      return false;
-    }
+      printf("ParseDmpHeader failed. Not a .dmp file? Trying to load as VMWare raw dump.\n");
+      //try to load it as a vmware snapshot
+      if(!BuildPhysmemRawDump()){
+        printf("BuildPhysmemRawDump failed. Not VMWare snapshot either?\n");
+         return false;
+       }
+    }else{
+      //
+      // Retrieve the physical memory according to the type of dump we have.
+      //
 
-    //
-    // Retrieve the physical memory according to the type of dump we have.
-    //
+      switch (DmpHdr_->DumpType) {
+      case DumpType_t::FullDump: {
+        if (!BuildPhysmemFullDump()) {
+          printf("BuildPhysmemFullDump failed.\n");
+          return false;
+        }
+        break;
+      }
+      case DumpType_t::BMPDump: {
+        if (!BuildPhysmemBMPDump()) {
+          printf("BuildPhysmemBMPDump failed.\n");
+          return false;
+        }
+        break;
+      }
 
-    switch (DmpHdr_->DumpType) {
-    case DumpType_t::FullDump: {
-      if (!BuildPhysmemFullDump()) {
-        printf("BuildPhysmemFullDump failed.\n");
+      case DumpType_t::CompleteMemoryDump:
+      case DumpType_t::KernelAndUserMemoryDump:
+      case DumpType_t::KernelMemoryDump: {
+        if (!BuildPhysicalMemoryFromDump(DmpHdr_->DumpType)) {
+          printf("BuildPhysicalMemoryFromDump failed.\n");
+          return false;
+        }
+        break;
+      }
+
+      default: {
+        printf("Invalid type\n");
         return false;
       }
-      break;
-    }
-    case DumpType_t::BMPDump: {
-      if (!BuildPhysmemBMPDump()) {
-        printf("BuildPhysmemBMPDump failed.\n");
-        return false;
       }
-      break;
-    }
-
-    case DumpType_t::CompleteMemoryDump:
-    case DumpType_t::KernelAndUserMemoryDump:
-    case DumpType_t::KernelMemoryDump: {
-      if (!BuildPhysicalMemoryFromDump(DmpHdr_->DumpType)) {
-        printf("BuildPhysicalMemoryFromDump failed.\n");
-        return false;
-      }
-      break;
-    }
-
-    default: {
-      printf("Invalid type\n");
-      return false;
-    }
-    }
-
+  }
     return true;
   }
 
@@ -674,6 +677,23 @@ private:
 
     return true;
   }
+
+bool BuildPhysmemRawDump(){
+  //vmware snapshot is just a raw linear dump of physical memory, with some gaps
+  //just fill up a structure for all the pages with appropriate physmem file offsets
+  //assuming physmem dump file is from a vm with 4gb of ram
+  uint8_t *base = (uint8_t *)FileMap_.ViewBase();
+  for(uint64_t i  = 0;i < 786432; i++ ){ //that many pages, first 3gb
+    uint64_t offset = i*4096;
+    Physmem_.try_emplace(offset, (uint8_t *)base+offset);
+  }
+  //there's a gap in VMWare's memory dump from 3 to 4gb, last 1gb is mapped above 4gb
+  for(uint64_t i  = 0;i < 262144; i++ ){
+    uint64_t offset = (i+786432)*4096;
+  Physmem_.try_emplace(i*4096+4294967296, (uint8_t *)base+offset);
+  }
+  return true;
+}
 
   //
   // Parse the DMP_HEADER.
