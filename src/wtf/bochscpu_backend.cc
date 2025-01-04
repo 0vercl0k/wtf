@@ -716,9 +716,9 @@ void BochscpuBackend_t::RecordEdge(/*void *Context, */ uint32_t Cpu,
   //
 
   Edge ^= Edge >> 30;
-  Edge *= 0xbf58476d'1ce4e5b9U;
+  Edge *= 0xbf58476d1ce4e5b9U;
   Edge ^= Edge >> 27;
-  Edge *= 0x94d049bb'133111ebU;
+  Edge *= 0x94d049bb133111ebU;
   Edge ^= Edge >> 31;
 
   //
@@ -726,18 +726,6 @@ void BochscpuBackend_t::RecordEdge(/*void *Context, */ uint32_t Cpu,
   //
 
   Edge ^= NextRip;
-
-  //
-  // Make sure the resulting value is not canonical by settings bits 64 to `1` &
-  // 60 to `0`. I am not sure this is actually necessary as the above
-  // operations might guarantee a non-canonical value :shrug:.
-  //
-  // This is a hack we use so the server knows how to filter out 'garbage' edge
-  // values from legit RIP values to create the `aggregate.cov` file.
-  //
-
-  Edge |= 0x80000000'00000000;
-  Edge &= 0xf7ffffff'ffffffff;
 
   const auto &[_, NewCoverage] = AggregatedCodeCoverage_.emplace(Edge);
   if (NewCoverage) {
