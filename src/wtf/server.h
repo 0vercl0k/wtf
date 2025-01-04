@@ -329,12 +329,6 @@ class Server_t {
   tsl::robin_set<Gva_t> Coverage_;
 
   //
-  // File where the aggregated code-coverage is written.
-  //
-
-  FILE *FileCoverage_ = nullptr;
-
-  //
   // Number of mutations we have performed.
   //
 
@@ -352,11 +346,6 @@ public:
   //
 
   ~Server_t() {
-    if (FileCoverage_) {
-      fclose(FileCoverage_);
-      FileCoverage_ = nullptr;
-    }
-
     for (const auto &[Fd, _] : Clients_) {
       CloseSocket(Fd);
     }
@@ -376,23 +365,6 @@ public:
     //
 
     fmt::print("Seeded with {}\n", Opts_.Seed);
-
-    //
-    // Open the file where the aggregated coverage is written to.
-    //
-
-    const char *FileCoverageName = "aggregate.cov";
-    if (fs::exists(FileCoverageName)) {
-      fmt::print("Please remove / save the {} file to continue\n",
-                 FileCoverageName);
-      return EXIT_FAILURE;
-    }
-
-    FileCoverage_ = fopen(FileCoverageName, "a");
-    if (FileCoverage_ == nullptr) {
-      fmt::print("Failed to open {}\n", FileCoverageName);
-      return EXIT_FAILURE;
-    }
 
     //
     // Initialize our internal state.
@@ -753,7 +725,7 @@ private:
 
     yas::mem_ostream Os;
     yas::binary_oarchive<decltype(Os), YasFlags> Oa(Os);
-    Oa & Testcase;
+    Oa &Testcase;
     const auto &Buf = Os.get_intrusive_buffer();
     if (!Send(Fd, (uint8_t *)Buf.data, Buf.size)) {
       fmt::print("Send failed\n");
@@ -802,7 +774,7 @@ private:
                          TestcaseResult_t &Result) {
     yas::mem_istream Is(Buffer.data(), Buffer.size_bytes());
     yas::binary_iarchive<decltype(Is), YasFlags> Ia(Is);
-    Ia & ReceivedTestcase & Coverage & Result;
+    Ia &ReceivedTestcase &Coverage &Result;
     return true;
   }
 
@@ -844,16 +816,11 @@ private:
     if (Coverage.size() > 0) {
 
       //
-      // Emplace the new coverage in our data and update the file on disk.
+      // Emplace the new coverage in our data.
       //
 
       const size_t SizeBefore = Coverage_.size();
-      for (const auto &Gva : Coverage) {
-        const auto &[_, NewCoverage] = Coverage_.emplace(Gva);
-        if (NewCoverage) {
-          fmt::print(FileCoverage_, "{:#x}\n", Gva.U64());
-        }
-      }
+      Coverage_.insert(Coverage.cbegin(), Coverage.cend());
 
       //
       // If the coverage size has changed, it means that this testcase
@@ -862,13 +829,6 @@ private:
 
       const bool NewCoverage = Coverage_.size() > SizeBefore;
       if (NewCoverage) {
-
-        //
-        // New coverage means that we added new content to the file, so let's
-        // flush it.
-        //
-
-        fflush(FileCoverage_);
 
         //
         // Allocate a test that will get moved into the corpus and maybe
