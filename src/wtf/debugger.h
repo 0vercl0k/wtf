@@ -257,7 +257,7 @@ public:
     //
     // Turn the below on to debug issues.
     //
-#if 1
+#if 0
     const uint32_t SYMOPT_DEBUG = 0x80'00'00'00;
     Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
     if (FAILED(Status)) {
