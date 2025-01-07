@@ -251,7 +251,11 @@ bool SanitizeCpuState(CpuState_t &CpuState) {
     if (Seg->Reserved != ((Seg->Limit >> 16) & 0xF)) {
       fmt::print("Segment with selector {:x} has invalid attributes.\n",
                  Seg->Selector);
+      #if defined(ERROR_WARN)
+      fmt::print("Above error could be fatal, but continuing anyway.");
+      #else
       return false;
+      #endif
     }
   }
 
