@@ -257,14 +257,16 @@ public:
     //
     // Turn the below on to debug issues.
     //
-
-    // #define SYMOPT_DEBUG 0x80000000
-    //     Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
-    //     if (FAILED(Status)) {
-    //       fmt::print("IDebugSymbols::SetSymbolOptions failed with
-    //       hr={:#x}\n", Status); return false;
-    //     }
-    //  Client_->SetOutputCallbacks(&StdioCallbacks_);
+#if 0
+    const uint32_t SYMOPT_DEBUG = 0x80'00'00'00;
+    Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
+    if (FAILED(Status)) {
+      fmt::print("IDebugSymbols::SetSymbolOptions failed with hr={:#x}\n ",
+                 Status);
+      return false;
+    }
+    Client_->SetOutputCallbacks(&StdioCallbacks_);
+#endif
 
     const std::string &DumpFileString = DumpPath.string();
     const char *DumpFileA = DumpFileString.c_str();
@@ -275,6 +277,7 @@ public:
       return false;
     }
 
+    //
     // Note The engine doesn't completely attach to the dump file until the
     // WaitForEvent method has been called. When a dump file is created from a
     // process or kernel, information about the last event is stored in the
@@ -282,6 +285,7 @@ public:
     // attempted, the engine will generate this event for the event callbacks.
     // Only then does the dump file become available in the debugging session.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/dbgeng/nf-dbgeng-idebugclient-opendumpfile
+    //
 
     Status = WaitForEvent();
     if (FAILED(Status)) {
@@ -290,16 +294,20 @@ public:
       return false;
     }
 
-    // XXX: Figure out whats wrong.
+    //
+    // To debug what might be wrong with the debugger, you can execute command
+    // with `Execute` like below.
+    //
+
     // Execute("? ucrtbase");
-    // Execute("? ucrtbase");
+    // Execute("? nt!SwapContext");
     return true;
   }
 
   [[nodiscard]] HRESULT WaitForEvent() const {
     const HRESULT Status = Control_->WaitForEvent(DEBUG_WAIT_DEFAULT, INFINITE);
     if (FAILED(Status)) {
-      fmt::print("Execute::WaitForEvent failed with {:#x}\n", Status);
+      fmt::print("IDebugControl::WaitForEvent failed with {:#x}\n", Status);
     }
     return Status;
   }
@@ -310,10 +318,9 @@ public:
                           Str, DEBUG_EXECUTE_NOT_LOGGED);
     if (FAILED(Status)) {
       fmt::print("IDebugControl::Execute failed with {:#x}\n", Status);
-      return Status;
     }
 
-    return WaitForEvent();
+    return Status;
   }
 
   [[nodiscard]] uint64_t GetModuleBase(const char *Name) const {
