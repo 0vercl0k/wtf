@@ -111,7 +111,7 @@ wtf.exe run --name hevd --limit 10000000 --input crashes\crash-0xfffff764b91c000
 <img src='pics/trace.webp'>
 </p>
 
-To symbolize execution traces you should use [symbolizer-rs](https://github.com/0vercl0k/symbolizer). This is how you would symbolize the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.trace` execution trace generated above:
+To symbolize execution traces you should use [symbolizer-rs](https://github.com/0vercl0k/symbolizer-rs). This is how you would symbolize the `crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.trace` execution trace generated above:
 
 ```
 symbolizer-rs.exe --trace crash-0xfffff764b91c0000-0x0-0xffffbf84fb10e780-0x2-0x0.rip.trace
