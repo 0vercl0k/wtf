@@ -1569,7 +1569,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     //
 
     if (LastBreakpointGpa_) {
-      KvmDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
+      KvmDebugPrint("Resetting breakpoint @ {:#x}\n", *LastBreakpointGpa_);
 
       //
       // Remember if we get there, it is because we hit a breakpoint, turned on
