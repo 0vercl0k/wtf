@@ -1532,7 +1532,8 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     // fault.
     //
 
-    KvmDebugPrint("Disarming bp and turning on RFLAGS.TF (rip={:#x})\n", Rip);
+    KvmDebugPrint("Disarming bp and will turn on single step (rip={:#x})\n",
+                  Rip);
     LastBreakpointGpa_ = Breakpoint.Gpa;
 
     Ram_.RemoveBreakpoint(Breakpoint.Gpa);
@@ -1580,12 +1581,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
       LastBreakpointGpa_.reset();
     }
 
-    if (TraceType_ == TraceType_t::Rip) {
-      TrapFlag(true);
-    } else {
-      KvmDebugPrint("Turning off RFLAGS.TF\n");
-    }
-
+    TrapFlag(TraceType_ == TraceType_t::Rip ? true : false);
     return true;
   } else {
     std::abort();
@@ -2651,13 +2647,14 @@ void KvmBackend_t::StaticSignalAlarm(int, siginfo_t *, void *) {
 }
 
 void KvmBackend_t::TrapFlag(const bool Arm) {
-  KvmDebugPrint("Turning on RFLAGS.TF\n");
-
   struct kvm_guest_debug Dreg = {0};
   Dreg.control = KVM_GUESTDBG_USE_SW_BP | KVM_GUESTDBG_ENABLE;
 
   if (Arm) {
+    KvmDebugPrint("Turning on SINGLESTEP\n");
     Dreg.control |= KVM_GUESTDBG_SINGLESTEP;
+  } else {
+    KvmDebugPrint("Turning off SINGLESTEP\n");
   }
 
   if (!SetDreg(Dreg)) {

@@ -61,10 +61,24 @@ bool InsertTestcase(const uint8_t *Buffer, const size_t BufferSize) {
 bool Init(const Options_t &Opts, const CpuState_t &) {
 
   //
-  // Stop the test-case once we return back from the call [DeviceIoControl]
+  // Set a breakpoint on the first instruction just for fun. Also, that type of
+  // breakpoint would have caught this bug:
+  // `https://github.com/0vercl0k/wtf/issues/223`
   //
 
   const Gva_t Rip = Gva_t(g_Backend->Rip());
+  if (!g_Backend->SetBreakpoint(Rip, [](Backend_t *Backend) {
+        DebugPrint(
+            "This is a breakpoint executed before the first instruction :)\n");
+      })) {
+    DebugPrint("Failed to SetBreakpoint on first instruction\n");
+    return false;
+  }
+
+  //
+  // Stop the test-case once we return back from the call [DeviceIoControl]
+  //
+
   const Gva_t AfterCall = Rip + Gva_t(6);
   if (!g_Backend->SetBreakpoint(AfterCall, [](Backend_t *Backend) {
         DebugPrint("Back from kernel!\n");

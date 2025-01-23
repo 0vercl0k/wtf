@@ -41,7 +41,7 @@ int main(int argc, const char *argv[]) {
         }
 
         //
-        // Populate other paths based on the based target path.. unless the user
+        // Populate other paths based on the base target path.. unless the user
         // has overriden them.
         //
 
@@ -121,7 +121,7 @@ int main(int argc, const char *argv[]) {
     }
 
     //
-    // Populate other paths based on the based state path.
+    // Populate other paths based on the base state path.
     //
 
     Opts.DumpPath = Opts.StatePath / "mem.dmp";
@@ -282,8 +282,9 @@ int main(int argc, const char *argv[]) {
 
     CLI::App *FuzzCmd =
         Wtf.add_subcommand("fuzz", "Fuzzing options")->callback([&Opts] {
+
           //
-          // Populate other paths based on the based target path.. unless the
+          // Populate other paths based on the base target path.. unless the
           // user has overriden them. One use-case for this for example, is to
           // be able to launch two instances fuzzing the same target but using
           // two different dumps; let's say one with PageHeap and one without.
