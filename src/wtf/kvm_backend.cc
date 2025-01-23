@@ -1559,7 +1559,7 @@ bool KvmBackend_t::OnExitDebug(struct kvm_debug_exit_arch &Debug) {
     //
 
     if (TraceType_ != TraceType_t::Rip && !LastBreakpointGpa_) {
-      fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none");
+      fmt::print("Got into OnDebugTrap with LastBreakpointGpa_ = none\n");
       return false;
     }
 
