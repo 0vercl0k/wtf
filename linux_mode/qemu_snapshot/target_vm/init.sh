@@ -63,7 +63,7 @@ download_prereqs() {
 
     sudo apt-get install -y libglib2.0-dev libpixman-1-dev python3-pip cmake
 
-    pip3 install pwntools
+    pip3 install pwntools lief
 
     # If there isn't a bookworm script for debootstrap (like in Ubuntu 18.04), copy
     # over the bullseye script as it is the same

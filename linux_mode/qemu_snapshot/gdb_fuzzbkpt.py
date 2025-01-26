@@ -11,6 +11,7 @@ import select
 import struct
 import subprocess
 import pathlib
+import lief
 
 currentdir = pathlib.Path(inspect.getfile(inspect.currentframe()))
 currentdir = currentdir.absolute().parent
@@ -26,6 +27,7 @@ import pwn
 pwn.context.arch = "amd64"
 
 SYMSTORE_FILENAME = pathlib.Path("symbol-store.json")
+ELF_FILENAME = pathlib.Path("mem.elf")
 RAW_FILENAME = pathlib.Path("raw")
 DMP_FILENAME = pathlib.Path("mem.dmp")
 REGS_JSON_FILENAME = pathlib.Path("regs.json")
@@ -42,6 +44,36 @@ class dump_file:
     BMP_HEADER64_SIZE = 56
     BMP_EXPECTED_SIGNATURE = b"SDMP"
     BMP_EXPECTED_VALID_DUMP = b"DUMP"
+
+    def convert_elf_to_raw():
+        print(f"Converting elf file '{ELF_FILENAME}' to raw file '{RAW_FILENAME}'")
+
+        core = lief.parse(ELF_FILENAME)
+
+        def is_load_segment(s):
+            return s.type == lief.ELF.Segment.TYPE.LOAD
+        segments = list(filter(is_load_segment, core.segments))
+
+        elf_file = ELF_FILENAME.open('rb')
+        raw_file = RAW_FILENAME.open('wb')
+
+        pos = 0
+        for s in segments:
+            pad_len = s.physical_address - pos
+            for _ in range(pad_len // dump_file.PAGE_SIZE):
+                raw_file.write(b'\0' * dump_file.PAGE_SIZE)
+                pos += dump_file.PAGE_SIZE
+
+            elf_file.seek(s.file_offset)
+            for _ in range(s.physical_size // dump_file.PAGE_SIZE):
+                raw_file.write(elf_file.read(dump_file.PAGE_SIZE))
+                pos += dump_file.PAGE_SIZE
+
+        elf_file.close()
+        raw_file.close()
+
+        ELF_FILENAME.unlink()
+        print("Done")
 
     def convert_raw_to_dmp(out_filename: pathlib.Path):
         dump_size = RAW_FILENAME.stat().st_size
@@ -144,6 +176,19 @@ class qemu_monitor:
 
         print(f"Instructing Qemu to dump physical memory into '{RAW_FILENAME}'")
         s.send(f"pmemsave 0 0xffffffff {RAW_FILENAME}\n".encode())
+        qemu_monitor.wait_ready(s)
+        print("Done")
+
+    def dump_guest_memory():
+        print(
+            f"Connecting to Qemu monitor at {qemu_monitor.HOSTNAME}:{qemu_monitor.PORT}"
+        )
+        s = qemu_monitor.setup_sock()
+        print("Connected")
+        qemu_monitor.wait_ready(s)
+
+        print(f"Instructing Qemu to dump physical memory into '{ELF_FILENAME}'")
+        s.send(f"dump-guest-memory {ELF_FILENAME}\n".encode())
         qemu_monitor.wait_ready(s)
         print("Done")
 
@@ -325,7 +370,8 @@ class FuzzBkpt(gdb.Breakpoint):
 
         wait_for_cpu_regs_dump()
 
-        qemu_monitor.write_phys_mem_file_to_disk()
+        qemu_monitor.dump_guest_memory()
+        dump_file.convert_elf_to_raw()
 
         out_filename = self.target_dir / "state" / DMP_FILENAME
         dump_file.convert_raw_to_dmp(out_filename)
