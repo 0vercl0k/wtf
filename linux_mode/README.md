@@ -150,10 +150,10 @@ Converting elf file 'mem.elf' to raw file 'raw'
 The current binary doesn't have a section header
 The current binary doesn't have a section header
 Done
-Converting raw file 'raw' to dump file '/home/over/wtf/targets/linux_crash_test/state/mem.dmp'
+Converting raw file 'raw' to dump file '/wtf/targets/linux_crash_test/state/mem.dmp'
 Done
-mv 'regs.json' '/home/over/wtf/targets/linux_crash_test/state/regs.json'
-mv 'symbol-store.json' '/home/over/wtf/targets/linux_crash_test/state/symbol-store.json'
+mv 'regs.json' '/wtf/targets/linux_crash_test/state/regs.json'
+mv 'symbol-store.json' '/wtf/targets/linux_crash_test/state/symbol-store.json'
 Snapshotting complete
 
 Breakpoint 1, 0x00005555555551e9 in do_crash_test ()
