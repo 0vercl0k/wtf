@@ -52,16 +52,17 @@ class dump_file:
 
         def is_load_segment(s):
             return s.type == lief.ELF.Segment.TYPE.LOAD
-        segments = list(filter(is_load_segment, core.segments))
 
-        elf_file = ELF_FILENAME.open('rb')
-        raw_file = RAW_FILENAME.open('wb')
+        segments = filter(is_load_segment, core.segments)
+
+        elf_file = ELF_FILENAME.open("rb")
+        raw_file = RAW_FILENAME.open("wb")
 
         pos = 0
         for s in segments:
             pad_len = s.physical_address - pos
             for _ in range(pad_len // dump_file.PAGE_SIZE):
-                raw_file.write(b'\0' * dump_file.PAGE_SIZE)
+                raw_file.write(b"\0" * dump_file.PAGE_SIZE)
                 pos += dump_file.PAGE_SIZE
 
             elf_file.seek(s.file_offset)
