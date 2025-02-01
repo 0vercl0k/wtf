@@ -181,7 +181,7 @@ user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf master --name linux_c
 Run the fuzzee and note that crashes are found quickly.
 
 ```console
-user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf fuzz --backend=bochscpu --name linux_crash_test
+user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf fuzz --name linux_crash_test
 Setting @fptw to 0xff'ff.
 The debugger instance is loaded with 16 items
 Setting debug register status to zero.
