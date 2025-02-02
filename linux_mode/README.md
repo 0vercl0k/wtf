@@ -140,19 +140,23 @@ The second tab will detect once the first tab has finished executing the `cpu` c
 Once the second tab indicates that snapshotting is complete, the target VM can be terminated.
 
 ```console
-In the Qemu tab, press Ctrl+C, run the `cpu` command
-Detected cpu registers dumped to regs.json
+In the QEMU tab, press Ctrl+C, run the `cpu` command
+Detected cpu registers dumped to 'regs.json'
 Connecting to Qemu monitor at localhost:55555
 Connected
-Instructing Qemu to dump physical memory to file raw
+Instructing Qemu to dump physical memory into 'mem.elf'
 Done
-Converting raw file raw to dump file /wtf/targets/linux_crash_test/state/mem.dmp
+Converting elf file 'mem.elf' to raw file 'raw'
+The current binary doesn't have a section header
+The current binary doesn't have a section header
 Done
-mv regs.json /wtf/targets/linux_crash_test/state/regs.json
-mv symbol-store.json /wtf/targets/linux_crash_test/state/symbol-store.json
+Converting raw file 'raw' to dump file '/wtf/targets/linux_crash_test/state/mem.dmp'
+Done
+mv 'regs.json' '/wtf/targets/linux_crash_test/state/regs.json'
+mv 'symbol-store.json' '/wtf/targets/linux_crash_test/state/symbol-store.json'
 Snapshotting complete
 
-Breakpoint 1, 0x0000555555555189 in do_crash_test ()
+Breakpoint 1, 0x00005555555551e9 in do_crash_test ()
 (gdb)
 ```
 
@@ -177,7 +181,7 @@ user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf master --name linux_c
 Run the fuzzee and note that crashes are found quickly.
 
 ```console
-user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf fuzz --backend=bochscpu --name linux_crash_test
+user@pc:/wtf/targets/linux_crash_test$ ../../src/build/wtf fuzz --name linux_crash_test
 Setting @fptw to 0xff'ff.
 The debugger instance is loaded with 16 items
 Setting debug register status to zero.
