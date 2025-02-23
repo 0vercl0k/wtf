@@ -9,7 +9,7 @@ mkdir bxbuild-win
 cd bxbuild-win
 
 REM Use WSL to configure / clone the repositories.
-bash -c "git clone https://github.com/yrp604/bochscpu-build.git && git clone https://github.com/yrp604/bochscpu && git clone https://github.com/yrp604/bochscpu-ffi && cd bochscpu-build && git checkout 3.0"
+bash -c "git clone https://github.com/yrp604/bochscpu-build.git && git clone https://github.com/yrp604/bochscpu && git clone https://github.com/yrp604/bochscpu-ffi && cd bochscpu-build && git checkout tags/v0.4"
 bash -c "cd bochscpu-build && BOCHS_REV=$(cat bochscpu-build/BOCHS_REV) bash prep.sh && cd Bochs/bochs && bash .conf.cpu-msvc"
 
 REM Build bochs; libinstrument.a is expected to fail to build so don't freak out.

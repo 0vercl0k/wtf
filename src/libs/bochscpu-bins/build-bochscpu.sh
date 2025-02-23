@@ -10,7 +10,7 @@ git clone https://github.com/yrp604/bochscpu
 git clone https://github.com/yrp604/bochscpu-ffi
 
 cd bochscpu-build
-git checkout 3.0
+git checkout tags/v0.4
 BOCHS_REV=$(cat BOCHS_REV) bash prep.sh && cd Bochs/bochs && sh .conf.cpu && make || true
 
 # Remove old files in bochscpu.
