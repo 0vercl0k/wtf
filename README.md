@@ -4,7 +4,7 @@
     <strong>A distributed, code-coverage guided, cross-platform snapshot-based fuzzer designed for attacking user and or kernel-mode targets running on Microsoft Windows and Linux user-mode (experimental!).</strong>
   </p>
   <p>
-    <img src='https://github.com/0vercl0k/wtf/workflows/Builds/badge.svg?branch=main'/>
+    <img src='https://github.com/0vercl0k/wtf/actions/workflows/wtf.yml/badge.svg?branch=main'/>
   </p>
   <p>
     <img src='pics/wtf.webp'/>
