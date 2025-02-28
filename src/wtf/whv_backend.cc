@@ -1120,7 +1120,9 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // to continue execution.
   //
 
-  WhvDebugPrint("Received debug trap @ {:#x}\n", Exception.VpContext.Rip);
+  const auto Rflags = Exception.VpContext.Rflags & (~RFLAGS_TRAP_FLAG_FLAG);
+  const auto Rip = Exception.VpContext.Rip;
+  WhvDebugPrint("Received debug trap @ {:#x}\n", Rip);
 
   if (TraceType_ == TraceType_t::Rip) {
 
@@ -1138,8 +1140,8 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
       return Hr;
     }
 
-    LastTF_ = Exception.VpContext.Rip;
-    fmt::print(TraceFile_, "{:#x}\n", Exception.VpContext.Rip);
+    LastTF_ = Rip;
+    fmt::print(TraceFile_, "{:#x}\n", Rip);
   }
 
   //
@@ -1173,14 +1175,10 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   // Either strip off or turn on TF.
   //
 
-  if (TraceType_ == TraceType_t::Rip) {
-    WhvDebugPrint("Turning on RFLAGS.TF\n");
-    return SetReg64(WHvX64RegisterRflags,
-                    Exception.VpContext.Rflags | RFLAGS_TRAP_FLAG_FLAG);
-  } else {
-    WhvDebugPrint("Turning off RFLAGS.TF\n");
-    return S_OK;
-  }
+  const bool Arm = TraceType_ == TraceType_t::Rip;
+  WhvDebugPrint("Turning {} RFLAGS.TF\n", Arm ? "on" : "off");
+  return SetReg64(WHvX64RegisterRflags,
+                  Rflags | (Arm ? RFLAGS_TRAP_FLAG_FLAG : 0));
 }
 
 HRESULT
