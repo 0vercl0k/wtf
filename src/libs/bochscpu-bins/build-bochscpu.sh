@@ -10,7 +10,8 @@ git clone https://github.com/yrp604/bochscpu
 git clone https://github.com/yrp604/bochscpu-ffi
 
 cd bochscpu-build
-bash prep.sh && cd Bochs/bochs && sh .conf.cpu && make || true
+git checkout 3.0
+BOCHS_REV=$(cat BOCHS_REV) bash prep.sh && cd Bochs/bochs && sh .conf.cpu && make || true
 
 # Remove old files in bochscpu.
 rm -rf ../../../bochscpu/bochs
@@ -22,6 +23,8 @@ cp cpu/libcpu.a ../../../bochscpu/lib/libcpu.a
 cp cpu/fpu/libfpu.a ../../../bochscpu/lib/libfpu.a
 cp cpu/avx/libavx.a ../../../bochscpu/lib/libavx.a
 cp cpu/cpudb/libcpudb.a ../../../bochscpu/lib/libcpudb.a
+cp cpu/softfloat3e/libsoftfloat.a ../../../bochscpu/lib/libsoftfloat.a
+
 make all-clean
 
 # Now we want to copy the bochs directory over there.
