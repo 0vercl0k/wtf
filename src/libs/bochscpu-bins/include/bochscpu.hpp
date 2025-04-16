@@ -6,57 +6,57 @@
 #include <ostream>
 #include <new>
 
-static const uint32_t BX_INSTR_IS_JMP = 10;
+constexpr static const uint32_t BX_INSTR_IS_JMP = 10;
 
-static const uint32_t BOCHSCPU_INSTR_IS_JMP_INDIRECT = 11;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_JMP_INDIRECT = 11;
 
-static const uint32_t BOCHSCPU_INSTR_IS_CALL = 12;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_CALL = 12;
 
-static const uint32_t BOCHSCPU_INSTR_IS_CALL_INDIRECT = 13;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_CALL_INDIRECT = 13;
 
-static const uint32_t BOCHSCPU_INSTR_IS_RET = 14;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_RET = 14;
 
-static const uint32_t BOCHSCPU_INSTR_IS_IRET = 15;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_IRET = 15;
 
-static const uint32_t BOCHSCPU_INSTR_IS_INT = 16;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_INT = 16;
 
-static const uint32_t BOCHSCPU_INSTR_IS_SYSCALL = 17;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSCALL = 17;
 
-static const uint32_t BOCHSCPU_INSTR_IS_SYSRET = 18;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSRET = 18;
 
-static const uint32_t BOCHSCPU_INSTR_IS_SYSENTER = 19;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSENTER = 19;
 
-static const uint32_t BOCHSCPU_INSTR_IS_SYSEXIT = 20;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSEXIT = 20;
 
-static const uint32_t BOCHSCPU_HOOK_MEM_READ = 0;
+constexpr static const uint32_t BOCHSCPU_HOOK_MEM_READ = 0;
 
-static const uint32_t BOCHSCPU_HOOK_MEM_WRITE = 1;
+constexpr static const uint32_t BOCHSCPU_HOOK_MEM_WRITE = 1;
 
-static const uint32_t BOCHSCPU_HOOK_MEM_EXECUTE = 2;
+constexpr static const uint32_t BOCHSCPU_HOOK_MEM_EXECUTE = 2;
 
-static const uint32_t BOCHSCPU_HOOK_MEM_RW = 3;
+constexpr static const uint32_t BOCHSCPU_HOOK_MEM_RW = 3;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_CR0 = 10;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_CR0 = 10;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_CR3 = 11;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_CR3 = 11;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_CR4 = 12;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_CR4 = 12;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_TASKSWITCH = 13;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_TASKSWITCH = 13;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_CONTEXTSWITCH = 14;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_CONTEXTSWITCH = 14;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_INVLPG = 15;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_INVLPG = 15;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_INVEPT = 16;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_INVEPT = 16;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_INVVPID = 17;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_INVVPID = 17;
 
-static const uint32_t BOCHSCPU_HOOK_TLB_INVPCID = 18;
+constexpr static const uint32_t BOCHSCPU_HOOK_TLB_INVPCID = 18;
 
-static const uint32_t BOCHSCPU_OPCODE_ERROR = 0;
+constexpr static const uint32_t BOCHSCPU_OPCODE_ERROR = 0;
 
-static const uint32_t BOCHSCPU_OPCODE_INSERTED = 1;
+constexpr static const uint32_t BOCHSCPU_OPCODE_INSERTED = 1;
 
 using bochscpu_cpu_t = void*;
 
@@ -366,6 +366,8 @@ uint32_t bochscpu_instr_imm32(bochscpu_instr_t p);
 
 uint64_t bochscpu_instr_imm64(bochscpu_instr_t p);
 
+void bochscpu_log_set_level(uintptr_t level);
+
 /// Add GPA mapping to HVA
 ///
 /// If the GPA was already mapped, this replaces the existing mapping
@@ -452,6 +454,4 @@ int32_t bochscpu_mem_virt_write(uint64_t cr3, uint64_t gva, const uint8_t *hva, 
 /// Zero on success, non-zero on failure
 int32_t bochscpu_mem_virt_read(uint64_t cr3, uint64_t gva, uint8_t *hva, uintptr_t sz);
 
-void bochscpu_log_set_level(uintptr_t level);
-
-} // extern "C"
+}  // extern "C"
