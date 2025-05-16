@@ -43,6 +43,7 @@ add_executable(
 )
 
 add_compile_definitions(FMT_HEADER_ONLY)
+set_property(TARGET wtf PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
 if (WIN32)
     enable_language(ASM_MASM)
@@ -74,7 +75,6 @@ if (WIN32)
     target_link_options(
         wtf
         PRIVATE
-        /NODEFAULTLIB:libcmt
         /DELAYLOAD:dbgeng.dll
     )
     target_link_libraries(
