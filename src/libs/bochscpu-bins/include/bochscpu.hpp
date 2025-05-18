@@ -184,6 +184,13 @@ struct State {
   uint64_t cstar;
   uint64_t sfmask;
   uint64_t tsc_aux;
+  uint64_t cet_control_u;
+  uint64_t cet_control_s;
+  uint64_t pl0_ssp;
+  uint64_t pl1_ssp;
+  uint64_t pl2_ssp;
+  uint64_t pl3_ssp;
+  uint64_t interrupt_ssp_table;
 };
 
 using bochscpu_cpu_state_t = State;

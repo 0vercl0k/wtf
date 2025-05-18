@@ -1138,83 +1138,15 @@ struct CpuState_t {
   uint64_t Cstar;
   uint64_t Sfmask;
   uint64_t TscAux;
+  uint64_t cet_control_u;
+  uint64_t cet_control_s;
+  uint64_t pl0_ssp;
+  uint64_t pl1_ssp;
+  uint64_t pl2_ssp;
+  uint64_t pl3_ssp;
+  uint64_t interrupt_ssp_table;
 
   CpuState_t() { memset(this, 0, sizeof(decltype(*this))); }
-
-  bool operator==(const CpuState_t &B) const {
-    bool Equal = Seed == B.Seed;
-    Equal = Equal && Rax == B.Rax;
-    Equal = Equal && Rcx == B.Rcx;
-    Equal = Equal && Rdx == B.Rdx;
-    Equal = Equal && Rbx == B.Rbx;
-    Equal = Equal && Rsp == B.Rsp;
-    Equal = Equal && Rbp == B.Rbp;
-    Equal = Equal && Rsi == B.Rsi;
-    Equal = Equal && Rdi == B.Rdi;
-    Equal = Equal && R8 == B.R8;
-    Equal = Equal && R9 == B.R9;
-    Equal = Equal && R10 == B.R10;
-    Equal = Equal && R11 == B.R11;
-    Equal = Equal && R12 == B.R12;
-    Equal = Equal && R13 == B.R13;
-    Equal = Equal && R14 == B.R14;
-    Equal = Equal && R15 == B.R15;
-    Equal = Equal && Rip == B.Rip;
-    Equal = Equal && Rflags == B.Rflags;
-    Equal = Equal && Es == B.Es;
-    Equal = Equal && Cs == B.Cs;
-    Equal = Equal && Ss == B.Ss;
-    Equal = Equal && Ds == B.Ds;
-    Equal = Equal && Fs == B.Fs;
-    Equal = Equal && Gs == B.Gs;
-    Equal = Equal && Ldtr == B.Ldtr;
-    Equal = Equal && Tr == B.Tr;
-    Equal = Equal && Gdtr == B.Gdtr;
-    Equal = Equal && Idtr == B.Idtr;
-    Equal = Equal && Cr0 == B.Cr0;
-    Equal = Equal && Cr2 == B.Cr2;
-    Equal = Equal && Cr3 == B.Cr3;
-    Equal = Equal && Cr4 == B.Cr4;
-    Equal = Equal && Cr8 == B.Cr8;
-    Equal = Equal && Dr0 == B.Dr0;
-    Equal = Equal && Dr1 == B.Dr1;
-    Equal = Equal && Dr2 == B.Dr2;
-    Equal = Equal && Dr3 == B.Dr3;
-    Equal = Equal && Dr6 == B.Dr6;
-    Equal = Equal && Dr7 == B.Dr7;
-    Equal = Equal && Xcr0 == B.Xcr0;
-
-    for (size_t Idx = 0; Idx < 32; Idx++) {
-      Equal = Equal && Zmm[Idx] == B.Zmm[Idx];
-    }
-
-    Equal = Equal && Fpcw == B.Fpcw;
-    Equal = Equal && Fpsw == B.Fpsw;
-    Equal = Equal && Fptw == B.Fptw;
-    Equal = Equal && Fpop == B.Fpop;
-
-    for (size_t Idx = 0; Idx < 8; Idx++) {
-      Equal =
-          Equal && (memcmp(&Fpst[Idx], &B.Fpst[Idx], sizeof(Fpst[Idx])) == 0);
-    }
-
-    Equal = Equal && Mxcsr == B.Mxcsr;
-    Equal = Equal && MxcsrMask == B.MxcsrMask;
-    Equal = Equal && Tsc == B.Tsc;
-    Equal = Equal && Efer.Flags == B.Efer.Flags;
-    Equal = Equal && KernelGsBase == B.KernelGsBase;
-    Equal = Equal && ApicBase == B.ApicBase;
-    Equal = Equal && Pat == B.Pat;
-    Equal = Equal && SysenterCs == B.SysenterCs;
-    Equal = Equal && SysenterEip == B.SysenterEip;
-    Equal = Equal && SysenterEsp == B.SysenterEsp;
-    Equal = Equal && Star == B.Star;
-    Equal = Equal && Lstar == B.Lstar;
-    Equal = Equal && Cstar == B.Cstar;
-    Equal = Equal && Sfmask == B.Sfmask;
-    Equal = Equal && TscAux == B.TscAux;
-    return Equal;
-  }
 };
 
 enum class TraceType_t {
