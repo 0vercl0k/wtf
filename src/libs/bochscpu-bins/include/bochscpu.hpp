@@ -141,6 +141,7 @@ struct State {
   uint64_t r15;
   uint64_t rip;
   uint64_t rflags;
+  uint64_t ssp;
   Seg es;
   Seg cs;
   Seg ss;

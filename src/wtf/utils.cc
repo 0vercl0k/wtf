@@ -128,6 +128,7 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   REGISTER_OR(pl2_ssp, "0")
   REGISTER_OR(pl3_ssp, "0")
   REGISTER_OR(interrupt_ssp_table, "0")
+  REGISTER_OR(ssp, "0")
 #undef REGISTER_OR
 #undef REGISTER
 

@@ -1094,6 +1094,7 @@ void BochscpuBackend_t::LoadState(const CpuState_t &State) {
   Bochs.pl2_ssp = State.pl2_ssp;
   Bochs.pl3_ssp = State.pl3_ssp;
   Bochs.interrupt_ssp_table = State.interrupt_ssp_table;
+  Bochs.ssp = State.ssp;
 
 #define SEG(_Bochs_, _Whv_)                                                    \
   {                                                                            \

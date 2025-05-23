@@ -1145,6 +1145,7 @@ struct CpuState_t {
   uint64_t pl2_ssp;
   uint64_t pl3_ssp;
   uint64_t interrupt_ssp_table;
+  uint64_t ssp;
 
   CpuState_t() { memset(this, 0, sizeof(decltype(*this))); }
 };
