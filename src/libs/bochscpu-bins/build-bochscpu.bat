@@ -9,7 +9,8 @@ mkdir bxbuild-win
 cd bxbuild-win
 
 REM Use WSL to configure / clone the repositories.
-bash -c "git clone https://github.com/yrp604/bochscpu-build.git && git clone https://github.com/yrp604/bochscpu && git clone https://github.com/yrp604/bochscpu-ffi && cd bochscpu-build && bash prep.sh && cd Bochs/bochs && bash .conf.cpu-msvc"
+bash -c "git clone https://github.com/yrp604/bochscpu-build.git && git clone https://github.com/yrp604/bochscpu && git clone https://github.com/yrp604/bochscpu-ffi && cd bochscpu-build && git checkout tags/v0.5"
+bash -c "cd bochscpu-build && BOCHS_REV=$(cat bochscpu-build/BOCHS_REV) bash prep.sh && cd Bochs/bochs && bash .conf.cpu-msvc"
 
 REM Build bochs; libinstrument.a is expected to fail to build so don't freak out.
 REM You can run nmake all-clean to clean up the build.
@@ -26,16 +27,17 @@ copy cpu\libcpu.a ..\..\..\bochscpu\lib\cpu.lib
 copy cpu\fpu\libfpu.a ..\..\..\bochscpu\lib\fpu.lib
 copy cpu\avx\libavx.a ..\..\..\bochscpu\lib\avx.lib
 copy cpu\cpudb\libcpudb.a ..\..\..\bochscpu\lib\cpudb.lib
+copy cpu\softfloat3e\libsoftfloat.a ..\..\..\bochscpu\lib\softfloat.lib
 
 REM Now we want to copy the bochs directory over there.
 mkdir ..\..\..\bochscpu\bochs
 robocopy . ..\..\..\bochscpu\bochs /e
 
-REM Now its time to build it.
+REM Now its time to build it (`RUSTFLAGS` to build a static version, otherwise the `.lib`'s size is blowing up (64mb+)).
 cd ..\..\..\bochscpu-ffi
-REM cargo clean -p bochscpu shits its pants on my computer so rebuilding everything
+set RUSTFLAGS=-C target-feature=+crt-static
 cargo clean
-cargo build
+REM cargo build
 cargo build --release
 
 REM Get back to where we were.

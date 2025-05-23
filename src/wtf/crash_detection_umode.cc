@@ -139,7 +139,29 @@ bool SetupUsermodeCrashDetectionHooks() {
                 ExceptionAddress);
             Backend->SaveCrash(ExceptionAddress, STATUS_STACK_BUFFER_OVERRUN);
           })) {
-    fmt::print("Failed to SetBreakpoint on KiRaiseSecurityCheckFailure\n");
+    fmt::print("Failed to SetBreakpoint on nt!KiFastFailDispatch\n");
+    return false;
+  }
+
+  //
+  // This is what a CET violation will trigger. Technically the entry-point in
+  // the IDT is `nt!KiControlProtectionFault` but we are not setting a
+  // breakpoint on there as the single-step tracing also hooks the entire IDT.
+  //
+
+  if (!g_Backend->SetBreakpoint(
+          "nt!KiProcessControlProtection", [](Backend_t *Backend) {
+            // https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/ntos/amd64_x/ktrap_frame.htm
+            const size_t TrapFrame2RipOffset = 0x168;
+            const Gva_t RipAddress =
+                Gva_t(Backend->Rcx() + TrapFrame2RipOffset);
+            const Gva_t ExceptionAddress = Backend->VirtReadGva(RipAddress);
+            CrashDetectionPrint("CET violation was detected "
+                                "(nt!KiProcessControlProtection) @ {:#x}\n",
+                                ExceptionAddress);
+            Backend->SaveCrash(ExceptionAddress, STATUS_STACK_BUFFER_OVERRUN);
+          })) {
+    fmt::print("Failed to SetBreakpoint on nt!KiProcessControlProtection\n");
     return false;
   }
 
