@@ -37,7 +37,7 @@ cd ../../bochscpu-ffi
 export RUSTFLAGS="-C target-feature=+crt-static"
 cargo clean
 # Why do we need this `--target`? Well I'm not sure.. but https://github.com/rust-lang/rust/issues/78210 :(
-cargo build --target x86_64-unknown-linux-gnu
+# cargo build --target x86_64-unknown-linux-gnu
 cargo build --release --target x86_64-unknown-linux-gnu
 
 # Get back to where we were.
