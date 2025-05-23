@@ -37,7 +37,7 @@ REM Now its time to build it (`RUSTFLAGS` to build a static version, otherwise t
 cd ..\..\..\bochscpu-ffi
 set RUSTFLAGS=-C target-feature=+crt-static
 cargo clean
-cargo build
+REM cargo build
 cargo build --release
 
 REM Get back to where we were.
