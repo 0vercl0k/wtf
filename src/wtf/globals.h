@@ -1138,14 +1138,14 @@ struct CpuState_t {
   uint64_t Cstar;
   uint64_t Sfmask;
   uint64_t TscAux;
-  uint64_t cet_control_u;
-  uint64_t cet_control_s;
-  uint64_t pl0_ssp;
-  uint64_t pl1_ssp;
-  uint64_t pl2_ssp;
-  uint64_t pl3_ssp;
-  uint64_t interrupt_ssp_table;
-  uint64_t ssp;
+  uint64_t CetControlU;
+  uint64_t CetControlS;
+  uint64_t Pl0Ssp;
+  uint64_t Pl1Ssp;
+  uint64_t Pl2Ssp;
+  uint64_t Pl3Ssp;
+  uint64_t InterruptSspTable;
+  uint64_t Ssp;
 
   CpuState_t() { memset(this, 0, sizeof(decltype(*this))); }
 };

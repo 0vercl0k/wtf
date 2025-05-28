@@ -61,9 +61,9 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
 
   memset(&CpuState, 0, sizeof(CpuState));
 
-#define REGISTER_OR(_Dmp_, _Value_)                                            \
+#define REGISTER_OR(_Dmp_, _Wtf_, _Value_)                                     \
   {                                                                            \
-    CpuState._Dmp_ = decltype(CpuState._Dmp_)(                                 \
+    CpuState._Wtf_ = decltype(CpuState._Wtf_)(                                 \
         std::strtoull(Json.value(#_Dmp_, _Value_).c_str(), nullptr, 0));       \
   }
 
@@ -121,14 +121,14 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   REGISTER(mxcsr, Mxcsr)
   REGISTER(mxcsr_mask, MxcsrMask)
   REGISTER(fpop, Fpop)
-  REGISTER_OR(cet_control_u, "0")
-  REGISTER_OR(cet_control_s, "0")
-  REGISTER_OR(pl0_ssp, "0")
-  REGISTER_OR(pl1_ssp, "0")
-  REGISTER_OR(pl2_ssp, "0")
-  REGISTER_OR(pl3_ssp, "0")
-  REGISTER_OR(interrupt_ssp_table, "0")
-  REGISTER_OR(ssp, "0")
+  REGISTER_OR(cet_control_u, CetControlU, "0")
+  REGISTER_OR(cet_control_s, CetControlS, "0")
+  REGISTER_OR(pl0_ssp, Pl0Ssp, "0")
+  REGISTER_OR(pl1_ssp, Pl1Ssp, "0")
+  REGISTER_OR(pl2_ssp, Pl2Ssp, "0")
+  REGISTER_OR(pl3_ssp, Pl3Ssp, "0")
+  REGISTER_OR(interrupt_ssp_table, InterruptSspTable, "0")
+  REGISTER_OR(ssp, Ssp, "0")
 #undef REGISTER_OR
 #undef REGISTER
 
