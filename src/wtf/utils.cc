@@ -61,10 +61,16 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
 
   memset(&CpuState, 0, sizeof(CpuState));
 
-#define REGISTER(_Bdmp_, _Wtf_)                                                \
+#define REGISTER_OR(_Dmp_, _Wtf_, _Value_)                                     \
   {                                                                            \
     CpuState._Wtf_ = decltype(CpuState._Wtf_)(                                 \
-        std::strtoull(Json[#_Bdmp_].get<std::string>().c_str(), nullptr, 0));  \
+        std::strtoull(Json.value(#_Dmp_, _Value_).c_str(), nullptr, 0));       \
+  }
+
+#define REGISTER(_Dmp_, _Wtf_)                                                 \
+  {                                                                            \
+    CpuState._Wtf_ = decltype(CpuState._Wtf_)(                                 \
+        std::strtoull(Json[#_Dmp_].get<std::string>().c_str(), nullptr, 0));   \
   }
 
   REGISTER(rax, Rax)
@@ -115,19 +121,28 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   REGISTER(mxcsr, Mxcsr)
   REGISTER(mxcsr_mask, MxcsrMask)
   REGISTER(fpop, Fpop)
+  REGISTER_OR(cet_control_u, CetControlU, "0")
+  REGISTER_OR(cet_control_s, CetControlS, "0")
+  REGISTER_OR(pl0_ssp, Pl0Ssp, "0")
+  REGISTER_OR(pl1_ssp, Pl1Ssp, "0")
+  REGISTER_OR(pl2_ssp, Pl2Ssp, "0")
+  REGISTER_OR(pl3_ssp, Pl3Ssp, "0")
+  REGISTER_OR(interrupt_ssp_table, InterruptSspTable, "0")
+  REGISTER_OR(ssp, Ssp, "0")
+#undef REGISTER_OR
 #undef REGISTER
 
-#define SEGMENT(_Bdmp_, _Wtf_)                                                 \
+#define SEGMENT(_Dmp_, _Wtf_)                                                  \
   {                                                                            \
-    CpuState._Wtf_.Present = Json[#_Bdmp_]["present"].get<bool>();             \
+    CpuState._Wtf_.Present = Json[#_Dmp_]["present"].get<bool>();              \
     CpuState._Wtf_.Selector = decltype(CpuState._Wtf_.Selector)(std::strtoull( \
-        Json[#_Bdmp_]["selector"].get<std::string>().c_str(), nullptr, 0));    \
+        Json[#_Dmp_]["selector"].get<std::string>().c_str(), nullptr, 0));     \
     CpuState._Wtf_.Base = std::strtoull(                                       \
-        Json[#_Bdmp_]["base"].get<std::string>().c_str(), nullptr, 0);         \
+        Json[#_Dmp_]["base"].get<std::string>().c_str(), nullptr, 0);          \
     CpuState._Wtf_.Limit = decltype(CpuState._Wtf_.Limit)(std::strtoull(       \
-        Json[#_Bdmp_]["limit"].get<std::string>().c_str(), nullptr, 0));       \
+        Json[#_Dmp_]["limit"].get<std::string>().c_str(), nullptr, 0));        \
     CpuState._Wtf_.Attr = decltype(CpuState._Wtf_.Attr)(std::strtoull(         \
-        Json[#_Bdmp_]["attr"].get<std::string>().c_str(), nullptr, 0));        \
+        Json[#_Dmp_]["attr"].get<std::string>().c_str(), nullptr, 0));         \
   }
 
   SEGMENT(es, Es)
@@ -140,12 +155,12 @@ bool LoadCpuStateFromJSON(CpuState_t &CpuState, const fs::path &CpuStatePath) {
   SEGMENT(ldtr, Ldtr)
 #undef SEGMENT
 
-#define GLOBALSEGMENT(_Bdmp_, _Wtf_)                                           \
+#define GLOBALSEGMENT(_Dmp_, _Wtf_)                                            \
   {                                                                            \
     CpuState._Wtf_.Base = decltype(CpuState._Wtf_.Base)(std::strtoull(         \
-        Json[#_Bdmp_]["base"].get<std::string>().c_str(), nullptr, 0));        \
+        Json[#_Dmp_]["base"].get<std::string>().c_str(), nullptr, 0));         \
     CpuState._Wtf_.Limit = decltype(CpuState._Wtf_.Limit)(std::strtoull(       \
-        Json[#_Bdmp_]["limit"].get<std::string>().c_str(), nullptr, 0));       \
+        Json[#_Dmp_]["limit"].get<std::string>().c_str(), nullptr, 0));        \
   }
 
   GLOBALSEGMENT(gdtr, Gdtr)

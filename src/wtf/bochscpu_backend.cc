@@ -1087,6 +1087,14 @@ void BochscpuBackend_t::LoadState(const CpuState_t &State) {
   Bochs.mxcsr = State.Mxcsr;
   Bochs.mxcsr_mask = State.MxcsrMask;
   Bochs.fpop = State.Fpop;
+  Bochs.cet_control_u = State.CetControlU;
+  Bochs.cet_control_s = State.CetControlS;
+  Bochs.pl0_ssp = State.Pl0Ssp;
+  Bochs.pl1_ssp = State.Pl1Ssp;
+  Bochs.pl2_ssp = State.Pl2Ssp;
+  Bochs.pl3_ssp = State.Pl3Ssp;
+  Bochs.interrupt_ssp_table = State.InterruptSspTable;
+  Bochs.ssp = State.Ssp;
 
 #define SEG(_Bochs_, _Whv_)                                                    \
   {                                                                            \

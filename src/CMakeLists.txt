@@ -43,6 +43,7 @@ add_executable(
 )
 
 add_compile_definitions(FMT_HEADER_ONLY)
+set_property(TARGET wtf PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
 if (WIN32)
     enable_language(ASM_MASM)
@@ -74,7 +75,6 @@ if (WIN32)
     target_link_options(
         wtf
         PRIVATE
-        /NODEFAULTLIB:libcmt
         /DELAYLOAD:dbgeng.dll
     )
     target_link_libraries(
@@ -106,7 +106,14 @@ else (WIN32)
         ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_sse41_x86-64_unix.S
         ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_sse2_x86-64_unix.S
         ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx2_x86-64_unix.S
-        ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx512_x86-64_unix.S
+
+        # libbochscpu_ffi.a already links this so will lead to multiple definition errors like in the below:
+        #    ```
+        #   `blake3_compress_in_place_avx512':
+        #   (.text+0x3780): multiple definition of `_blake3_compress_in_place_avx512'; CMakeFiles/wtf.dir/libs/BLAKE3/c/blake3_avx512_x86-64_unix.S.o:(.text+0x3740): first defined here
+        #   /usr/bin/ld: /home/runner/work/wtf/wtf/src/libs/bochscpu-bins/lib/libbochscpu_ffi.a(b8423798394d5395-blake3_avx512_x86-64_unix.o)
+        #   ```
+        # ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx512_x86-64_unix.S
     )
 
     target_link_libraries(

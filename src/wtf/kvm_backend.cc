@@ -585,7 +585,7 @@ bool KvmBackend_t::LoadMsrs(const CpuState_t &CpuState) {
     const uint64_t MsrListSize = sizeof(struct kvm_msr_list) +
                                  (MsrList_.nmsrs * sizeof(MsrList_.indices[0]));
     auto MsrListBacking = std::make_unique<uint8_t[]>(MsrListSize);
-    struct kvm_msr_list *MsrList = (struct kvm_msr_list *)MsrListBacking.get();
+    auto *MsrList = (struct kvm_msr_list *)MsrListBacking.get();
     MsrList->nmsrs = MsrList_.nmsrs;
 
     if (ioctl(Kvm_, KVM_GET_MSR_INDEX_LIST, MsrList) < 0) {
@@ -601,7 +601,7 @@ bool KvmBackend_t::LoadMsrs(const CpuState_t &CpuState) {
         sizeof(struct kvm_msrs) +
         (MsrList->nmsrs * sizeof(struct kvm_msr_entry));
     auto AllMsrsBacking = std::make_unique<uint8_t[]>(AllMsrsSize);
-    struct kvm_msrs *AllMsrs = (struct kvm_msrs *)AllMsrsBacking.get();
+    auto *AllMsrs = (struct kvm_msrs *)AllMsrsBacking.get();
 
     for (uint64_t MsrIdx = 0; MsrIdx < AllMsrs->nmsrs; MsrIdx++) {
       AllMsrs->entries[MsrIdx].index = MsrList->indices[MsrIdx];
@@ -768,7 +768,7 @@ bool KvmBackend_t::SetMsr(const uint32_t Msr, const uint64_t Value) {
       sizeof(struct kvm_msrs) + sizeof(struct kvm_msr_entry);
 
   std::array<uint8_t, MsrsSize> _Msrs;
-  struct kvm_msrs *Msrs = (struct kvm_msrs *)_Msrs.data();
+  auto *Msrs = (struct kvm_msrs *)_Msrs.data();
 
   Msrs->nmsrs = 1;
   Msrs->entries[0].index = Msr;
@@ -797,7 +797,7 @@ uint64_t KvmBackend_t::GetMsr(const uint32_t Msr) {
       sizeof(struct kvm_msrs) + sizeof(struct kvm_msr_entry);
 
   std::array<uint8_t, MsrsSize> _Msrs;
-  struct kvm_msrs *Msrs = (struct kvm_msrs *)_Msrs.data();
+  auto *Msrs = (struct kvm_msrs *)_Msrs.data();
 
   Msrs->nmsrs = 1;
   Msrs->entries[0].index = Msr;
