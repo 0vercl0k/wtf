@@ -24,7 +24,8 @@ If you would like to read more about its history or how to use it on a real targ
 - [Fuzzing Modern UDP Game Protocols With Snapshot-based Fuzzers](https://blog.ret2.io/2021/07/21/wtf-snapshot-fuzzing/) by [Markus Gaasedelen](https://twitter.com/gaasedelen)
 - [Fuzzing RDPEGFX with "what the fuzz"](https://thalium.github.io/blog/posts/rdpegfx/) by [Colas Le Guernic](https://github.com/clslgrnc), Jérémy Rubert, and Anonymous
 - [A Journey to Network Protocol Fuzzing – Dissecting Microsoft IMAP Client Protocol](https://www.fortinet.com/blog/threat-research/analyzing-microsoft-imap-client-protocol) by [Wayne Chin Yick Low](https://www.fortinet.com/blog/search?author=Wayne+Chin+Yick+Low)
-- The [Snapshot Fuzzing](https://appsec.guide/docs/fuzzing/snapshot-fuzzing/) section of [Trail Of Bits' Testing Handbook](https://appsec.guide/) 
+- The [Snapshot Fuzzing](https://appsec.guide/docs/fuzzing/snapshot-fuzzing/) section of [Trail Of Bits' Testing Handbook](https://appsec.guide/)
+- [Attacking EDRs Part 4: Fuzzing Defender's Scanning and Emulation Engine (mpengine.dll)](https://labs.infoguard.ch/posts/attacking_edr_part4_fuzzing_defender_scanning_and_emulation_engine/) by [Manuel Feifel](https://x.com/p0w1_)
 
 ## Usage
 
