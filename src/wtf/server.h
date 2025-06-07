@@ -329,6 +329,12 @@ class Server_t {
   tsl::robin_set<Gva_t> Coverage_;
 
   //
+  // File where the aggregated code-coverage is written.
+  //
+
+  FILE *FileCoverage_ = nullptr;
+
+  //
   // Number of mutations we have performed.
   //
 
@@ -346,6 +352,11 @@ public:
   //
 
   ~Server_t() {
+    if (FileCoverage_) {
+      fclose(FileCoverage_);
+      FileCoverage_ = nullptr;
+    }
+
     for (const auto &[Fd, _] : Clients_) {
       CloseSocket(Fd);
     }
@@ -365,6 +376,19 @@ public:
     //
 
     fmt::print("Seeded with {}\n", Opts_.Seed);
+
+    //
+    // Open the file where the aggregated coverage is written to.
+    //
+
+    const char *FileCoverageName = "aggregate.cov";
+    FileCoverage_ = fopen(FileCoverageName, "wx");
+    if (FileCoverage_ == nullptr) {
+      fmt::print(
+          "Failed to open {}, please save or remove the file to continue\n",
+          FileCoverageName);
+      return EXIT_FAILURE;
+    }
 
     //
     // Initialize our internal state.
@@ -725,7 +749,7 @@ private:
 
     yas::mem_ostream Os;
     yas::binary_oarchive<decltype(Os), YasFlags> Oa(Os);
-    Oa &Testcase;
+    Oa & Testcase;
     const auto &Buf = Os.get_intrusive_buffer();
     if (!Send(Fd, (uint8_t *)Buf.data, Buf.size)) {
       fmt::print("Send failed\n");
@@ -774,7 +798,7 @@ private:
                          TestcaseResult_t &Result) {
     yas::mem_istream Is(Buffer.data(), Buffer.size_bytes());
     yas::binary_iarchive<decltype(Is), YasFlags> Ia(Is);
-    Ia &ReceivedTestcase &Coverage &Result;
+    Ia & ReceivedTestcase & Coverage & Result;
     return true;
   }
 
@@ -816,11 +840,25 @@ private:
     if (Coverage.size() > 0) {
 
       //
-      // Emplace the new coverage in our data.
+      // Emplace the new coverage in our data and update the file on disk.
       //
 
       const size_t SizeBefore = Coverage_.size();
-      Coverage_.insert(Coverage.cbegin(), Coverage.cend());
+      for (const auto &Gva : Coverage) {
+
+        //
+        // If we receive a non canonical value from a client, those are 'edges'
+        // so they're not 'real' RIP values which means we don't want them in
+        // the `aggregate.cov` file.
+        //
+
+        const auto HighBits = Gva.U64() >> 48;
+        const bool Canonical = HighBits == 0xffff || HighBits == 0;
+        const auto &[_, NewCoverage] = Coverage_.emplace(Gva);
+        if (NewCoverage && Canonical) {
+          fmt::print(FileCoverage_, "{:#x}\n", Gva.U64());
+        }
+      }
 
       //
       // If the coverage size has changed, it means that this testcase
@@ -829,6 +867,13 @@ private:
 
       const bool NewCoverage = Coverage_.size() > SizeBefore;
       if (NewCoverage) {
+
+        //
+        // New coverage means that we added new content to the file, so let's
+        // flush it.
+        //
+
+        fflush(FileCoverage_);
 
         //
         // Allocate a test that will get moved into the corpus and maybe
