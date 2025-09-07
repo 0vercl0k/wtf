@@ -153,6 +153,11 @@ enum class Registers_t : uint32_t {
   Cr3
 };
 
+template <> struct fmt::formatter<Registers_t> : formatter<string_view> {
+  auto format(Registers_t Register, format_context &Ctx) const
+      -> format_context::iterator;
+};
+
 //
 // The backend interface. A backend runs test-cases in a ~deterministic
 // environment. It can be in a VM, an emulator, etc.

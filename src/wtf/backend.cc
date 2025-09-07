@@ -8,6 +8,95 @@
 
 Backend_t *g_Backend = nullptr;
 
+auto fmt::formatter<Registers_t>::format(Registers_t Register,
+                                         format_context &Ctx) const
+    -> format_context::iterator {
+  string_view Name = "unknown";
+  switch (Register) {
+  case Registers_t::Rax: {
+    Name = "Rax";
+    break;
+  }
+  case Registers_t::Rbx: {
+    Name = "Rbx";
+    break;
+  }
+  case Registers_t::Rcx: {
+    Name = "Rcx";
+    break;
+  }
+  case Registers_t::Rdx: {
+    Name = "Rdx";
+    break;
+  }
+  case Registers_t::Rsi: {
+    Name = "Rsi";
+    break;
+  }
+  case Registers_t::Rdi: {
+    Name = "Rdi";
+    break;
+  }
+  case Registers_t::Rip: {
+    Name = "Rip";
+    break;
+  }
+  case Registers_t::Rsp: {
+    Name = "Rsp";
+    break;
+  }
+  case Registers_t::Rbp: {
+    Name = "Rbp";
+    break;
+  }
+  case Registers_t::R8: {
+    Name = "R8";
+    break;
+  }
+  case Registers_t::R9: {
+    Name = "R9";
+    break;
+  }
+  case Registers_t::R10: {
+    Name = "R10";
+    break;
+  }
+  case Registers_t::R11: {
+    Name = "R11";
+    break;
+  }
+  case Registers_t::R12: {
+    Name = "R12";
+    break;
+  }
+  case Registers_t::R13: {
+    Name = "R13";
+    break;
+  }
+  case Registers_t::R14: {
+    Name = "R14";
+    break;
+  }
+  case Registers_t::R15: {
+    Name = "R15";
+    break;
+  }
+  case Registers_t::Rflags: {
+    Name = "Rflags";
+    break;
+  }
+  case Registers_t::Cr2: {
+    Name = "Cr2";
+    break;
+  }
+  case Registers_t::Cr3: {
+    Name = "Cr3";
+    break;
+  }
+  }
+  return formatter<string_view>::format(Name, Ctx);
+}
+
 bool Backend_t::SetTraceFile(const fs::path &, const TraceType_t) {
   fmt::print("SetTraceFile not implemented.\n");
   return true;

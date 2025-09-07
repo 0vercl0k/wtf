@@ -1449,7 +1449,7 @@ bool WhvBackend_t::EnableSingleStep(CpuState_t &CpuState) {
 
 uint64_t WhvBackend_t::GetReg(const Registers_t Reg) const {
   if (!RegisterMapping.contains(Reg)) {
-    fmt::print("There is no mapping for register {:#x}.\n", Reg);
+    fmt::print("There is no mapping for register {}.\n", Reg);
     __debugbreak();
   }
 
@@ -1458,7 +1458,7 @@ uint64_t WhvBackend_t::GetReg(const Registers_t Reg) const {
 
 uint64_t WhvBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
   if (!RegisterMapping.contains(Reg)) {
-    fmt::print("There is no mapping for register {:#x}.\n", Reg);
+    fmt::print("There is no mapping for register {}.\n", Reg);
     __debugbreak();
   }
 
