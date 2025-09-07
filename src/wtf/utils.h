@@ -2,6 +2,7 @@
 #pragma once
 #include "backend.h"
 #include "globals.h"
+#include "nlohmann/json.hpp"
 #include "nt.h"
 #include <cstdint>
 #include <filesystem>
@@ -11,14 +12,55 @@
 #include <span>
 #include <string>
 #include <tsl/robin_map.h>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace fs = std::filesystem;
 namespace chrono = std::chrono;
-using span_u8 = std::span<uint8_t>;
 
 const size_t StringMaxSize = 120;
+
+struct Version_t {
+  uint16_t Major;
+  uint16_t Minor;
+  uint16_t Build;
+  uint16_t Revision;
+
+  auto operator<=>(const Version_t &) const = default;
+
+  friend void from_json(const nlohmann::json &Json, Version_t &Version) {
+    Json.at("major").get_to(Version.Major);
+    Json.at("minor").get_to(Version.Minor);
+    Json.at("build").get_to(Version.Build);
+    Json.at("revision").get_to(Version.Revision);
+  };
+};
+
+template <> struct fmt::formatter<Version_t> : formatter<std::string> {
+  auto format(const Version_t &Version, format_context &Ctx) {
+    return fmt::format_to(Ctx.out(), "v{}.{}.{}.{}", Version.Major,
+                          Version.Minor, Version.Build, Version.Revision);
+  }
+};
+
+struct DllInfo_t {
+  fs::path Path;
+  Version_t Version;
+
+  friend void from_json(const nlohmann::json &Json, DllInfo_t &DllInfo) {
+    Json.at("path").get_to(DllInfo.Path);
+    Json.at("version").get_to(DllInfo.Version);
+  };
+};
+
+struct Extras_t {
+  std::unordered_map<std::string, DllInfo_t> DebugDlls;
+
+  friend void from_json(const nlohmann::json &Json, Extras_t &Extras) {
+    Json.at("debug_dlls").get_to(Extras.DebugDlls);
+  };
+};
 
 //
 // Compare two file path by their sizes.
@@ -30,6 +72,7 @@ const size_t StringMaxSize = 120;
 // Hexdump function.
 //
 
+using span_u8 = std::span<uint8_t>;
 void Hexdump(const span_u8 Buffer);
 void Hexdump(const uint64_t Address, const span_u8 Buffer);
 void Hexdump(const uint64_t Address, const void *Buffer, size_t Len);
@@ -268,3 +311,9 @@ SaveFile(const fs::path &Path, const uint8_t *Buffer, const size_t BufferSize);
 [[nodiscard]] std::optional<Gva_t>
 ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
                     const size_t Vector);
+
+//
+// Parse the 'extras.json' file.
+//
+
+[[nodiscard]] Extras_t ParseExtrasFile(const fs::path &ExtrasFilePath);

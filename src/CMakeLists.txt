@@ -86,6 +86,7 @@ if (WIN32)
         delayimp.lib
         bcrypt.lib
         ntdll.lib
+        version.lib
     )
 
     add_executable(

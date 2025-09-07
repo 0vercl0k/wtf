@@ -127,6 +127,7 @@ int main(int argc, const char *argv[]) {
         Opts.DumpPath = Opts.StatePath / "mem.dmp";
         Opts.CpuStatePath = Opts.StatePath / "regs.json";
         Opts.SymbolFilePath = Opts.StatePath / "symbol-store.json";
+        Opts.ExtrasFilePath = Opts.StatePath / "extras.json";
 
         if (Opts.GuestFilesPath.empty()) {
           Opts.GuestFilesPath = Opts.StatePath.parent_path() / "guest-files";
@@ -466,7 +467,7 @@ int main(int argc, const char *argv[]) {
   // Initialize the debugger instance.
   //
 
-  if (!g_Dbg->Init(Opts.DumpPath, Opts.SymbolFilePath)) {
+  if (!g_Dbg->Init(Opts.DumpPath, Opts.SymbolFilePath, Opts.ExtrasFilePath)) {
     return EXIT_FAILURE;
   }
 

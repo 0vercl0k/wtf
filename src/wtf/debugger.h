@@ -4,6 +4,7 @@
 #include "nlohmann/json.hpp"
 #include "platform.h"
 #include "tsl/robin_map.h"
+#include "utils.h"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -16,8 +17,8 @@ namespace fs = std::filesystem;
 namespace json = nlohmann;
 
 struct Debugger_t {
-  virtual bool Init(const fs::path &DumpPath,
-                    const fs::path &SymbolFilePath) = 0;
+  virtual bool Init(const fs::path &DumpPath, const fs::path &SymbolFilePath,
+                    const fs::path &ExtrasFilePath) = 0;
 
   virtual uint64_t GetModuleBase(const char *Name) const = 0;
 
@@ -32,7 +33,8 @@ class DebuggerLess_t : public Debugger_t {
 
 public:
   explicit DebuggerLess_t() = default;
-  bool Init(const fs::path &DumpPath, const fs::path &SymbolFilePath) {
+  bool Init(const fs::path &DumpPath, const fs::path &SymbolFilePath,
+            const fs::path &) {
     json::json Json;
     std::ifstream SymbolFile(SymbolFilePath);
     SymbolFile >> Json;
@@ -121,285 +123,27 @@ class WindowsDebugger_t : public Debugger_t {
 public:
   explicit WindowsDebugger_t() = default;
 
-  ~WindowsDebugger_t() {
-    if (Client_) {
-      Client_->EndSession(DEBUG_END_ACTIVE_DETACH);
-      Client_->Release();
-    }
-
-    if (Control_) {
-      Control_->Release();
-    }
-
-    if (Registers_) {
-      Registers_->Release();
-    }
-
-    if (Symbols_) {
-      Symbols_->Release();
-    }
-  }
+  ~WindowsDebugger_t();
 
   WindowsDebugger_t(const WindowsDebugger_t &) = delete;
   WindowsDebugger_t &operator=(const WindowsDebugger_t &) = delete;
 
-  [[nodiscard]] bool AddSymbol(const char *Name, const uint64_t Address) const {
-    json::json Json;
-    std::ifstream SymbolFileIn(SymbolFilePath_);
-    if (SymbolFileIn.is_open()) {
-      SymbolFileIn >> Json;
-    }
-
-    if (Json.contains(Name)) {
-      Json[Name] = fmt::format("{:#x}", Address);
-    } else {
-      Json.emplace(Name, fmt::format("{:#x}", Address));
-    }
-
-    std::ofstream SymbolFileOut(SymbolFilePath_);
-    SymbolFileOut << Json;
-    return true;
-  }
+  [[nodiscard]] bool AddSymbol(const char *Name, const uint64_t Address) const;
 
   [[nodiscard]] bool Init(const fs::path &DumpPath,
-                          const fs::path &SymbolFilePath) {
-    fmt::print(
-        "Initializing the debugger instance.. (this takes a bit of time)\n");
+                          const fs::path &SymbolFilePath,
+                          const fs::path &ExtrasPath);
 
-    SymbolFilePath_ = SymbolFilePath;
+  [[nodiscard]] HRESULT WaitForEvent() const;
 
-    //
-    // Ensure that we both have dbghelp.dll and symsrv.dll in the current
-    // directory otherwise things don't work. cf
-    // https://docs.microsoft.com/en-us/windows/win32/debug/using-symsrv
-    // "Installation"
-    //
+  [[nodiscard]] HRESULT Execute(const char *Str) const;
 
-    char ExePathBuffer[MAX_PATH];
-    if (!GetModuleFileNameA(nullptr, &ExePathBuffer[0],
-                            sizeof(ExePathBuffer))) {
-      fmt::print("GetModuleFileNameA failed.\n");
-      return false;
-    }
+  [[nodiscard]] uint64_t GetModuleBase(const char *Name) const;
 
-    //
-    // Let's check if the dlls exist in the same path as the application.
-    //
-
-    const fs::path ExePath(ExePathBuffer);
-    const fs::path ParentDir(ExePath.parent_path());
-    const std::vector<std::string_view> Dlls = {"dbghelp.dll", "symsrv.dll",
-                                                "dbgeng.dll", "dbgcore.dll"};
-    const fs::path DefaultDbgDllLocation(
-        R"(c:\program Files (x86)\windows kits\10\debuggers\x64)");
-
-    for (const auto &Dll : Dlls) {
-      if (fs::exists(ParentDir / Dll)) {
-        continue;
-      }
-
-      //
-      // Apparently it doesn't. Be nice and try to find them by ourselves.
-      //
-
-      const fs::path DbgDllLocation(DefaultDbgDllLocation / Dll);
-      if (!fs::exists(DbgDllLocation)) {
-
-        //
-        // If it doesn't exist we have to exit.
-        //
-
-        fmt::print("The debugger class expects debug dlls in the "
-                   "directory "
-                   "where the application is running from.\n");
-        return false;
-      }
-
-      //
-      // Sounds like we are able to fix the problem ourselves. Copy the files
-      // in the directory where the application is running from and move on!
-      //
-
-      fs::copy(DbgDllLocation, ParentDir);
-      fmt::print("Copied {} into the "
-                 "executable directory..\n",
-                 DbgDllLocation.generic_string());
-    }
-
-    HRESULT Status = DebugCreate(__uuidof(IDebugClient), (void **)&Client_);
-    if (FAILED(Status)) {
-      fmt::print("DebugCreate failed with hr={:#x}\n", Status);
-      return false;
-    }
-
-    Status =
-        Client_->QueryInterface(__uuidof(IDebugControl), (void **)&Control_);
-    if (FAILED(Status)) {
-      fmt::print("QueryInterface/IDebugControl failed with hr={:#x}\n", Status);
-      return false;
-    }
-
-    Status = Client_->QueryInterface(__uuidof(IDebugRegisters),
-                                     (void **)&Registers_);
-    if (FAILED(Status)) {
-      fmt::print("QueryInterface/IDebugRegisters failed with hr={:#x}\n",
-                 Status);
-      return false;
-    }
-
-    Status =
-        Client_->QueryInterface(__uuidof(IDebugSymbols3), (void **)&Symbols_);
-    if (FAILED(Status)) {
-      fmt::print("QueryInterface/IDebugSymbols failed with hr={:#x}\n", Status);
-      return false;
-    }
-
-    //
-    // Turn the below on to debug issues.
-    //
-#if 0
-    const uint32_t SYMOPT_DEBUG = 0x80'00'00'00;
-    Status = Symbols_->SetSymbolOptions(SYMOPT_DEBUG);
-    if (FAILED(Status)) {
-      fmt::print("IDebugSymbols::SetSymbolOptions failed with hr={:#x}\n ",
-                 Status);
-      return false;
-    }
-    Client_->SetOutputCallbacks(&StdioCallbacks_);
-#endif
-
-    const std::string &DumpFileString = DumpPath.string();
-    const char *DumpFileA = DumpFileString.c_str();
-    Status = Client_->OpenDumpFile(DumpFileA);
-    if (FAILED(Status)) {
-      fmt::print("OpenDumpFile({}) failed with hr={:#x}\n", DumpFileString,
-                 Status);
-      return false;
-    }
-
-    //
-    // Note The engine doesn't completely attach to the dump file until the
-    // WaitForEvent method has been called. When a dump file is created from a
-    // process or kernel, information about the last event is stored in the
-    // dump file. After the dump file is opened, the next time execution is
-    // attempted, the engine will generate this event for the event callbacks.
-    // Only then does the dump file become available in the debugging session.
-    // https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/dbgeng/nf-dbgeng-idebugclient-opendumpfile
-    //
-
-    Status = WaitForEvent();
-    if (FAILED(Status)) {
-      fmt::print("WaitForEvent for OpenDumpFile failed with hr={:#x}\n",
-                 Status);
-      return false;
-    }
-
-    //
-    // To debug what might be wrong with the debugger, you can execute command
-    // with `Execute` like below.
-    //
-
-    // Execute("? ucrtbase");
-    // Execute("? nt!SwapContext");
-    return true;
-  }
-
-  [[nodiscard]] HRESULT WaitForEvent() const {
-    const HRESULT Status = Control_->WaitForEvent(DEBUG_WAIT_DEFAULT, INFINITE);
-    if (FAILED(Status)) {
-      fmt::print("IDebugControl::WaitForEvent failed with {:#x}\n", Status);
-    }
-    return Status;
-  }
-
-  [[nodiscard]] HRESULT Execute(const char *Str) const {
-    const HRESULT Status =
-        Control_->Execute(DEBUG_OUTCTL_THIS_CLIENT | DEBUG_OUTCTL_NOT_LOGGED,
-                          Str, DEBUG_EXECUTE_NOT_LOGGED);
-    if (FAILED(Status)) {
-      fmt::print("IDebugControl::Execute failed with {:#x}\n", Status);
-    }
-
-    return Status;
-  }
-
-  [[nodiscard]] uint64_t GetModuleBase(const char *Name) const {
-    uint64_t Base = 0;
-    const HRESULT Status =
-        Symbols_->GetModuleByModuleName(Name, 0, nullptr, &Base);
-    if (FAILED(Status)) {
-      return 0;
-    }
-
-    if (!AddSymbol(Name, Base)) {
-      __debugbreak();
-      return 0;
-    }
-
-    return Base;
-  }
-
-  uint64_t GetSymbol(const char *Name) const {
-    uint64_t Offset = 0;
-    HRESULT Status = Symbols_->GetOffsetByName(Name, &Offset);
-    if (FAILED(Status)) {
-      if (Status == S_FALSE) {
-        // If GetOffsetByName finds multiple matches
-        // for the name it can return any one of them.
-        // In that case it will return S_FALSE to indicate
-        // that ambiguity was arbitrarily resolved.
-        __debugbreak();
-      }
-    }
-
-    if (!AddSymbol(Name, Offset)) {
-      __debugbreak();
-    }
-
-    return Offset;
-  }
+  uint64_t GetSymbol(const char *Name) const;
 
   const std::string &GetName(const uint64_t SymbolAddress,
-                             const bool Symbolized) {
-    if (SymbolCache_.contains(SymbolAddress)) {
-      return SymbolCache_.at(SymbolAddress);
-    }
-
-    const size_t NameSizeMax = MAX_PATH;
-    char Buffer[NameSizeMax];
-    uint64_t Offset = 0;
-
-    if (Symbolized) {
-      const HRESULT Status = Symbols_->GetNameByOffset(
-          SymbolAddress, Buffer, NameSizeMax, nullptr, &Offset);
-      if (FAILED(Status)) {
-        __debugbreak();
-      }
-    } else {
-      ULONG Index;
-      ULONG64 Base;
-      HRESULT Status =
-          Symbols_->GetModuleByOffset(SymbolAddress, 0, &Index, &Base);
-
-      if (FAILED(Status)) {
-        __debugbreak();
-      }
-
-      ULONG NameSize;
-      Status = Symbols_->GetModuleNameString(DEBUG_MODNAME_MODULE, Index, Base,
-                                             Buffer, NameSizeMax, &NameSize);
-
-      if (FAILED(Status)) {
-        __debugbreak();
-      }
-
-      Offset = SymbolAddress - Base;
-    }
-
-    SymbolCache_.emplace(SymbolAddress,
-                         fmt::format("{}+{:#x}", Buffer, Offset));
-    return SymbolCache_.at(SymbolAddress);
-  }
+                             const bool Symbolized);
 };
 #else
 
