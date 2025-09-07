@@ -3,7 +3,6 @@
 #include "backend.h"
 #include "blake3.h"
 #include "debugger.h"
-#include "nlohmann/json.hpp"
 #include "platform.h"
 #include <cstdio>
 #include <cstdlib>
@@ -527,4 +526,11 @@ ReadIDTEntryHandler(const Backend_t &Backend, const CpuState_t &CpuState,
   }
 
   return Entry.Handler();
+}
+
+[[nodiscard]] Extras_t ParseExtrasFile(const fs::path &ExtrasFilePath) {
+  std::ifstream File(ExtrasFilePath);
+  json::json Json;
+  File >> Json;
+  return Json.get<Extras_t>();
 }

@@ -1163,7 +1163,7 @@ uint64_t BochscpuBackend_t::GetReg(const Registers_t Reg) const {
                                 {Registers_t::Cr3, bochscpu_cpu_cr3}};
 
   if (!RegisterMappingGetters.contains(Reg)) {
-    fmt::print("There is no mapping for register {:x}.\n", Reg);
+    fmt::print("There is no mapping for register {}.\n", Reg);
     __debugbreak();
   }
 
@@ -1197,7 +1197,7 @@ uint64_t BochscpuBackend_t::SetReg(const Registers_t Reg,
                                 {Registers_t::Cr3, bochscpu_cpu_set_cr3}};
 
   if (!RegisterMappingSetters.contains(Reg)) {
-    fmt::print("There is no mapping for register {:x}.\n", Reg);
+    fmt::print("There is no mapping for register {}.\n", Reg);
     __debugbreak();
   }
 

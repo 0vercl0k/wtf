@@ -39,9 +39,8 @@ public:
   Gva_t Offset() const { return Gva_t(Gva_ & 0xfff); }
   Gva_t Align() const { return Gva_t(Gva_ & ~0xfff); }
 
-  bool operator!=(const Gva_t &Gva) const { return Gva_ != Gva.U64(); }
-  bool operator==(const Gva_t &Gva) const { return Gva_ == Gva.U64(); }
-  bool operator<(const Gva_t &Gva) const { return Gva_ < Gva.U64(); }
+  auto operator<=>(const Gva_t &) const = default;
+
   explicit operator bool() const { return Gva_ != 0; }
   uint64_t *operator&() { return &Gva_; }
   Gva_t operator+(const Gva_t &Gva) const { return Gva_t(Gva_ + Gva.U64()); }
@@ -57,16 +56,14 @@ public:
 //
 
 template <> struct fmt::formatter<Gpa_t> : formatter<uint64_t> {
-  template <typename FormatContext>
-  auto format(const Gpa_t Gpa, FormatContext &ctx) {
-    return formatter<uint64_t>::format(Gpa.U64(), ctx);
+  auto format(const Gpa_t Gpa, format_context &Ctx) const {
+    return formatter<uint64_t>::format(Gpa.U64(), Ctx);
   }
 };
 
 template <> struct fmt::formatter<Gva_t> : formatter<uint64_t> {
-  template <typename FormatContext>
-  auto format(const Gva_t Gva, FormatContext &ctx) {
-    return formatter<uint64_t>::format(Gva.U64(), ctx);
+  auto format(const Gva_t Gva, format_context &Ctx) const {
+    return formatter<uint64_t>::format(Gva.U64(), Ctx);
   }
 };
 

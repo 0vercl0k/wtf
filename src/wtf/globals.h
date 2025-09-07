@@ -1340,6 +1340,12 @@ struct Options_t {
   fs::path GuestFilesPath;
 
   //
+  // Extras file path.
+  //
+
+  fs::path ExtrasFilePath;
+
+  //
   // The limit per testcase: for bochscpu it is an instruction number, for whv
   // it is a number of seconds.
   //
