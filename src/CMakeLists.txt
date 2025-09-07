@@ -49,7 +49,7 @@ if (WIN32)
     enable_language(ASM_MASM)
     # This is for winsock / windows.h; without this windows.h imports socket.
     # https://docs.microsoft.com/en-us/windows/win32/iphlp/creating-a-basic-ip-helper-application
-    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN FMT_UNICODE)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
     target_sources(
         wtf
         PRIVATE
@@ -64,6 +64,13 @@ if (WIN32)
         wtf
         PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>"
+    )
+
+    # /utf-8 for fmt
+    target_compile_options(
+        wtf
+        PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:/utf-8>"
     )
 
     # Delay loading dbgeng.dll:

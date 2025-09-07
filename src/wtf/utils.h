@@ -38,7 +38,7 @@ struct Version_t {
 };
 
 template <> struct fmt::formatter<Version_t> : formatter<std::string> {
-  auto format(const Version_t &Version, format_context &Ctx) {
+  auto format(const Version_t &Version, format_context &Ctx) const {
     return fmt::format_to(Ctx.out(), "v{}.{}.{}.{}", Version.Major,
                           Version.Minor, Version.Build, Version.Revision);
   }

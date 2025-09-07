@@ -56,15 +56,13 @@ public:
 //
 
 template <> struct fmt::formatter<Gpa_t> : formatter<uint64_t> {
-  template <typename FormatContext>
-  auto format(const Gpa_t Gpa, FormatContext &Ctx) {
+  auto format(const Gpa_t Gpa, format_context &Ctx) const {
     return formatter<uint64_t>::format(Gpa.U64(), Ctx);
   }
 };
 
 template <> struct fmt::formatter<Gva_t> : formatter<uint64_t> {
-  template <typename FormatContext>
-  auto format(const Gva_t Gva, FormatContext &Ctx) {
+  auto format(const Gva_t Gva, format_context &Ctx) const {
     return formatter<uint64_t>::format(Gva.U64(), Ctx);
   }
 };
