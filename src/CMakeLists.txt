@@ -49,7 +49,7 @@ if (WIN32)
     enable_language(ASM_MASM)
     # This is for winsock / windows.h; without this windows.h imports socket.
     # https://docs.microsoft.com/en-us/windows/win32/iphlp/creating-a-basic-ip-helper-application
-    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN FMT_UNICODE)
     target_sources(
         wtf
         PRIVATE
