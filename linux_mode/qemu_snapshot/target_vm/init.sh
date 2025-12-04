@@ -53,7 +53,7 @@ download_prereqs() {
 	sudo apt install -y gcc-11 g++-11 clang make ninja-build debootstrap libelf-dev \
 		libssl-dev pkg-config flex bison gdb libc6 lsb-release software-properties-common
 
-	sudo apt-get install -y python3.10-venv libglib2.0-dev libpixman-1-dev python3-pip cmake
+	sudo apt-get install -y python3-venv libglib2.0-dev libpixman-1-dev python3-pip cmake
 
 	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
 	sudo add-apt-repository -y "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-20 main"

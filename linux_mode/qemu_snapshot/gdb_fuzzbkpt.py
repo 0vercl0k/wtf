@@ -12,7 +12,11 @@ import struct
 import subprocess
 import pathlib
 import lief
+import glob
 
+venv_site_packages = glob.glob("../qemu_snapshot/target_vm/venv/lib/python3.*/site-packages")
+if venv_site_packages:
+    sys.path.insert(0, venv_site_packages[0])
 currentdir = pathlib.Path(inspect.getfile(inspect.currentframe()))
 currentdir = currentdir.absolute().parent
 sys.path.insert(0, str(currentdir.parent / "qemu_snapshot"))
