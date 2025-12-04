@@ -73,7 +73,7 @@ download_prereqs() {
 
 	# activate python venv
 	source venv/bin/activate
-	pip3 install pwntools lief tomli
+	pip3 install pwntools setuptools lief tomli
 	# If there isn't a bookworm script for debootstrap (like in Ubuntu 18.04), copy
 	# over the bullseye script as it is the same
 	if [ ! -f /usr/share/debootstrap/scripts/bookworm ]; then
