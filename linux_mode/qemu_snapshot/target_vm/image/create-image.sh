@@ -168,7 +168,12 @@ echo "root    soft   memlock           unlimited" | sudo tee -a $DIR/etc/securit
 # Example for setting afl-system-config.sh to run automatically on reboot
 #sudo cp ./afl-system-config.sh $DIR/root
 #sudo chroot $DIR /bin/bash -c "(crontab -l 2>/dev/null; echo \"@reboot  /root/afl-system-config.sh\") | crontab -"
-ssh-keygen -f $RELEASE.id_rsa -t rsa -N ''
+
+# Don't regenerate key if it already exists
+if [ ! -f "$RELEASE.id_rsa" ]; then
+	ssh-keygen -f $RELEASE.id_rsa -t rsa -N ''
+fi
+
 sudo mkdir -p $DIR/root/.ssh/
 cat $RELEASE.id_rsa.pub | sudo tee $DIR/root/.ssh/authorized_keys
 

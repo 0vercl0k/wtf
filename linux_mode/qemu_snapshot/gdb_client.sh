@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # get our environmental variables
 export LINUX_MODE_BASE=../
 export WTF=${LINUX_MODE_BASE}../
@@ -15,5 +16,7 @@ gdb \
     -iex "add-auto-load-safe-path ${LINUX_GDB}" \
     -ex "set confirm off" \
     -ex "target remote localhost:1234" \
+    -ex "python import sys; sys.path.insert(0, '${LINUX_MODE_BASE}qemu_snapshot/target_vm/linux/scripts/gdb')" \
+    -ex "source ${LINUX_GDB}" \
     -x ./bkpt.py \
     -ex continue
