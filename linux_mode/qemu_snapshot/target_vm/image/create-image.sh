@@ -171,7 +171,7 @@ echo "root    soft   memlock           unlimited" | sudo tee -a $DIR/etc/securit
 
 # Don't regenerate key if it already exists
 if [ ! -f "$RELEASE.id_rsa" ]; then
-	ssh-keygen -f $RELEASE.id_rsa -t rsa -N ''
+    ssh-keygen -f $RELEASE.id_rsa -t rsa -N ''
 fi
 
 sudo mkdir -p $DIR/root/.ssh/
