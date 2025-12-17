@@ -144,7 +144,7 @@ init_debian_image() {
     popd
 }
 # add user to kvm
-sudo usermod -aG kvm ${whoami}
+sudo usermod -aG kvm `whoami`
 
 download_prereqs
 sudo -v
