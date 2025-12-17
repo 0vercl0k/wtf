@@ -78,6 +78,10 @@ jobs:
         CC: gcc-10
         CXX: g++-10
       run: |
+        pushd src/libs/bochscpu-bins
+        bash build-bochscpu.sh
+        cp bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib/
+        popd
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
@@ -88,6 +92,10 @@ jobs:
         CC: clang-20
         CXX: clang++-20
       run: |
+        pushd src/libs/bochscpu-bins
+        bash build-bochscpu.sh
+        cp bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib/
+        popd
         cd src/build
         chmod u+x ./build-release.sh
         ./build-release.sh
