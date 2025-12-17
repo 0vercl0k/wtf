@@ -133,20 +133,6 @@ else (WIN32)
     )
 endif(WIN32)
 
-if (UNIX)
-    # Removed -opaque-pointers flags due to incompatibility with LLVM 14.0.0
-    # target_compile_options(wtf PRIVATE -opaque-pointers)
-    # target_link_options(wtf PRIVATE -opaque-pointers -v)
-
-    # Fix for glibc compatibility: wrap newer __isoc23_* symbols to older versions
-    target_link_options(
-        wtf
-        PRIVATE
-        -Wl,--wrap=__isoc23_strtoull
-        -Wl,--wrap=__isoc23_sscanf
-    )
-endif (UNIX)
-
 target_precompile_headers(
     wtf
     PRIVATE

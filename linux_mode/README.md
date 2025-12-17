@@ -160,8 +160,25 @@ Breakpoint 1, 0x00005555555551e9 in do_crash_test ()
 (gdb)
 ```
 
-## Harnessing and Fuzzing 
+## Building Fuzzer
+First build libboch
+```console
+cd src/libs/bochscpu-bins
+bash build-bochscpu.sh
+```
 
+Copy the built library into lib folder
+```console
+cp bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib/
+```
+
+Build wtf itself
+```console
+cd src/build/
+bash build-release.sh
+```
+
+## Harnessing and Fuzzing 
 Writing harnesses is the same process as writing harnesses for Windows executables. Example harnesses for crash_test and page_fault_test are present in [src/wtf/fuzzer_linux_crash_test.cc](../src/wtf/fuzzer_linux_crash_test.cc) and [src/wtf/fuzzer_linux_page_fault_test.cc](../src/wtf/fuzzer_linux_page_fault_test.cc).
 
 Now that we have everything set up we can start our server and fuzzer:
