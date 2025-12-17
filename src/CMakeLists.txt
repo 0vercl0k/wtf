@@ -22,8 +22,6 @@ file(
     wtf/*.cc
 )
 
-# Add glibc compatibility shim for linking against newer libraries
-list(APPEND wtf_srcfiles ${CMAKE_CURRENT_LIST_DIR}/wtf/glibc_compat.c)
 
 file(
     GLOB_RECURSE
