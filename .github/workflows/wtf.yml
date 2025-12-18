@@ -8,101 +8,93 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        generator: ['ninja', 'msvc']
+        generator: ["ninja", "msvc"]
 
     name: Windows latest / ${{ matrix.generator }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v2
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
 
-    - name: Setup vs prompt
-      uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup vs prompt
+        uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Build with Ninja/cl
-      if: matrix.generator == 'ninja'
-      run: |
-        cd src\build
-        .\build-release.bat
+      - name: Build with Ninja/cl
+        if: matrix.generator == 'ninja'
+        run: |
+          cd src\build
+          .\build-release.bat
 
-    - name: Build with msvc
-      if: matrix.generator == 'msvc'
-      run: |
-        cd src\build
-        .\build-release-msvc.bat
+      - name: Build with msvc
+        if: matrix.generator == 'msvc'
+        run: |
+          cd src\build
+          .\build-release-msvc.bat
 
-    - name: Copy dbghelp/symsrv
-      if: matrix.generator == 'ninja'
-      run: |
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgeng.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgcore.dll" src/build
-        copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
+      - name: Copy dbghelp/symsrv
+        if: matrix.generator == 'ninja'
+        run: |
+          copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbghelp.dll" src/build
+          copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgeng.dll" src/build
+          copy "c:\program Files (x86)\windows kits\10\debuggers\x64\dbgcore.dll" src/build
+          copy "c:\program Files (x86)\windows kits\10\debuggers\x64\symsrv.dll" src/build
 
-    - name: Upload artifacts
-      if: matrix.generator == 'ninja'
-      uses: actions/upload-artifact@v4
-      with:
-        name: bin-win64.RelWithDebInfo
-        path: |
-          src/build/wtf.exe
-          src/build/wtf.pdb
-          src/build/dbghelp.dll
-          src/build/dbgeng.dll
-          src/build/dbgcore.dll
-          src/build/symsrv.dll
+      - name: Upload artifacts
+        if: matrix.generator == 'ninja'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-win64.RelWithDebInfo
+          path: |
+            src/build/wtf.exe
+            src/build/wtf.pdb
+            src/build/dbghelp.dll
+            src/build/dbgeng.dll
+            src/build/dbgcore.dll
+            src/build/symsrv.dll
 
   Linux:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        compiler: ['clang', 'gcc']
+        compiler: ["clang", "gcc"]
 
     name: Ubuntu latest / ${{ matrix.compiler }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Installing dependencies
-      run: |
-        sudo apt-get -y update
-        sudo apt install -y g++-10 ninja-build
-        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+      - name: Installing dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt install -y g++-10 ninja-build
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
-    - name: Build with gcc
-      if: matrix.compiler == 'gcc'
-      env:
-        CC: gcc-10
-        CXX: g++-10
-      run: |
-        pushd src/libs/bochscpu-bins
-        bash build-bochscpu.sh
-        cp bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib/
-        popd
-        cd src/build
-        chmod u+x ./build-release.sh
-        ./build-release.sh
+      - name: Build with gcc
+        if: matrix.compiler == 'gcc'
+        env:
+          CC: gcc-10
+          CXX: g++-10
+        run: |
+          cd src/build
+          chmod u+x ./build-release.sh
+          ./build-release.sh
 
-    - name: Build with clang
-      if: matrix.compiler == 'clang'
-      env:
-        CC: clang-20
-        CXX: clang++-20
-      run: |
-        pushd src/libs/bochscpu-bins
-        bash build-bochscpu.sh
-        cp bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib/
-        popd
-        cd src/build
-        chmod u+x ./build-release.sh
-        ./build-release.sh
+      - name: Build with clang
+        if: matrix.compiler == 'clang'
+        env:
+          CC: clang-20
+          CXX: clang++-20
+        run: |
+          cd src/build
+          chmod u+x ./build-release.sh
+          ./build-release.sh
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: bin-lin64-${{ matrix.compiler }}.Release
-        path: |
-          src/build/wtf
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-lin64-${{ matrix.compiler }}.Release
+          path: |
+            src/build/wtf
