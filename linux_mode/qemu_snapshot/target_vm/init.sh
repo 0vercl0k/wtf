@@ -143,7 +143,8 @@ init_debian_image() {
     ./create-image.sh
     popd
 }
-# add user to kvm
+
+# Add the current user to the kvm group; QEMU uses the KVM api (/dev/kvm) for acceleration.
 sudo usermod -aG kvm `whoami`
 
 download_prereqs
