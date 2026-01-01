@@ -112,6 +112,8 @@ Start the virtual machine in one tab while in the snapshot subdirectory by runni
 user@pc:/wtf/linux_mode/crash_test$ ../qemu_snapshot/gdb_server.sh
 ```
 
+(If you are running into `Could not access KVM kernel module: Permission denied` or KVM related errors, close an re-open your shell. `setup.sh` added the current user to the `kvm` group and it seems to require to close / re-open the shell).
+
 In a separate tab, scp the target file to the target VM. With `crash_test` this can be done by first compiling the target file:
 
 ```console
@@ -207,24 +209,6 @@ Snapshotting complete
 
 Breakpoint 1, 0x00005555555551e9 in do_crash_test ()
 (gdb)
-```
-
-## Building Fuzzer
-First build libboch
-```console
-cd src/libs/bochscpu-bins
-bash build-bochscpu.sh
-```
-
-Copy the built library into lib folder
-```console
-cp bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib/
-```
-
-Build wtf itself
-```console
-cd src/build/
-bash build-release.sh
 ```
 
 ## Harnessing and Fuzzing 
