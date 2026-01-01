@@ -13,11 +13,62 @@
 
 ## Overview
 
-This provides experimental Linux ELF userland snapshotting support based on previous work by [Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot).
+This provides experimental Linux ELF userland snapshotting support based on previous work by [Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot). What follows has been tested and should work out of the box against [Ubuntu 'Noble Numbat' 24.04](https://ubuntu.com/download/desktop?version=24.04&architecture=amd64&lts=true).
 
 <p align='center'>
 <img src='../pics/wtf-linux-snapshot.webp'>
 </p>
+
+### Ubuntu 22.04
+
+It also has been tested against [Ubuntu 'Jammy Jellyfish' 22.04](https://releases.ubuntu.com/jammy/) but requires you to rebuild [`libbochscpu_ffi`](../src/libs/bochscpu-bins) in order to build `wtf`. These are the linking errors you will encounter otherwise:
+
+```bash
+user@pc:~/wtf/src/build$ CXX=clang++-20 CC=clang-20 ./build-release.sh
+...
+[36/36] Linking CXX executable wtf
+FAILED: wtf
+...
+/usr/bin/ld: ../libs/bochscpu-bins/lib/libbochscpu_ffi.a(85d2494f718bd438-paramtree.o): in function `bx_param_num_c::parse_param(char const*)':
+paramtree.cc:(.text._ZN14bx_param_num_c11parse_paramEPKc+0x5b): undefined reference to `__isoc23_strtoull'
+/usr/bin/ld: paramtree.cc:(.text._ZN14bx_param_num_c11parse_paramEPKc+0xa9): undefined reference to `__isoc23_strtoull'
+/usr/bin/ld: paramtree.cc:(.text._ZN14bx_param_num_c11parse_paramEPKc+0xd5): undefined reference to `__isoc23_strtoull'
+/usr/bin/ld: paramtree.cc:(.text._ZN14bx_param_num_c11parse_paramEPKc+0x111): undefined reference to `__isoc23_strtoull'
+/usr/bin/ld: ../libs/bochscpu-bins/lib/libbochscpu_ffi.a(85d2494f718bd438-paramtree.o): in function `bx_param_bytestring_c::parse_param(char const*)':
+paramtree.cc:(.text._ZN21bx_param_bytestring_c11parse_paramEPKc+0x97): undefined reference to `__isoc23_sscanf'
+/usr/bin/ld: ../libs/bochscpu-bins/lib/libbochscpu_ffi.a(msr.o): in function `BX_CPU_C::load_MSRs(char const*)':
+/mnt/c/work/codes/wtf/src/libs/bochscpu-bins/bxbuild-lin/bochscpu-build/Bochs/bochs/cpu/msr.cc:1557: undefined reference to `__isoc23_sscanf'
+clang++-20: error: linker command failed with exit code 1 (use -v to see invocation)
+ninja: build stopped: subcommand failed.
+```
+
+Rebuild `libbochscpu_ffi` by running the [build-bochscpu.sh](../src/libs/bochscpu-bins/build-bochscpu.sh) script like so to build the `libbochscpu_ffi.a` library (a Rust toolchain is needed; you can install it with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)..:
+
+```bash
+user@pc:~/wtf/src/libs/bochscpu-bins$ bash build-bochscpu.sh
+...
+Finished `release` profile [optimized] target(s) in 11.81s
+~/wtf/src/libs/bochscpu-bins
+user@pc:~/wtf/src/libs/bochscpu-bins$ ls bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/*.a
+bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a
+```
+
+..this should have generated a `libbochscpu_ffi.a` file that you can move into the `src/libs/bochscpu-bins/` directory..:
+
+```bash
+user@pc:~/wtf/src/libs/bochscpu-bins$ mv bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib
+user@pc:~/wtf/src/libs/bochscpu-bins$ git status
+...
+        modified:   lib/libbochscpu_ffi.a
+```
+
+With those changes, you should be able to link `wtf` successfully:
+
+```bash
+user@pc:~/wtf/src/build$ CXX=clang++-20 CC=clang-20 ./build-release.sh
+...
+[1/1] Linking CXX executable wtf
+```
 
 ## Setting up the environment
 
