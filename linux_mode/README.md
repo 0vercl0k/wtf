@@ -13,17 +13,15 @@
 
 ## Overview
 
-This provides experimental Linux ELF userland snapshotting support based on previous work by [Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot). What follows has been tested and should work out of the box against [Ubuntu 'Noble Numbat' 24.04](https://ubuntu.com/download/desktop?version=24.04&architecture=amd64&lts=true).
+This provides experimental Linux ELF userland snapshotting support based on previous work by [Kasimir](https://github.com/0vercl0k/wtf/pull/102) and scripts from [Snapchange](https://github.com/awslabs/snapchange/tree/main/qemu_snapshot). It has been tested and should work out of the box against [Ubuntu 'Noble Numbat' 24.04](https://ubuntu.com/download/desktop?version=24.04&architecture=amd64&lts=true).
 
 <p align='center'>
 <img src='../pics/wtf-linux-snapshot.webp'>
 </p>
 
-### Ubuntu 22.04
+It also has been tested against [Ubuntu 'Jammy Jellyfish' 22.04](https://releases.ubuntu.com/jammy/) but requires you to rebuild [`libbochscpu_ffi.a`](../src/libs/bochscpu-bins/lib/libbochscpu_ffi.a) in order to build `wtf`. Otherwise, you will encounter these linker errors:
 
-It also has been tested against [Ubuntu 'Jammy Jellyfish' 22.04](https://releases.ubuntu.com/jammy/) but requires you to rebuild [`libbochscpu_ffi`](../src/libs/bochscpu-bins) in order to build `wtf`. These are the linking errors you will encounter otherwise:
-
-```bash
+```console
 user@pc:~/wtf/src/build$ CXX=clang++-20 CC=clang-20 ./build-release.sh
 ...
 [36/36] Linking CXX executable wtf
@@ -44,7 +42,7 @@ ninja: build stopped: subcommand failed.
 
 Rebuild `libbochscpu_ffi` by running the [build-bochscpu.sh](../src/libs/bochscpu-bins/build-bochscpu.sh) script like so to build the `libbochscpu_ffi.a` library (a Rust toolchain is needed; you can install it with `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)..:
 
-```bash
+```console
 user@pc:~/wtf/src/libs/bochscpu-bins$ bash build-bochscpu.sh
 ...
 Finished `release` profile [optimized] target(s) in 11.81s
@@ -53,18 +51,18 @@ user@pc:~/wtf/src/libs/bochscpu-bins$ ls bxbuild-lin/bochscpu-ffi/target/x86_64-
 bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a
 ```
 
-..this should have generated a `libbochscpu_ffi.a` file that you can move into the `src/libs/bochscpu-bins/` directory..:
+..this should have generated a `libbochscpu_ffi.a` file. Move into `src/libs/bochscpu-bins/lib`:
 
-```bash
+```console
 user@pc:~/wtf/src/libs/bochscpu-bins$ mv bxbuild-lin/bochscpu-ffi/target/x86_64-unknown-linux-gnu/release/libbochscpu_ffi.a lib
 user@pc:~/wtf/src/libs/bochscpu-bins$ git status
 ...
         modified:   lib/libbochscpu_ffi.a
 ```
 
-With those changes, you should be able to link `wtf` successfully:
+Linking `wtf` should now be working successfully:
 
-```bash
+```console
 user@pc:~/wtf/src/build$ CXX=clang++-20 CC=clang-20 ./build-release.sh
 ...
 [1/1] Linking CXX executable wtf
