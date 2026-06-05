@@ -150,6 +150,11 @@ public:
       SymbolFileIn >> Json;
     }
 
+    const std::string AddrStr = fmt::format("{:#x}", Address);
+    if (Json.contains(Name) && Json[Name] == AddrStr) {
+        return true;
+    }
+    
     if (Json.contains(Name)) {
       Json[Name] = fmt::format("{:#x}", Address);
     } else {
