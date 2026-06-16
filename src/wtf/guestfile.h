@@ -325,7 +325,7 @@ public:
           (FILE_ALLOCATION_INFORMATION *)HostFileInformation;
 
       FileStreamDebugPrint("FileAllocationInformation({:#x}).\n",
-                           FileAllocationInfo->AllocationSize);
+                           FileAllocationInfo_->AllocationSize);
     } else {
       FileStreamDebugPrint("Unsupported class.\n");
       return false;
