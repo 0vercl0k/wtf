@@ -13,10 +13,10 @@ jobs:
     name: Windows latest / ${{ matrix.generator }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Setup vs prompt
         uses: ilammy/msvc-dev-cmd@v1
@@ -43,7 +43,7 @@ jobs:
 
       - name: Upload artifacts
         if: matrix.generator == 'ninja'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bin-win64.RelWithDebInfo
           path: |
@@ -64,7 +64,7 @@ jobs:
     name: Ubuntu latest / ${{ matrix.compiler }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installing dependencies
         run: |
@@ -85,15 +85,15 @@ jobs:
       - name: Build with clang
         if: matrix.compiler == 'clang'
         env:
-          CC: clang-20
-          CXX: clang++-20
+          CC: clang-22
+          CXX: clang++-22
         run: |
           cd src/build
           chmod u+x ./build-release.sh
           ./build-release.sh
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bin-lin64-${{ matrix.compiler }}.Release
           path: |

@@ -150,10 +150,14 @@ public:
       SymbolFileIn >> Json;
     }
 
+    const std::string AddrStr = fmt::format("{:#x}", Address);
     if (Json.contains(Name)) {
-      Json[Name] = fmt::format("{:#x}", Address);
+      if (Json[Name] == AddrStr) {
+        return true;
+      }
+      Json[Name] = AddrStr;
     } else {
-      Json.emplace(Name, fmt::format("{:#x}", Address));
+      Json.emplace(Name, AddrStr);
     }
 
     std::ofstream SymbolFileOut(SymbolFilePath_);
