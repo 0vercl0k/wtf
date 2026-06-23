@@ -2062,13 +2062,11 @@ uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
 
   case Registers_t::Cr2: {
     Run_->s.regs.sregs.cr2 = Value;
-    Run_->kvm_dirty_regs |= KVM_SYNC_X86_SREGS;
     break;
   }
 
   case Registers_t::Cr3: {
     Run_->s.regs.sregs.cr3 = Value;
-    Run_->kvm_dirty_regs |= KVM_SYNC_X86_SREGS;
     break;
   }
   }
