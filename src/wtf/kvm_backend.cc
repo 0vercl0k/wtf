@@ -1994,6 +1994,9 @@ uint64_t GetKvmDirtyRegsFromRegister(const Registers_t Reg) {
   case Registers_t::Cr3:
     return KVM_SYNC_X86_SREGS;
   }
+
+  std::abort();
+  return 0;
 }
 
 uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
@@ -2100,7 +2103,8 @@ uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
   }
 
   //
-  // Tell KVM to flush the appropriate set of regs into the VCPU next time it runs.
+  // Tell KVM to flush the appropriate set of regs into the VCPU next time it
+  // runs.
   //
 
   Run_->kvm_dirty_regs |= GetKvmDirtyRegsFromRegister(Reg);
