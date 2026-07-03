@@ -1968,6 +1968,34 @@ uint64_t KvmBackend_t::GetReg(const Registers_t Reg) const {
   return 0;
 }
 
+uint64_t GetKvmDirtyRegsFromRegister(const Registers_t Reg) {
+  switch (Reg) {
+  case Registers_t::Rax:
+  case Registers_t::Rbx:
+  case Registers_t::Rcx:
+  case Registers_t::Rdx:
+  case Registers_t::Rsi:
+  case Registers_t::Rdi:
+  case Registers_t::Rip:
+  case Registers_t::Rsp:
+  case Registers_t::Rbp:
+  case Registers_t::R8:
+  case Registers_t::R9:
+  case Registers_t::R10:
+  case Registers_t::R11:
+  case Registers_t::R12:
+  case Registers_t::R13:
+  case Registers_t::R14:
+  case Registers_t::R15:
+  case Registers_t::Rflags:
+    return KVM_SYNC_X86_REGS;
+
+  case Registers_t::Cr2:
+  case Registers_t::Cr3:
+    return KVM_SYNC_X86_SREGS;
+  }
+}
+
 uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
   switch (Reg) {
   case Registers_t::Rax: {
@@ -2072,10 +2100,10 @@ uint64_t KvmBackend_t::SetReg(const Registers_t Reg, const uint64_t Value) {
   }
 
   //
-  // Tell KVM to flush the regs into the VCPU next time it runs.
+  // Tell KVM to flush the appropriate set of regs into the VCPU next time it runs.
   //
 
-  Run_->kvm_dirty_regs |= KVM_SYNC_X86_REGS;
+  Run_->kvm_dirty_regs |= GetKvmDirtyRegsFromRegister(Reg);
   return Value;
 }
 
