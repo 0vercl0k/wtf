@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <fstream>
 
-constexpr bool WhvLoggingOn = true;
+constexpr bool WhvLoggingOn = false;
 
 template <typename... Args_t>
 void WhvDebugPrint(const char *Format, const Args_t &...args) {
