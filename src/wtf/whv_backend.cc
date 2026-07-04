@@ -118,8 +118,23 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   }
 
   //
-  // Configuration of the partition.
+  // XXX.
   //
+
+  uint64_t ProcessorFeatures = 0;
+  Hr = GetPartitionProperty(WHvPartitionPropertyCodeProcessorFeatures,
+                            ProcessorFeatures);
+  if (FAILED(Hr)) {
+    fmt::print("Failed GetPartitionProperty/ProcessorFeatures\n");
+    return false;
+  }
+
+  Hr = SetPartitionProperty(WHvPartitionPropertyCodeProcessorFeatures,
+                            ProcessorFeatures);
+  if (FAILED(Hr)) {
+    fmt::print("Failed SetPartitionProperty/ProcessorFeatures\n");
+    return false;
+  }
 
   //
   // Add one VP to the partition.
@@ -229,6 +244,20 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
 }
 
 HRESULT
+WhvBackend_t::GetPartitionProperty(
+    const WHV_PARTITION_PROPERTY_CODE PropertyCode, uint64_t &PropertyValue) {
+  uint32_t Written = 0;
+  HRESULT Hr = WHvGetPartitionProperty(Partition_, PropertyCode, &PropertyValue,
+                                       sizeof(PropertyValue), &Written);
+
+  if (Written != sizeof(PropertyValue)) {
+    Hr = E_FAIL;
+  }
+
+  return Hr;
+}
+
+HRESULT
 WhvBackend_t::SetPartitionProperty(
     const WHV_PARTITION_PROPERTY_CODE PropertyCode,
     const uint64_t PropertyValue) {
@@ -248,6 +277,11 @@ WhvBackend_t::SetPartitionProperty(
 
   case WHvPartitionPropertyCodeExceptionExitBitmap: {
     Property.ExceptionExitBitmap = PropertyValue;
+    break;
+  }
+
+  case WHvPartitionPropertyCodeProcessorFeatures: {
+    Property.ProcessorFeatures.AsUINT64 = PropertyValue;
     break;
   }
 
@@ -1159,7 +1193,7 @@ WhvBackend_t::OnDebugTrap(const WHV_RUN_VP_EXIT_CONTEXT &Exception) {
   //
 
   if (LastBreakpointGpa_) {
-    WhvDebugPrint("Resetting breakpoint @ {:#x}", *LastBreakpointGpa_);
+    WhvDebugPrint("Resetting breakpoint @ {:#x}\n", *LastBreakpointGpa_);
 
     //
     // Remember if we get there, it is because we hit a breakpoint, turned on

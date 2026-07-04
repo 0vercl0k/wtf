@@ -328,6 +328,8 @@ private:
   HRESULT OnExitCoverageBp(const WHV_RUN_VP_EXIT_CONTEXT &Exception);
   HRESULT OnExitReasonMemoryAccess(const WHV_RUN_VP_EXIT_CONTEXT &Exception);
 
+  HRESULT GetPartitionProperty(const WHV_PARTITION_PROPERTY_CODE PropertyCode,
+                               uint64_t &PropertyValue);
   HRESULT SetPartitionProperty(const WHV_PARTITION_PROPERTY_CODE PropertyCode,
                                const uint64_t PropertyValue);
   HRESULT LoadState(const CpuState_t &CpuState);
