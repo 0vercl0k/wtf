@@ -328,10 +328,49 @@ private:
   HRESULT OnExitCoverageBp(const WHV_RUN_VP_EXIT_CONTEXT &Exception);
   HRESULT OnExitReasonMemoryAccess(const WHV_RUN_VP_EXIT_CONTEXT &Exception);
 
-  HRESULT GetPartitionProperty(const WHV_PARTITION_PROPERTY_CODE PropertyCode,
-                               uint64_t &PropertyValue);
-  HRESULT SetPartitionProperty(const WHV_PARTITION_PROPERTY_CODE PropertyCode,
-                               const uint64_t PropertyValue);
+  template <typename Capability_t>
+  std::optional<HRESULT> GetCapability(const WHV_CAPABILITY_CODE CapabilityCode,
+                                       Capability_t &Capability) {
+    uint32_t Written = 0;
+    HRESULT Hr = WHvGetCapability(CapabilityCode, (void *)&Capability,
+                                  sizeof(Capability), &Written);
+
+    if (FAILED(Hr) || Written != sizeof(Capability)) {
+      return Hr;
+    }
+
+    return std::nullopt;
+  }
+
+  template <typename Property_t>
+  std::optional<HRESULT>
+  GetPartitionProperty(const WHV_PARTITION_PROPERTY_CODE PropertyCode,
+                       Property_t &Property) {
+    uint32_t Written = 0;
+    HRESULT Hr = WHvGetPartitionProperty(Partition_, PropertyCode, &Property,
+                                         sizeof(Property), &Written);
+
+    if (FAILED(Hr) || Written != sizeof(Property)) {
+      return Hr;
+    }
+
+    return std::nullopt;
+  }
+
+  template <typename Property_t>
+  std::optional<HRESULT>
+  SetPartitionProperty(const WHV_PARTITION_PROPERTY_CODE PropertyCode,
+                       const Property_t &Property) {
+    const HRESULT Hr = WHvSetPartitionProperty(
+        Partition_, PropertyCode, (void *)&Property, sizeof(Property));
+
+    if (FAILED(Hr)) {
+      return Hr;
+    }
+
+    return std::nullopt;
+  }
+
   HRESULT LoadState(const CpuState_t &CpuState);
   bool SetCoverageBps();
   HRESULT MapGpaRange(const uint8_t *Hva, const Gpa_t Gpa,

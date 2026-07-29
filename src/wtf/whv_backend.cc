@@ -118,20 +118,33 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   }
 
   //
-  // XXX.
+  // Make sure to configure the partition with the capability of the host.
+  // Technically, this isn't the correct thing to do I think; in theory we'd
+  // want to try to match the configuration of the host that took the snapshot
+  // but then I am not too sure how to get that information at snapshot time
+  // (collecting cpuid leaves?). In general, if you take the snapshot & run the
+  // snapshot on the same machine then this is fine. If you snapshot from & run
+  // that snapshot from a different machine you might end up in issues (a
+  // feature turned on on the host that took the snapshot but that doesn't exist
+  // on the host running it for example).
+  //
+  // This was added because of `issues/252`; the VM had access to speculation
+  // control settings (MSR) but not setting `ProcessorFeatures` meant that a
+  // default state was being used. This isn't documented by Microsoft AFAICT but
+  // clearly that state didn't have the speculation control bits on, so when the
+  // guest was attempting to write that MSR, it triggered a #GP.
   //
 
-  uint64_t ProcessorFeatures = 0;
-  Hr = GetPartitionProperty(WHvPartitionPropertyCodeProcessorFeatures,
-                            ProcessorFeatures);
-  if (FAILED(Hr)) {
-    fmt::print("Failed GetPartitionProperty/ProcessorFeatures\n");
+  constexpr uint32_t BanksCount =
+      sizeof(WHV_PROCESSOR_FEATURES_BANKS::AsUINT64) / sizeof(uint64_t);
+  WHV_PROCESSOR_FEATURES_BANKS FeaturesBanks = {.BanksCount = BanksCount};
+  if (GetCapability(WHvCapabilityCodeProcessorFeaturesBanks, FeaturesBanks)) {
+    fmt::print("Failed GetCapability/ProcessorFeaturesBanks\n");
     return false;
   }
 
-  Hr = SetPartitionProperty(WHvPartitionPropertyCodeProcessorFeatures,
-                            ProcessorFeatures);
-  if (FAILED(Hr)) {
+  if (SetPartitionProperty(WHvPartitionPropertyCodeProcessorFeatures,
+                           FeaturesBanks.Bank0.AsUINT64)) {
     fmt::print("Failed SetPartitionProperty/ProcessorFeatures\n");
     return false;
   }
@@ -140,18 +153,21 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   // Add one VP to the partition.
   //
 
-  Hr = SetPartitionProperty(WHvPartitionPropertyCodeProcessorCount, 1);
-  if (FAILED(Hr)) {
+  WHV_PARTITION_PROPERTY ProcessorCount = {.ProcessorCount = 1};
+  if (SetPartitionProperty(WHvPartitionPropertyCodeProcessorCount,
+                           ProcessorCount.ProcessorCount)) {
     fmt::print("Failed SetPartitionProperty/ProcessorCount\n");
     return false;
   }
 
   //
-  // Turn on extended VM-exits.
+  // Turn on `WHvRunVpExitReasonException` VM-exits.
   //
 
-  Hr = SetPartitionProperty(WHvPartitionPropertyCodeExtendedVmExits, 1);
-  if (FAILED(Hr)) {
+  WHV_PARTITION_PROPERTY ExtendedVmExits = {};
+  ExtendedVmExits.ExtendedVmExits.ExceptionExit = 1;
+  if (SetPartitionProperty(WHvPartitionPropertyCodeExtendedVmExits,
+                           ExtendedVmExits.ExtendedVmExits)) {
     fmt::print("Failed SetPartitionProperty/ExtendedVmExits\n");
     return false;
   }
@@ -160,24 +176,24 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   // Configure the exit bitmap with the event we want to VM-exit on.
   //
 
-  uint64_t ExceptionExitBitmap = 0;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeDivideErrorFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeDebugTrapOrFault;
-  ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeBreakpointTrap;
+  WHV_PARTITION_PROPERTY ExceptionExitBitmap = {};
+  ExceptionExitBitmap.ExceptionExitBitmap |=
+      1ULL << WHvX64ExceptionTypeDivideErrorFault;
+  ExceptionExitBitmap.ExceptionExitBitmap |=
+      1ULL << WHvX64ExceptionTypeDebugTrapOrFault;
+  ExceptionExitBitmap.ExceptionExitBitmap |=
+      1ULL << WHvX64ExceptionTypeBreakpointTrap;
 
   //
   // XXX: Enable if we can get a vmexit for failfast exception in the future?
   //
 
-  // ExceptionExitBitmap |= 1ULL << WHvX64ExceptionTypeFailFast;
-
   //
   // Set the exit bitmap in the partition.
   //
 
-  Hr = SetPartitionProperty(WHvPartitionPropertyCodeExceptionExitBitmap,
-                            ExceptionExitBitmap);
-  if (FAILED(Hr)) {
+  if (SetPartitionProperty(WHvPartitionPropertyCodeExceptionExitBitmap,
+                           ExceptionExitBitmap.ExceptionExitBitmap)) {
     fmt::print("Failed SetPartitionProperty/ExceptionExitBitmap\n");
     return false;
   }
@@ -241,59 +257,6 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   //
 
   return true;
-}
-
-HRESULT
-WhvBackend_t::GetPartitionProperty(
-    const WHV_PARTITION_PROPERTY_CODE PropertyCode, uint64_t &PropertyValue) {
-  uint32_t Written = 0;
-  HRESULT Hr = WHvGetPartitionProperty(Partition_, PropertyCode, &PropertyValue,
-                                       sizeof(PropertyValue), &Written);
-
-  if (Written != sizeof(PropertyValue)) {
-    Hr = E_FAIL;
-  }
-
-  return Hr;
-}
-
-HRESULT
-WhvBackend_t::SetPartitionProperty(
-    const WHV_PARTITION_PROPERTY_CODE PropertyCode,
-    const uint64_t PropertyValue) {
-  WHV_PARTITION_PROPERTY Property;
-  memset(&Property, 0, sizeof(Property));
-
-  switch (PropertyCode) {
-  case WHvPartitionPropertyCodeProcessorCount: {
-    Property.ProcessorCount = uint32_t(PropertyValue);
-    break;
-  }
-
-  case WHvPartitionPropertyCodeExtendedVmExits: {
-    Property.ExtendedVmExits.ExceptionExit = PropertyValue;
-    break;
-  }
-
-  case WHvPartitionPropertyCodeExceptionExitBitmap: {
-    Property.ExceptionExitBitmap = PropertyValue;
-    break;
-  }
-
-  case WHvPartitionPropertyCodeProcessorFeatures: {
-    Property.ProcessorFeatures.AsUINT64 = PropertyValue;
-    break;
-  }
-
-  default: {
-    fmt::print("Property not implemented.\n");
-    return E_FAIL;
-  }
-  }
-
-  const HRESULT Hr = WHvSetPartitionProperty(Partition_, PropertyCode,
-                                             &Property, sizeof(Property));
-  return Hr;
 }
 
 HRESULT WhvBackend_t::LoadState(const CpuState_t &CpuState) {

@@ -247,7 +247,7 @@ void StaticUcNearBranchHook(void *Context, uint32_t Cpu, uint32_t What,
 }
 
 void StaticCNearBranchHook(void *Context, uint32_t Cpu, uint64_t Rip,
-                           uint64_t NextRip) {
+                       uint64_t NextRip) {
 
   //
   // Invoking the member function now.
@@ -475,8 +475,8 @@ void BochscpuBackend_t::AfterExecutionHook(/*void *Context, */ uint32_t,
 #ifdef WINDOWS
 __declspec(safebuffers)
 #endif
-    void BochscpuBackend_t::BeforeExecutionHook(
-        /*void *Context, */ uint32_t, void *Ins) {
+void BochscpuBackend_t::BeforeExecutionHook(
+    /*void *Context, */ uint32_t, void *Ins) {
   if (bochscpu_instr_bx_opcode(Ins) == BOCHSCPU_OPCODE_INSERTED) {
 
     //
