@@ -135,9 +135,9 @@ bool WhvBackend_t::Initialize(const Options_t &Opts,
   // guest was attempting to write that MSR, it triggered a #GP.
   //
 
-  constexpr uint32_t BanksCount =
-      sizeof(WHV_PROCESSOR_FEATURES_BANKS::AsUINT64) / sizeof(uint64_t);
-  WHV_PROCESSOR_FEATURES_BANKS FeaturesBanks = {.BanksCount = BanksCount};
+  WHV_PROCESSOR_FEATURES_BANKS FeaturesBanks = {
+      .BanksCount = sizeof(WHV_PROCESSOR_FEATURES_BANKS::AsUINT64) /
+                    sizeof(WHV_PROCESSOR_FEATURES_BANKS::AsUINT64[0])};
   if (GetCapability(WHvCapabilityCodeProcessorFeaturesBanks, FeaturesBanks)) {
     fmt::print("Failed GetCapability/ProcessorFeaturesBanks\n");
     return false;
