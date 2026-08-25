@@ -6,27 +6,33 @@
 #include <ostream>
 #include <new>
 
-constexpr static const uint32_t BX_INSTR_IS_JMP = 10;
+constexpr static const uint32_t BX_INSTR_IS_JMP_CONDITIONAL_NOT_TAKEN = 10;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_JMP_INDIRECT = 11;
+constexpr static const uint32_t BX_INSTR_IS_JMP_CONDITIONAL_TAKEN = 11;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_CALL = 12;
+constexpr static const uint32_t BX_INSTR_IS_JMP = 12;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_CALL_INDIRECT = 13;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_JMP_INDIRECT = 13;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_RET = 14;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_CALL = 14;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_IRET = 15;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_CALL_INDIRECT = 15;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_INT = 16;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_RET = 16;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSCALL = 17;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_IRET = 17;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSRET = 18;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_INT = 18;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSENTER = 19;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSCALL = 19;
 
-constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSEXIT = 20;
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSRET = 20;
+
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSENTER = 21;
+
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_SYSEXIT = 22;
+
+constexpr static const uint32_t BOCHSCPU_INSTR_IS_UIRET = 23;
 
 constexpr static const uint32_t BOCHSCPU_HOOK_MEM_READ = 0;
 
@@ -73,9 +79,8 @@ struct bochscpu_hooks_t {
   void (*reset)(void*, uint32_t, uint32_t);
   void (*hlt)(void*, uint32_t);
   void (*mwait)(void*, uint32_t, uint64_t, uintptr_t, uint32_t);
-  void (*cnear_branch_taken)(void*, uint32_t, uint64_t, uint64_t);
-  void (*cnear_branch_not_taken)(void*, uint32_t, uint64_t, uint64_t);
-  void (*ucnear_branch)(void*, uint32_t, uint32_t, uint64_t, uint64_t);
+  void (*branch_taken)(void*, uint32_t, uint32_t, uint64_t, uint64_t);
+  void (*branch_not_taken)(void*, uint32_t, uint32_t, uint64_t, uint64_t);
   void (*far_branch)(void*, uint32_t, uint32_t, uint16_t, uint64_t, uint16_t, uint64_t);
   void (*opcode)(void*, uint32_t, const void*, const uint8_t*, uintptr_t, bool, bool);
   void (*interrupt)(void*, uint32_t, uint32_t);
