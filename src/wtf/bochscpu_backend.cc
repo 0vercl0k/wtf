@@ -232,22 +232,8 @@ void StaticHltHook(void *Context, uint32_t Cpu) {
   reinterpret_cast<BochscpuBackend_t *>(Context)->OpcodeHlt(Cpu);
 }
 
-void StaticUcNearBranchHook(void *Context, uint32_t Cpu, uint32_t What,
-                            uint64_t Rip, uint64_t NextRip) {
-  if ((What == BOCHSCPU_INSTR_IS_JMP_INDIRECT) ||
-      (What == BOCHSCPU_INSTR_IS_CALL_INDIRECT)) {
-
-    //
-    // Invoking the member function now.
-    //
-
-    reinterpret_cast<BochscpuBackend_t *>(Context)->RecordEdge(Cpu, Rip,
-                                                               NextRip);
-  }
-}
-
-void StaticCNearBranchHook(void *Context, uint32_t Cpu, uint64_t Rip,
-                       uint64_t NextRip) {
+void StaticBranchHook(void *Context, uint32_t Cpu, uint32_t What, uint64_t Rip,
+                      uint64_t NextRip) {
 
   //
   // Invoking the member function now.
@@ -306,9 +292,8 @@ bool BochscpuBackend_t::Initialize(const Options_t &Opts,
   //
 
   if (Opts.Edges) {
-    Hooks_.cnear_branch_taken = StaticCNearBranchHook;
-    Hooks_.cnear_branch_not_taken = StaticCNearBranchHook;
-    Hooks_.ucnear_branch = StaticUcNearBranchHook;
+    Hooks_.branch_taken = StaticBranchHook;
+    Hooks_.branch_not_taken = StaticBranchHook;
   }
 
   //
