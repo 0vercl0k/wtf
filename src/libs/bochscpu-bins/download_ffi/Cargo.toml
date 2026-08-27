@@ -5,9 +5,9 @@ edition = "2024"
 authors = ["Axel '0vercl0k' Souchet"]
 
 [dependencies]
-reqwest = { version = "0.13.4", features = ["blocking", "default-tls"], default-features = false }
-serde_json = "1.0.151"
-zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+ureq = { version = "3.4", default-features = false, features = ["rustls"] }
+serde_json = "1.0"
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
 
 [lints.clippy]
 pedantic = "warn"

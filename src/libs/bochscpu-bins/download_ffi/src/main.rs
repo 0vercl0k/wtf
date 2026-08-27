@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::{env, io};
 
-use reqwest::blocking::ClientBuilder;
 use serde_json::Value;
 use zip::ZipArchive;
 
@@ -76,9 +75,11 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 /// Get the URLs to the bochscpu-ffi zip files that contains the static library
 /// `wtf` needs for linking.
 fn fetch_bxcpuffi_zip_assets_urls() -> Result<(String, HashMap<String, String>)> {
-    let cli = ClientBuilder::new().user_agent("Mozilla/5.0").build()?;
-    let res = cli.get(BXCPUFFI_LATEST_RELEASE_LINK).send()?.text()?;
-    let js: Value = serde_json::from_str(&res)?;
+    let res = ureq::get(BXCPUFFI_LATEST_RELEASE_LINK)
+        .header("user-agent", "Mozilla/5.0")
+        .call()?;
+    let body = res.into_body().read_to_string()?;
+    let js: Value = serde_json::from_str(&body)?;
     let assets = js["assets"].as_array().ok_or("no assets?")?;
     let tag_name = js["tag_name"].as_str().ok_or("no tag name?")?.to_string();
 
@@ -167,7 +168,10 @@ fn main() -> Result<()> {
         );
 
         let mut downloaded_zip = TempFile::new(downloaded_zip_path)?;
-        io::copy(&mut reqwest::blocking::get(zip_url)?, &mut *downloaded_zip)?;
+        io::copy(
+            &mut ureq::get(zip_url).call()?.into_body().as_reader(),
+            &mut *downloaded_zip,
+        )?;
 
         let staticlib_path = format!("../lib/{}", staticlib_info.new_filename);
         let mut staticlib_file = File::create(&staticlib_path)?;
