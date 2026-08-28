@@ -1,20 +1,22 @@
 # Axel '0vercl0k' Souchet - April 27 2020
-cmake_minimum_required(VERSION 3.16.0)
+cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 project(wtf)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/bochscpu-bins/include)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/robin-map/include)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/kdmp-parser/)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/libfuzzer)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/readerwriterqueue)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/json/single_include)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/CLI11/include)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/fmt/include)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/libs/yas/include)
+set(WTF_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs")
+
+include_directories(${WTF_LIBS_DIR}/bochscpu-bins/include)
+include_directories(${WTF_LIBS_DIR}/robin-map/include)
+add_subdirectory(${WTF_LIBS_DIR}/kdmp-parser/)
+include_directories(${WTF_LIBS_DIR}/libfuzzer)
+include_directories(${WTF_LIBS_DIR}/readerwriterqueue)
+include_directories(${WTF_LIBS_DIR}/json/single_include)
+include_directories(${WTF_LIBS_DIR}/BLAKE3/c)
+include_directories(${WTF_LIBS_DIR}/CLI11/include)
+include_directories(${WTF_LIBS_DIR}/fmt/include)
+include_directories(${WTF_LIBS_DIR}/yas/include)
 
 file(
     GLOB_RECURSE
@@ -25,14 +27,14 @@ file(
 file(
     GLOB_RECURSE
     libfuzzer_srcfiles
-    ${CMAKE_CURRENT_LIST_DIR}/libs/libfuzzer/*.cpp
+    ${WTF_LIBS_DIR}/libfuzzer/*.cpp
 )
 
 add_library(
     blake3 STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3.c
-    ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_dispatch.c
-    ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_portable.c
+    ${WTF_LIBS_DIR}/BLAKE3/c/blake3.c
+    ${WTF_LIBS_DIR}/BLAKE3/c/blake3_dispatch.c
+    ${WTF_LIBS_DIR}/BLAKE3/c/blake3_portable.c
 )
 
 add_executable(
@@ -57,10 +59,10 @@ if(WIN32)
     target_sources(
         wtf
         PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_sse41_x86-64_windows_msvc.asm
-        ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_sse2_x86-64_windows_msvc.asm
-        ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx2_x86-64_windows_msvc.asm
-        ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx512_x86-64_windows_msvc.asm
+        ${WTF_LIBS_DIR}/BLAKE3/c/blake3_sse41_x86-64_windows_msvc.asm
+        ${WTF_LIBS_DIR}/BLAKE3/c/blake3_sse2_x86-64_windows_msvc.asm
+        ${WTF_LIBS_DIR}/BLAKE3/c/blake3_avx2_x86-64_windows_msvc.asm
+        ${WTF_LIBS_DIR}/BLAKE3/c/blake3_avx512_x86-64_windows_msvc.asm
     )
 
     target_compile_options(
@@ -125,9 +127,9 @@ elseif(UNIX)
         target_sources(
             wtf
             PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_sse41_x86-64_unix.S
-            ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_sse2_x86-64_unix.S
-            ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx2_x86-64_unix.S
+            ${WTF_LIBS_DIR}/BLAKE3/c/blake3_sse41_x86-64_unix.S
+            ${WTF_LIBS_DIR}/BLAKE3/c/blake3_sse2_x86-64_unix.S
+            ${WTF_LIBS_DIR}/BLAKE3/c/blake3_avx2_x86-64_unix.S
 
             # libbochscpu_ffi.a already links this so will lead to multiple definition errors like in the below:
             #    ```
@@ -135,7 +137,7 @@ elseif(UNIX)
             #   (.text+0x3780): multiple definition of `_blake3_compress_in_place_avx512'; CMakeFiles/wtf.dir/libs/BLAKE3/c/blake3_avx512_x86-64_unix.S.o:(.text+0x3740): first defined here
             #   /usr/bin/ld: /home/runner/work/wtf/wtf/src/libs/bochscpu-bins/lib/libbochscpu_ffi.a(b8423798394d5395-blake3_avx512_x86-64_unix.o)
             #   ```
-            # ${CMAKE_CURRENT_LIST_DIR}/libs/BLAKE3/c/blake3_avx512_x86-64_unix.S
+            # ${WTF_LIBS_DIR}/BLAKE3/c/blake3_avx512_x86-64_unix.S
         )
     endif()
 else()
@@ -160,6 +162,6 @@ target_precompile_headers(
 target_link_libraries(
     wtf
     blake3
-    ${CMAKE_CURRENT_LIST_DIR}/libs/bochscpu-bins/lib/${CMAKE_SHARED_MODULE_PREFIX}bochscpu_ffi_${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}${CMAKE_STATIC_LIBRARY_SUFFIX}
+    ${WTF_LIBS_DIR}/bochscpu-bins/lib/${CMAKE_SHARED_MODULE_PREFIX}bochscpu_ffi_${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}${CMAKE_STATIC_LIBRARY_SUFFIX}
     kdmp-parser
 )
