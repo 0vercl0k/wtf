@@ -152,9 +152,14 @@ target_precompile_headers(
 set(WTF_PLATFORM_LIBRARIES)
 if(WIN32)
     set_property(TARGET wtf blake3 PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
-    # This is for winsock / windows.h; without this windows.h imports socket.
-    # https://docs.microsoft.com/en-us/windows/win32/iphlp/creating-a-basic-ip-helper-application
-    target_compile_definitions(wtf PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_compile_definitions(
+        wtf
+        PRIVATE
+        NOMINMAX
+        # This is for winsock / windows.h; without this windows.h imports socket.
+        # https://docs.microsoft.com/en-us/windows/win32/iphlp/creating-a-basic-ip-helper-application
+        WIN32_LEAN_AND_MEAN
+    )
 
     target_compile_options(
         wtf
@@ -192,6 +197,14 @@ if(WIN32)
     add_executable(
         tlv_server
         tlv_server/tlv_server.cc
+    )
+
+    target_compile_definitions(
+        tlv_server
+        PRIVATE
+        # This is for winsock / windows.h; without this windows.h imports socket.
+        # https://docs.microsoft.com/en-us/windows/win32/iphlp/creating-a-basic-ip-helper-application
+        WIN32_LEAN_AND_MEAN
     )
 
     add_executable(
