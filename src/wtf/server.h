@@ -334,6 +334,12 @@ class Server_t {
 
   uint64_t Mutations_ = 0;
 
+  //
+  // Number of files from the inputs folder that we sent to the clients.
+  //
+
+  uint64_t InputsSent_ = 0;
+
 public:
   explicit Server_t(const MasterOptions_t &Opts)
       : Opts_(Opts), Rng_(Opts.Seed), Corpus_(Opts.OutputsPath, Rng_) {
@@ -701,8 +707,23 @@ private:
         std::string TestcaseContent;
         TestcaseContent.resize(BufferSize);
         memcpy(TestcaseContent.data(), Buffer.get(), BufferSize);
+        InputsSent_++;
         return TestcaseContent;
       }
+    }
+
+    //
+    // If the corpus is still empty at this point, the mutator won't have
+    // anything to mutate. Explain why it is likely to happen as the inputs
+    // only make it to the corpus if they trigger new code coverage.
+    //
+
+    if (Corpus_.Size() == 0) {
+      fmt::print("/!\\ None of the {} input(s) sent so far triggered new code "
+                 "coverage, so none of them was added to the corpus. If the "
+                 "nodes use the kvm / whv backends, make sure that the "
+                 "coverage folder of the target contains valid .cov files.\n",
+                 InputsSent_);
     }
 
     //

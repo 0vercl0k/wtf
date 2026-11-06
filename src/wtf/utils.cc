@@ -400,7 +400,7 @@ ParseCovFiles(const Backend_t &Backend, const fs::path &CovFilesDir) {
   if (CovBreakpoints.size() == 0) {
     fmt::print("/!\\ No code-coverage breakpoints were found. This probably "
                "means that you do not have any .cov files in {}, or that those "
-               "files are not formatted properly.",
+               "files are not formatted properly.\n",
                CovFilesDir.string());
   }
 

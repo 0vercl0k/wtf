@@ -27,6 +27,7 @@ std::string LibfuzzerMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
   const Testcase_t *Testcase = Corpus.PickTestcase();
   if (!Testcase) {
     fmt::print("The corpus is empty, exiting\n");
+    fflush(stdout);
     std::abort();
   }
 
@@ -79,6 +80,7 @@ std::string HonggfuzzMutator_t::GetNewTestcase(const Corpus_t &Corpus) {
   const Testcase_t *Testcase = Corpus.PickTestcase();
   if (!Testcase) {
     fmt::print("The corpus is empty, exiting\n");
+    fflush(stdout);
     std::abort();
   }
 

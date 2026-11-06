@@ -2624,10 +2624,19 @@ void KvmBackend_t::UffdThreadMain() {
 bool KvmBackend_t::SetCoverageBps() {
   //
   // If the user didn't provided a path with code coverage files or if the
-  // folder doesn't exist, then we have nothing to do.
+  // folder doesn't exist, then we have nothing to do. Warn the user though, as
+  // the coverage breakpoints are the only way for this backend to report code
+  // coverage.
   //
 
   if (CoveragePath_.empty() || !fs::exists(CoveragePath_)) {
+    if (!CoveragePath_.empty()) {
+      fmt::print("/!\\ The coverage folder {} does not exist, so no "
+                 "code-coverage breakpoints were set. This backend relies on "
+                 "them to report code coverage.\n",
+                 CoveragePath_.string());
+    }
+
     return true;
   }
 
