@@ -237,6 +237,12 @@ public:
       Timeouts_++;
     }
   }
+
+  //
+  // How many testcases were executed by the fuzzing nodes?
+  //
+
+  uint64_t HowManyExecutedTestcases() const { return TestcasesNumber_; }
 };
 
 class Server_t {
@@ -333,12 +339,6 @@ class Server_t {
   //
 
   uint64_t Mutations_ = 0;
-
-  //
-  // Number of files from the inputs folder that we sent to the clients.
-  //
-
-  uint64_t InputsSent_ = 0;
 
 public:
   explicit Server_t(const MasterOptions_t &Opts)
@@ -707,23 +707,28 @@ private:
         std::string TestcaseContent;
         TestcaseContent.resize(BufferSize);
         memcpy(TestcaseContent.data(), Buffer.get(), BufferSize);
-        InputsSent_++;
         return TestcaseContent;
       }
     }
 
     //
-    // If the corpus is still empty at this point, the mutator won't have
-    // anything to mutate. Explain why it is likely to happen as the inputs
-    // only make it to the corpus if they trigger new code coverage.
+    // We get here after having sent every usable files that come from the input
+    // corpus. If none of those files made it into the corpus, we can't go
+    // forward. The mutator needs a testcase to mutate & there's none. What
+    // usually happens is that users forget / don't know that they have to
+    // generate code coverage breakpoint files when using the whv/kvm backends;
+    // so let's point users in the right direction.
     //
 
     if (Corpus_.Size() == 0) {
-      fmt::print("/!\\ None of the {} input(s) sent so far triggered new code "
-                 "coverage, so none of them was added to the corpus. If the "
-                 "nodes use the kvm / whv backends, make sure that the "
-                 "coverage folder of the target contains valid .cov files.\n",
-                 InputsSent_);
+      fmt::print("/!\\ {} files from the input corpus were executed by the "
+                 "fuzzing nodes, and none of them triggered new code-coverage "
+                 "leaving the corpus maintained by the server empty. If the "
+                 "nodes use the kvm / whv backend, ensure that the target "
+                 "'coverage' folder contains valid '.cov' files.\n",
+                 Stats_.HowManyExecutedTestcases());
+      std::fflush(stdout);
+      std::abort();
     }
 
     //
@@ -746,7 +751,7 @@ private:
 
     yas::mem_ostream Os;
     yas::binary_oarchive<decltype(Os), YasFlags> Oa(Os);
-    Oa &Testcase;
+    Oa & Testcase;
     const auto &Buf = Os.get_intrusive_buffer();
     if (!Send(Fd, (uint8_t *)Buf.data, Buf.size)) {
       fmt::print("Send failed\n");
@@ -795,7 +800,7 @@ private:
                          TestcaseResult_t &Result) {
     yas::mem_istream Is(Buffer.data(), Buffer.size_bytes());
     yas::binary_iarchive<decltype(Is), YasFlags> Ia(Is);
-    Ia &ReceivedTestcase &Coverage &Result;
+    Ia & ReceivedTestcase & Coverage & Result;
     return true;
   }
 
