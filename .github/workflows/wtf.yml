@@ -76,8 +76,8 @@ jobs:
       - name: Build with gcc
         if: matrix.compiler == 'gcc'
         env:
-          CC: gcc-10
-          CXX: g++-10
+          CC: gcc
+          CXX: g++
         run: |
           cd src/build
           chmod u+x ./build-release.sh
@@ -86,8 +86,8 @@ jobs:
       - name: Build with clang
         if: matrix.compiler == 'clang'
         env:
-          CC: clang-22
-          CXX: clang++-22
+          CC: clang-23
+          CXX: clang++-23
         run: |
           cd src/build
           chmod u+x ./build-release.sh
