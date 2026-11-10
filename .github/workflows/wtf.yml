@@ -86,8 +86,8 @@ jobs:
       - name: Build with clang
         if: matrix.compiler == 'clang'
         env:
-          CC: clang-23
-          CXX: clang++-23
+          CC: clang-22
+          CXX: clang++-22
         run: |
           cd src/build
           chmod u+x ./build-release.sh
