@@ -226,6 +226,7 @@ public:
     const Testcase_t *Testcase = Corpus.PickTestcase();
     if (!Testcase) {
       fmt::print("The corpus is empty, exiting\n");
+      std::fflush(stdout);
       std::abort();
     }
 
